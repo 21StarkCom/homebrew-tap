@@ -1,29 +1,17 @@
 require "download_strategy"
 
-# Downloads a private-repo GitHub Release asset via the API using
-# HOMEBREW_GITHUB_API_TOKEN. Homebrew removed the built-in strategy, so it is
-# defined inline here.
+# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
+# HOMEBREW_GITHUB_API_TOKEN auth header. Kept minimal — no Homebrew-internal
+# GitHub API helpers, which change between versions.
 class GitHubPrivateReleaseStrategy < CurlDownloadStrategy
-  require "utils/github"
-
-  def initialize(url, name, version, **meta)
-    super
-    @token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    raise CurlDownloadStrategyError, "HOMEBREW_GITHUB_API_TOKEN is required for the private lumiere tap." if @token.to_s.empty?
-    m = @url.match(%r{https://github.com/([^/]+)/([^/]+)/releases/download/([^/]+)/(\S+)})
-    raise CurlDownloadStrategyError, "Bad GitHub release URL." unless m
-    _, @owner, @repo, @tag, @filename = *m
-  end
-
   def _fetch(url:, resolved_url:, timeout:)
-    release = GitHub.open_api("https://api.github.com/repos/#{@owner}/#{@repo}/releases/tags/#{@tag}")
-    asset = release["assets"].find { |a| a["name"] == @filename }
-    raise CurlDownloadStrategyError, "Asset #{@filename} not found on #{@tag}." unless asset
-    curl "--location", "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{@token}",
+    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
+    raise CurlDownloadStrategyError, "HOMEBREW_GITHUB_API_TOKEN is required for the private lumiere tap." if token.to_s.empty?
+    curl "--location",
+         "--header", "Accept: application/octet-stream",
+         "--header", "Authorization: token #{token}",
          "--output", temporary_path.to_s,
-         "https://api.github.com/repos/#{@owner}/#{@repo}/releases/assets/#{asset["id"]}",
-         timeout: timeout
+         url, timeout: timeout
   end
 end
 
@@ -33,7 +21,8 @@ class Lumiere < Formula
   desc "Visual-media CLI toolkit: image gen/edit, SVG suite, video, brand icons (16 tools)"
   homepage "https://github.com/21StarkCom/lumiere"
   version "0.1.0"
-  url "https://github.com/21StarkCom/lumiere/releases/download/v0.1.0/lumiere_v0.1.0_darwin_arm64.zip",
+  # API asset URL (private repo). asset id is release-specific; bump on each release.
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/519984540",
       using: GitHubPrivateReleaseStrategy
   sha256 "a757d7f5b6bb1e3c67cc0934c47876870f87a4866066c4dad5cb951849d2573a"
   depends_on :macos
