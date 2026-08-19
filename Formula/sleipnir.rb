@@ -24,9 +24,9 @@ class Sleipnir < Formula
   homepage "https://github.com/21StarkCom/sleipnir"
   version "0.2.0"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/0",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/521207061",
       using: SleipnirGitHubPrivateReleaseStrategy
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  sha256 "f7e9b888dc0e28c324809a2f96d4f514e42c11019a8367d899fb35b55eac6a1f"
   depends_on "node"           # Node 26 strips TS types natively; sleipnir has no build step
   depends_on :macos           # drives system Chrome + a Swift AX/CGEvent helper
   depends_on arch: :arm64     # the shipped mac-helper is a signed arm64 Mach-O
