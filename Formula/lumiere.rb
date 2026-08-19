@@ -20,11 +20,11 @@ end
 class Lumiere < Formula
   desc "Visual-media CLI toolkit: image gen/edit, SVG suite, video, brand icons (16 tools)"
   homepage "https://github.com/21StarkCom/lumiere"
-  version "0.1.0"
+  version "0.1.1"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/519984540",
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/521085838",
       using: GitHubPrivateReleaseStrategy
-  sha256 "a757d7f5b6bb1e3c67cc0934c47876870f87a4866066c4dad5cb951849d2573a"
+  sha256 "ee0f9ad2e4da91b930f651aeefea6a5b893fa1dbfbfb11c7b2a211ffe621c6d1"
   depends_on :macos
   depends_on arch: :arm64
 
