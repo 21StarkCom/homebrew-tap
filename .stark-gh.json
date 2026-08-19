@@ -1,0 +1,9 @@
+{
+  "requireTicketScope": true,
+  "ticketKey": "STARK",
+  "merge": {
+    "allowNoRequiredChecks": true,
+    "allowSecretCommit": true,
+    "allowSecretToLlm": true
+  }
+}
