@@ -6,7 +6,11 @@ require "download_strategy"
 class SleipnirGitHubPrivateReleaseStrategy < CurlDownloadStrategy
   def _fetch(url:, resolved_url:, timeout:)
     token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    raise CurlDownloadStrategyError, "HOMEBREW_GITHUB_API_TOKEN is required for the private sleipnir tap." if token.to_s.empty?
+    if token.to_s.empty?
+      raise CurlDownloadStrategyError,
+            "HOMEBREW_GITHUB_API_TOKEN is required for the private sleipnir tap."
+    end
+
     curl "--location",
          "--header", "Accept: application/octet-stream",
          "--header", "Authorization: token #{token}",
@@ -22,14 +26,14 @@ end
 class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/sleipnir"
-  version "0.2.0"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/521207061",
       using: SleipnirGitHubPrivateReleaseStrategy
+  version "0.2.0"
   sha256 "f7e9b888dc0e28c324809a2f96d4f514e42c11019a8367d899fb35b55eac6a1f"
-  depends_on "node"           # Node 26 strips TS types natively; sleipnir has no build step
-  depends_on :macos           # drives system Chrome + a Swift AX/CGEvent helper
-  depends_on arch: :arm64     # the shipped mac-helper is a signed arm64 Mach-O
+  depends_on arch: :arm64 # the shipped mac-helper is a signed arm64 Mach-O
+  depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper
+  depends_on "node" # Node 26 strips TS types natively; sleipnir has no build step
 
   def install
     # The zip is the runnable tree (app.ts, bin/, packages/, vendored node_modules,
@@ -40,7 +44,7 @@ class Sleipnir < Formula
     %w[sleipnir slp].each do |name|
       (bin/name).write <<~SH
         #!/bin/bash
-        exec "#{Formula["node"].opt_bin}/node" "#{libexec}/bin/sleipnir.mjs" "$@"
+        exec "#{formula_opt_bin("node")}/node" "#{libexec}/bin/sleipnir.mjs" "$@"
       SH
       (bin/name).chmod 0755
     end
