@@ -3,7 +3,7 @@ require "download_strategy"
 # Fetches a private-repo GitHub Release asset by its API asset URL, adding the
 # HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
 # other formulae in this tap that ship the same pattern.
-class TyrGitHubPrivateReleaseStrategy < CurlDownloadStrategy
+class TyrPrivateReleaseStrategy < CurlDownloadStrategy
   def _fetch(url:, resolved_url:, timeout:)
     token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
     raise CurlDownloadStrategyError, "HOMEBREW_GITHUB_API_TOKEN is required for the private tyr tap." if token.to_s.empty?
@@ -22,7 +22,7 @@ class Tyr < Formula
   version "0.96.0"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/520675877",
-      using: TyrGitHubPrivateReleaseStrategy
+      using: TyrPrivateReleaseStrategy
   sha256 "fb6b7e69efc6358813c74fff2a916900b674e4609ff856051b49435446b1917f"
   depends_on :macos
   depends_on arch: :arm64
