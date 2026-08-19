@@ -6,7 +6,11 @@ require "download_strategy"
 class TyrPrivateReleaseStrategy < CurlDownloadStrategy
   def _fetch(url:, resolved_url:, timeout:)
     token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    raise CurlDownloadStrategyError, "HOMEBREW_GITHUB_API_TOKEN is required for the private tyr tap." if token.to_s.empty?
+    if token.to_s.empty?
+      raise CurlDownloadStrategyError,
+            "HOMEBREW_GITHUB_API_TOKEN is required for the private tyr tap."
+    end
+
     curl "--location",
          "--header", "Accept: application/octet-stream",
          "--header", "Authorization: token #{token}",
@@ -17,15 +21,15 @@ end
 
 # Signed (Developer ID) + notarized macOS build of the tyr vendor-integration CLI.
 class Tyr < Formula
-  desc "Vendor-integration CLI: gh, Google Workspace, Atlassian, Slack, ClickUp, GCP and more"
+  desc "Vendor-integration CLI: gh, Workspace, Atlassian, Slack, ClickUp, GCP and more"
   homepage "https://github.com/21StarkCom/tyr"
-  version "0.96.0"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/520675877",
       using: TyrPrivateReleaseStrategy
+  version "0.96.0"
   sha256 "fb6b7e69efc6358813c74fff2a916900b674e4609ff856051b49435446b1917f"
-  depends_on :macos
   depends_on arch: :arm64
+  depends_on :macos
 
   def install
     bin.install "tyr", "tyr-serve"
