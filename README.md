@@ -72,3 +72,40 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
 from the `sleipnir` checkout (`--dry-run` to preview).
+
+## mimir
+
+[`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
+with a paired `mimir` CLI and a loopback MCP server for agents. Unlike the CLIs above,
+it is a **GUI app**, so it ships as a **cask** (`Casks/mimir.rb`):
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install --cask 21StarkCom/tap/mimir
+```
+
+The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
+your `PATH`. The token is required: this repo and the `mimir` releases are **private**, and
+the cask's `MimirPrivateReleaseStrategy` fetches the release asset by its GitHub API URL with
+an `Authorization` header.
+
+**macOS 26 (Tahoe) arm64 only** (Apple Silicon). The release zip is the Developer-ID-signed,
+notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `brew uninstall
+--cask mimir` removes the app; `--zap` also trashes its local data (but never the
+login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+
+## Maintenance — the mimir cask is bumped automatically
+
+`Casks/mimir.rb` pins the release's darwin zip **asset id + sha256** and the **version**, all
+of which change every release. Do **not** hand-edit them. They are rewritten by `mimir`'s
+release tooling:
+
+- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing cert) builds +
+  signs the app (`make app`), notarizes + staples it, re-zips the stapled bundle, records the
+  notarization in the `apple-developer` ledger, uploads the asset onto the hand-cut release,
+  then calls…
+- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the published
+  release, rewrites the three release-specific lines, and opens a PR here.
+
+To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from the
+`mimir` checkout (`--dry-run` to preview).
