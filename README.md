@@ -2,6 +2,43 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet.
 
+## idun
+
+The [`idun`](https://github.com/21StarkCom/idun) personal-ops maintenance CLI —
+one bun/TypeScript binary, one subcommand per tool (GitHub identity swap, seat
+rotation, cleanup, housekeeping, updates).
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/idun
+```
+
+The token is required: this repo and the `idun` releases are **private**, and
+the formula's `IdunPrivateReleaseStrategy` fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). The release zip is a `bun build --compile`
+binary carrying bun's linker-signed **ad-hoc** signature — it runs under Homebrew
+(which strips the quarantine xattr) but is **not** Developer-ID notarized like
+the tools below, so a raw unzip outside Homebrew hits Gatekeeper. The live,
+repo-tracking install is the wrapper in the `idun` repo (`./setup.sh`); this
+formula is for repo-less machines.
+
+## Maintenance — the idun formula is bumped automatically
+
+`Formula/idun.rb` pins the release's darwin zip **asset id + sha256**, both of
+which change every release. Do **not** hand-edit them. They are rewritten by
+`idun`'s release tooling:
+
+- `scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
+  zips, and uploads the macOS zip onto the GitHub Release, then calls…
+- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
+  the published release, rewrites the three release-specific lines, and opens a
+  PR here.
+
+To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
+from the `idun` checkout (`--dry-run` to preview).
+
 ## lumiere
 
 The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
