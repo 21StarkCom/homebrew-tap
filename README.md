@@ -79,6 +79,45 @@ rewritten by `cmux-client`'s release tooling:
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
 from the `cmux-client` checkout (`--dry-run` to preview).
 
+## frigg
+
+The [`frigg`](https://github.com/21StarkCom/frigg) 21Stark IT-ops CLIs for Google
+Workspace — `gws-align-managers` (bulk-align org-chart manager edges) and
+`gws-build-all-group` (maintain `all@evinced.com` as a group-of-groups). Both
+dry-run by default; `--apply` mutates the live directory.
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/frigg
+```
+
+The token is required: this repo and the `frigg` releases are **private**, and
+the formula's `FriggPrivateReleaseStrategy` fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). Like `idun`, the release zip is
+**ad-hoc-signed** (Go's linker), **not** Developer-ID notarized — it runs under
+Homebrew (which strips the quarantine xattr) but a raw unzip outside Homebrew
+hits Gatekeeper. Non-macOS or repo-less: `go install` from the `frigg` repo.
+
+## Maintenance — the frigg formula is bumped automatically (by GitLab CI)
+
+`Formula/frigg.rb` pins the release's darwin zip **asset id + sha256** and
+**version**, all of which change every release. Do **not** hand-edit them. Unlike
+the other tools here (local Mac scripts / GitHub Actions), frigg is built and
+published by a **GitLab CI/CD pipeline** on the self-hosted `gitlab.evinced.cloud`
+(STARK-1193). Pushing a tag `vX.Y.Z` to `21StarkCom/frigg` runs the pipeline,
+which:
+
+- cross-builds the ad-hoc-signed darwin/arm64 zip on a Linux runner
+  (`frigg/scripts/build-darwin.sh`), uploads it onto the GitHub Release, then…
+- runs `frigg/scripts/bump-tap.sh`, which reads the asset id + sha256 back from
+  the published release, rewrites the three release-specific lines, and opens a
+  PR here.
+
+To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
+from the `frigg` checkout (`--dry-run` to preview).
+
 ## lumiere
 
 The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
