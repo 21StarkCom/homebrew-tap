@@ -32,7 +32,7 @@ class Tyr < Formula
   depends_on :macos
 
   def install
-    bin.install "tyr", "tyr-serve"
+    bin.install "tyr"
   end
 
   test do
