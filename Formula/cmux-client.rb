@@ -24,10 +24,10 @@ class CmuxClient < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
   homepage "https://github.com/21StarkCom/cmux-client"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/cmux-client/releases/assets/531299108",
+  url "https://api.github.com/repos/21StarkCom/cmux-client/releases/assets/531316105",
       using: CmuxClientPrivateReleaseStrategy
-  version "0.4.1"
-  sha256 "91b208e7c7a178414f01318676a8ce250c4dbf94f9735f6ca97cdb9763833245"
+  version "0.4.2"
+  sha256 "3ca723631e0e3a9d8c1ba1bd327372218e573ec83086de64790fb585c594e170"
   depends_on arch: :arm64
   depends_on :macos
 
