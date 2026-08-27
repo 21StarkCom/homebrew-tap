@@ -24,10 +24,10 @@ class Tyr < Formula
   desc "Vendor-integration CLI: gh, Workspace, Atlassian, Slack, ClickUp, GCP and more"
   homepage "https://github.com/21StarkCom/tyr"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/532769713",
+  url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/532798162",
       using: TyrPrivateReleaseStrategy
-  version "0.108.0"
-  sha256 "e2fd7139e5bd7cbb8da9b932e795e5dc1aa4703a9609a42565b6849dafcde139"
+  version "0.109.0"
+  sha256 "a8982839520c23c9ff563c45b535465cffe52763048fa803acc24b6d8cb81926"
   depends_on arch: :arm64
   depends_on :macos
 
