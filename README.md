@@ -225,3 +225,38 @@ release tooling:
 
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from the
 `mimir` checkout (`--dry-run` to preview).
+
+## heimdall
+
+The [`heimdall`](https://github.com/21StarkCom/heimdall) CLI — personal
+native-APNs push relay. `heimdall send <title>` fires a Mac banner **and** pushes
+to your iPhone / iPad via your own APNs key and app (no third-party push service).
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/heimdall
+```
+
+The token is required: this repo and the `heimdall` releases are **private**, and
+the formula's `HeimdallPrivateReleaseStrategy` fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). The zip is the Developer-ID-signed +
+notarized `heimdall` binary. Config (backend URL + send-secret) reads from the
+login Keychain (service `heimdall`), or `HEIMDALL_URL` / `HEIMDALL_SEND_SECRET`.
+
+## Maintenance — the heimdall formula is bumped by local Mac scripts
+
+`Formula/heimdall.rb` pins the release's darwin zip **asset id + sha256** — both
+change every release, so they are rewritten by the source repo's tooling, never
+hand-edited:
+
+- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing
+  cert) builds, Developer-ID-signs, notarizes, and uploads the darwin/arm64 zip,
+  then calls…
+- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the
+  published release, rewrites the three release-specific lines, and opens a PR here.
+
+To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from
+the `heimdall` checkout (`--dry-run` to preview). heimdall has no release-please —
+cut the tag + GitHub Release first, then run the release script.
