@@ -3,12 +3,12 @@ require "download_strategy"
 # Fetches a private-repo GitHub Release asset by its API asset URL, adding the
 # HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
 # other formulae in this tap that ship the same pattern.
-class CmuxClientPrivateReleaseStrategy < CurlDownloadStrategy
+class HermodPrivateReleaseStrategy < CurlDownloadStrategy
   def _fetch(url:, resolved_url:, timeout:)
     token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
     if token.to_s.empty?
       raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private cmux-client tap."
+            "HOMEBREW_GITHUB_API_TOKEN is required for the private hermod tap."
     end
 
     curl "--location",
@@ -19,23 +19,24 @@ class CmuxClientPrivateReleaseStrategy < CurlDownloadStrategy
   end
 end
 
-# Ad-hoc-signed macOS build of the cmux-client control-API CLI.
-class CmuxClient < Formula
+# Ad-hoc-signed macOS build of the hermod control-API CLI (renamed from
+# cmux-client, STARK-1758).
+class Hermod < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
-  homepage "https://github.com/21StarkCom/cmux-client"
+  homepage "https://github.com/21StarkCom/hermod"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/cmux-client/releases/assets/533742905",
-      using: CmuxClientPrivateReleaseStrategy
-  version "0.8.0"
-  sha256 "bac25b80d9a45a2e5425511889406e459dc1279d50aee3a6982592678b4b8114"
+  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/534330841",
+      using: HermodPrivateReleaseStrategy
+  version "0.9.0"
+  sha256 "2e1c6762b9f25634d13a04d2e5daebc6c0a0cc0a6c98dfa48c219a58f2943c45"
   depends_on arch: :arm64
   depends_on :macos
 
   def install
-    bin.install "cmux-client"
+    bin.install "hermod"
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/cmux-client version")
+    assert_match version.to_s, shell_output("#{bin}/hermod version")
   end
 end
