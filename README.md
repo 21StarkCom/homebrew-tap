@@ -39,9 +39,9 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
 from the `idun` checkout (`--dry-run` to preview).
 
-## cmux-client
+## hermod
 
-The [`cmux-client`](https://github.com/21StarkCom/cmux-client) CLI + engine for
+The [`hermod`](https://github.com/21StarkCom/hermod) CLI + engine for
 the [cmux](https://github.com/manaflow-ai/cmux) control API — one bun/TypeScript
 binary that spawns/splits tabs, drives the per-workspace todo checklist (a one-
 shot command group plus an interactive TUI), and finds orphaned surface
@@ -49,26 +49,26 @@ processes.
 
 ```sh
 export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/cmux-client
+brew install 21StarkCom/tap/hermod
 ```
 
-The token is required: this repo and the `cmux-client` releases are **private**,
-and the formula's `CmuxClientPrivateReleaseStrategy` fetches the release asset by
+The token is required: this repo and the `hermod` releases are **private**,
+and the formula's `HermodPrivateReleaseStrategy` fetches the release asset by
 its GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). Same ad-hoc signature story as `idun`: the
 release zip is a `bun build --compile` binary carrying bun's linker-signed
 **ad-hoc** signature — it runs under Homebrew (which strips the quarantine
 xattr) but is **not** Developer-ID notarized, so a raw unzip outside Homebrew
-hits Gatekeeper. `cmux-client` reaches its cmux app over the inherited
+hits Gatekeeper. `hermod` reaches its cmux app over the inherited
 `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or set the socket env
 yourself).
 
-## Maintenance — the cmux-client formula is bumped automatically
+## Maintenance — the hermod formula is bumped automatically
 
-`Formula/cmux-client.rb` pins the release's darwin zip **asset id + sha256**,
+`Formula/hermod.rb` pins the release's darwin zip **asset id + sha256**,
 both of which change every release. Do **not** hand-edit them. They are
-rewritten by `cmux-client`'s release tooling:
+rewritten by `hermod`'s release tooling:
 
 - `scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
   zips, and uploads the macOS zip onto the GitHub Release, then calls…
@@ -77,7 +77,7 @@ rewritten by `cmux-client`'s release tooling:
   PR here.
 
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
-from the `cmux-client` checkout (`--dry-run` to preview).
+from the `hermod` checkout (`--dry-run` to preview).
 
 ## frigg
 
