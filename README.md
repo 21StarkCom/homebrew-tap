@@ -260,3 +260,49 @@ hand-edited:
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from
 the `heimdall` checkout (`--dry-run` to preview). heimdall has no release-please —
 cut the tag + GitHub Release first, then run the release script.
+
+## plume
+
+The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — one
+`plume-<format>` driver per format (`plume-xlsx`, `plume-docx`, `plume-pdf`,
+`plume-pptx`), each a thin CLI over the format's library package (the library is
+the product; these binaries are the drivers).
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/plume
+```
+
+The token is required: this repo and the `plume` releases are **private**, and
+the formula's `PlumePrivateReleaseStrategy` fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon) — matching the rest of this tap. plume is
+`CGO_ENABLED=0` pure Go and its `release.yml` genuinely cross-compiles
+`{linux,darwin}/{amd64,arm64}`, so a non-Mac (or Intel Mac) can `make build` /
+`go install` straight from the `plume` repo; the formula pins the darwin/arm64
+tarball only. That build carries Go's linker **ad-hoc** signature (not Developer-ID
+notarized), so it runs under Homebrew (which strips the quarantine xattr) but a
+raw untar outside Homebrew hits Gatekeeper.
+
+## Maintenance — the plume formula is bumped automatically (by GitHub Actions)
+
+`Formula/plume.rb` pins the release's darwin/arm64 tarball **asset id + sha256**
+and **version**, all of which change every release. Do **not** hand-edit them.
+Unlike the local-Mac-script tools above, `plume` builds, publishes, and bumps
+entirely from a **GitHub Actions** workflow (`release.yml`) on a semver tag push,
+which cross-compiles the four-platform release, publishes it, then runs
+`plume/scripts/bump-tap.sh --push`, which:
+
+- reads the darwin/arm64 tarball's asset id + sha256 back from the published
+  GitHub Release, rewrites the three release-specific lines, and pushes the bump
+  straight to this tap's default branch — **no PR**, the same CI hands-off path
+  idun / alfred / tyr use.
+
+The bump job authenticates to this (separate) tap repo through the shared
+`HOMEBREW_TAP_TOKEN` secret on the `plume` repo (a fine-grained PAT with
+`contents:write` here — a direct push needs no Pull-requests scope); if that
+secret is unset the job self-skips and the formula must be bumped by hand. To
+open a review PR instead (or re-point at an existing release by hand), run
+`scripts/bump-tap.sh <version>` from the `plume` checkout (`--dry-run` to preview,
+default path opens a PR).
