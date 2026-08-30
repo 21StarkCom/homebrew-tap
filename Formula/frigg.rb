@@ -30,10 +30,10 @@ class Frigg < Formula
   # version / asset id / sha256 are release-specific and rewritten by the source
   # repo's bump tooling (frigg/scripts/bump-tap.sh) — do not hand-edit them. The
   # seed values below are placeholders until the first release's bump PR lands.
-  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/536486277",
+  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/536509948",
       using: FriggPrivateReleaseStrategy
-  version "0.16.1"
-  sha256 "e496edf82f4f3778b219cfa4d1d84604fc87f67d7b380c5bbb465e1a91f122e8"
+  version "0.17.0"
+  sha256 "3da3ae32e4f00dfaee1c6f0876e79d33bdf5af55b58daef76d570556a8240c98"
   depends_on arch: :arm64
   depends_on :macos
 
