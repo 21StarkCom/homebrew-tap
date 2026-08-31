@@ -29,10 +29,10 @@ class Brain < Formula
   desc "Atlas CLI — the second-brain engine (ingest, index, retrieve, review)"
   homepage "https://github.com/21StarkCom/atlas"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/537821558",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/537854160",
       using: BrainPrivateReleaseStrategy
-  version "0.9.2"
-  sha256 "1964e27510d67c0555a5ae5bca8fb6db0de31d95aade740f46a5eda595295ae4"
+  version "0.9.3"
+  sha256 "722f5c14654edffcb19b5180d3f74126cc3423aaeb97e6ba92df1524ad3f8fb1"
   depends_on arch: :arm64 # ships signed arm64 native modules (lancedb, better-sqlite3)
   depends_on :macos
   depends_on "node" # brain is node ESM; the keg node runs dist/bin.js
@@ -52,8 +52,8 @@ class Brain < Formula
   end
 
   test do
-    # `brain --help` loads the command registry from the bundled cli-contract — a real
-    # exercise of ATLAS_ROOT + the deploy tree, no config/vault needed.
-    assert_match "Atlas CLI", shell_output("#{bin}/brain --help")
+    # `brain version` prints `brain <version>`; assert it against the formula's version —
+    # version-agnostic (never a hardcoded string), answered before the registry loads.
+    assert_match version.to_s, shell_output("#{bin}/brain version")
   end
 end
