@@ -329,9 +329,11 @@ two used native modules, `better-sqlite3` and `@lancedb/lancedb-darwin-arm64`;
 LanceDB's optional ML embedding stack is pruned), and the runtime command
 registry at `docs/specs/cli-contract/`. The formula installs that tree into
 `libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so
-the registry always resolves. The natives are **Developer-ID signed** (not
-notarized — fine under Homebrew, which strips the quarantine xattr). Released
-from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
+the registry always resolves. The natives are **Developer-ID signed + notarized**
+(submission recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't
+be offline-**stapled**, so it's online-notarized — moot under Homebrew, which
+strips the quarantine xattr anyway. Released from `cli-v*` tags, parallel to the
+desktop app's `desktop-v*`.
 
 ## Maintenance — the brain formula is bumped automatically
 
