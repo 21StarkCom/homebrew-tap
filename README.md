@@ -346,3 +346,31 @@ cert:
   the published release and opens the bump PR here (`--dry-run` to preview,
   `--no-pr` to edit a local clone). Re-point at an existing release by running
   `bump-tap.sh cli-vX.Y.Z` on its own.
+
+## atlas (desktop app — cask)
+
+The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
+`21StarkCom/atlas` repo). A GUI `.app`, so it ships as a **cask**:
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install --cask 21StarkCom/tap/atlas
+```
+
+`Atlas.app` lands in `/Applications`. The bundle carries its own internal CLI
+closure (a standalone Node + `brain` bin it spawns for status checks), so — unlike
+`mimir` — the cask exposes **no `binary`**: `brain` is its own formula and must not
+be shadowed. **macOS 12+ arm64.** The build is Developer-ID **signed + notarized**
+(`spctl` reports "Notarized Developer ID"); `brew install --cask` strips the
+quarantine xattr, so Gatekeeper never gates it. Released from the source repo's
+`desktop-v*` tags (parallel to the CLI's `cli-v*`).
+
+## Maintenance — the atlas cask is bumped by local Mac scripts
+
+`Casks/atlas.rb` pins the release's **asset id + sha256** and **version**, all of
+which change every release. Do **not** hand-edit them. The desktop app is built,
+signed, and notarized on a Mac holding the cert via `atlas`'s
+`apps/desktop/scripts/{sign-app.mjs --notarize, release.mjs --publish}`, which
+publishes the notarized `Atlas-<version>.zip` onto a `desktop-v*` GitHub Release.
+Re-point the cask at a release by rewriting those three lines against the
+published asset.
