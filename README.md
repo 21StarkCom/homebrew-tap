@@ -306,3 +306,43 @@ secret is unset the job self-skips and the formula must be bumped by hand. To
 open a review PR instead (or re-point at an existing release by hand), run
 `scripts/bump-tap.sh <version>` from the `plume` checkout (`--dry-run` to preview,
 default path opens a PR).
+
+## brain
+
+The [`brain`](https://github.com/21StarkCom/atlas) CLI — the **Atlas** engine
+(`@atlas/cli`): ingest notes, build the retrieval index, query/answer over a
+vault, and run the review/housekeep surfaces.
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/brain
+```
+
+The token is required: this repo and the `atlas` releases are **private**, and
+the formula's `BrainPrivateReleaseStrategy` fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). Unlike the bun-compiled CLIs, `brain` is
+**node ESM** inside a pnpm monorepo, so the release zip is a **`pnpm deploy`
+tree** — `dist/`, a vendored `node_modules` (workspace `@atlas/*` deps plus the
+two used native modules, `better-sqlite3` and `@lancedb/lancedb-darwin-arm64`;
+LanceDB's optional ML embedding stack is pruned), and the runtime command
+registry at `docs/specs/cli-contract/`. The formula installs that tree into
+`libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so
+the registry always resolves. The natives are **Developer-ID signed** (not
+notarized — fine under Homebrew, which strips the quarantine xattr). Released
+from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
+
+## Maintenance — the brain formula is bumped automatically
+
+`Formula/brain.rb` pins the release's darwin/arm64 zip **asset id + sha256** and
+**version**, all of which change every release. Do **not** hand-edit them. They
+are rewritten by `atlas`'s release tooling, run on a Mac holding the signing
+cert:
+
+- `scripts/release-darwin.sh cli-vX.Y.Z` — `pnpm -r build`, `pnpm deploy`, prune,
+  Developer-ID sign, zip, upload onto the GitHub Release, then calls…
+- `scripts/bump-tap.sh cli-vX.Y.Z`, which reads the asset id + sha256 back from
+  the published release and opens the bump PR here (`--dry-run` to preview,
+  `--no-pr` to edit a local clone). Re-point at an existing release by running
+  `bump-tap.sh cli-vX.Y.Z` on its own.
