@@ -25,7 +25,7 @@ end
 # quarantine xattr on install, so Gatekeeper is not in the path. Built + published
 # by a GitLab CI/CD pipeline on gitlab.evinced.cloud (STARK-1193).
 class Frigg < Formula
-  desc "Google Workspace IT-ops toolkit: frigg TUI cockpit and gws-* CLIs"
+  desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-cockpit TUI, and gws-* CLIs"
   homepage "https://github.com/21StarkCom/frigg"
   # version / asset id / sha256 are release-specific and rewritten by the source
   # repo's bump tooling (frigg/scripts/bump-tap.sh) — do not hand-edit them. The
@@ -38,11 +38,12 @@ class Frigg < Formula
   depends_on :macos
 
   def install
-    bin.install "frigg", "gws-align-managers", "gws-build-all-group"
+    bin.install "frigg", "frigg-cockpit", "gws-align-managers", "gws-build-all-group"
   end
 
   test do
     assert_match version.to_s, shell_output("#{bin}/frigg --version")
+    assert_match version.to_s, shell_output("#{bin}/frigg-cockpit --version")
     assert_match version.to_s, shell_output("#{bin}/gws-align-managers --version")
     assert_match version.to_s, shell_output("#{bin}/gws-build-all-group --version")
   end
