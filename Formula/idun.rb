@@ -24,10 +24,10 @@ class Idun < Formula
   desc "Personal-ops maintenance CLI: GitHub identity swap, seat rotation, cleanup, housekeeping"
   homepage "https://github.com/21StarkCom/idun"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/543107921",
+  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/543155702",
       using: IdunPrivateReleaseStrategy
-  version "0.9.0"
-  sha256 "ff3c3d64422e85c00eecc426e25899edf3ff06c9f128f0c46fffd4266f121179"
+  version "0.10.0"
+  sha256 "ba1bb564a2789b1ccf9feb8ef666ed437d951768d5cf092f8fdeaceb176618a4"
   depends_on arch: :arm64
   depends_on :macos
 
