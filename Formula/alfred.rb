@@ -27,10 +27,10 @@ class Alfred < Formula
   desc "Manual-ticket CLI + always-on local daemon for the 21Stark work fleet"
   homepage "https://github.com/21StarkCom/alfred"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/544390141",
+  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/545550389",
       using: AlfredPrivateReleaseStrategy
-  version "0.15.0"
-  sha256 "d94aa288e960843122ec18e4c4f43a24b2fb0580a34478fda92aa110a95a8be9"
+  version "0.16.0"
+  sha256 "0c0599fa67ba96c2e45a10fe7ec9716028c5841af5b1b94f1a2f45f32caa48a0"
   depends_on arch: :arm64
   depends_on :macos
 
