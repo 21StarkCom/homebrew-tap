@@ -27,10 +27,10 @@ class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/555595881",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/555605604",
       using: SleipnirGitHubPrivateReleaseStrategy
-  version "0.5.0"
-  sha256 "db497e4513ad9aa874357056dff1989962b557bbd97556c76c0631b9172281ba"
+  version "0.5.1"
+  sha256 "4b85b83e84ed70aaced97bac9ce40ff53375925d27845c70c92c19098f304e62"
   depends_on arch: :arm64 # the shipped mac-helper is a signed arm64 Mach-O
   depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper
   depends_on "bun" # Bun runs the TypeScript directly; sleipnir has no build step
