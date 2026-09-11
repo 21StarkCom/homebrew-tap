@@ -25,10 +25,10 @@ class Hermod < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
   homepage "https://github.com/21StarkCom/hermod"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/552178639",
+  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/556879886",
       using: HermodPrivateReleaseStrategy
-  version "0.15.0"
-  sha256 "e7a8dc0dffae766ace08a713af316fbe91840386d39890e8859a1e5080fc587f"
+  version "0.15.1"
+  sha256 "707b3c1bf0c814f92a79b28e7751e01284c8aa6b42da87a6013493bc99dfa52d"
   depends_on arch: :arm64
   depends_on :macos
 
