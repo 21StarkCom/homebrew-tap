@@ -66,17 +66,21 @@ yourself).
 
 ## Maintenance — the hermod formula is bumped automatically
 
-`Formula/hermod.rb` pins the release's darwin zip **asset id + sha256**,
-both of which change every release. Do **not** hand-edit them. They are
-rewritten by `hermod`'s release tooling:
+`Formula/hermod.rb` pins the release's darwin zip **asset id + sha256** and the
+**version**, all of which change every release. Do **not** hand-edit them. They
+are rewritten by `hermod`'s release tooling, which lives under `ts/`:
 
-- `scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
+- `ts/scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
   zips, and uploads the macOS zip onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
-  the published release, rewrites the three release-specific lines, and opens a
-  PR here.
+- `ts/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
+  the published release and rewrites the three release-specific lines.
 
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
+Its auto-PR title is `chore: bump hermod to v<x>`, which carries no
+ticket and so fails this repo's `requireTicketScope` gate. Run
+`ts/scripts/bump-tap.sh <version> --no-pr --tap-dir <checkout>` instead, then open
+the generated change with `idun gh pr-open` under a `chore(STARK-<n>):` title.
+
+To re-point at an existing release by hand, run `ts/scripts/bump-tap.sh <version>`
 from the `hermod` checkout (`--dry-run` to preview).
 
 ## frigg

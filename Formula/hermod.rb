@@ -37,6 +37,6 @@ class Hermod < Formula
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/hermod version")
+    assert_equal "hermod v#{version}", shell_output("#{bin}/hermod version").strip
   end
 end
