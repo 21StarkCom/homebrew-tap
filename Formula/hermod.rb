@@ -25,10 +25,10 @@ class Hermod < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
   homepage "https://github.com/21StarkCom/hermod"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/567989729",
+  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/568479766",
       using: HermodPrivateReleaseStrategy
-  version "0.17.3"
-  sha256 "50d3ecbff7d711280c7f6dc02278231eb037800e62d5972d3c4ad63da41f5d2b"
+  version "0.17.4"
+  sha256 "ed4620d0f7afd82471105ea665ca3e2ac7edeb41df26ce50430de3912b8c4ea5"
   depends_on arch: :arm64
   depends_on :macos
 
@@ -37,6 +37,6 @@ class Hermod < Formula
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/hermod version")
+    assert_equal "hermod v#{version}", shell_output("#{bin}/hermod version").strip
   end
 end
