@@ -40,7 +40,7 @@ The tap is already registered locally, but the registration is a **separate git 
 
 Use `idun gh pr-open` and `idun gh pr-merge` for the PR gates. Every title must carry its ticket: `chore(STARK-<n>): bump <formula> to v<x>`. If a source bumper cannot produce that title, run its `--no-pr` mode in a dedicated checkout, then open the generated change with `idun`. Run native Codex xhigh review, fix findings, and rebase before squash-merging. The scanner may flag a formula's public 64-hex checksum as high-entropy; verify it against the downloaded release bytes before using `--allow-secret-commit` on `idun gh pr-open`. This repo's `.stark-gh.json` already provides the audited merge waivers `allowSecretCommit` and `allowSecretToLlm`; `idun gh pr-merge` reads them without extra flags.
 
-Hermod's bumper writes the formula before checking `--dry-run`. Use a disposable checkout for that preview, never a shared working tree. Its `--no-pr` mode deliberately leaves the generated formula available for review. Verify exactly one matching ZIP and checksum sidecar, and hash the downloaded ZIP yourself before trusting the formula pin.
+Hermod's bumper previews `--dry-run` changes without editing the checkout. Its `--no-pr` mode requires `--tap-dir` so the generated formula remains available for review. Verify exactly one matching ZIP and checksum sidecar, and hash the downloaded ZIP yourself before trusting the formula pin.
 
 ## Adding a formula (or cask)
 
