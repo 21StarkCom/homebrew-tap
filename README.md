@@ -70,26 +70,43 @@ yourself).
 **version**, all of which change every release. Do **not** hand-edit them. They
 are rewritten by `hermod`'s release tooling, which lives under `ts/`:
 
-- `ts/scripts/release-darwin.sh <version> --ticket STARK-<n>` (run on a Mac)
+- `ts/scripts/release-darwin.sh <version> [--ticket STARK-<n>]` (run on a Mac)
   builds, ad-hoc signs, zips, and uploads the macOS zip onto the GitHub Release,
   then calls…
-- `ts/scripts/bump-tap.sh <version> --ticket STARK-<n>`, which reads the asset
+- `ts/scripts/bump-tap.sh <version> [--ticket STARK-<n>]`, which reads the asset
   id + sha256 back from the published release, rewrites the three
   release-specific lines, and opens a PR here.
 
-Unlike the other bumpers, hermod's **requires** `--ticket STARK-<n>` to open a
-PR, and titles it `chore(STARK-<n>): bump hermod to v<x>` — the ticket-scoped
-shape this repo's `requireTicketScope` policy demands — so there is no hand
-step. `release-darwin.sh` forwards the same flag. Omit it and both scripts
-refuse before doing any work, rather than opening a PR that would squash onto
-`main` with an unscoped subject (STARK-5059) — `idun gh pr-merge` derives the
-required subject from the PR title and does not itself re-check the ticket
-policy, so nothing downstream would catch it. Only the modes that open nothing
-(`--dry-run`, `--no-pr`, `--no-tap`, `--no-upload`) run without a ticket.
+Unlike the other bumpers, hermod's can produce the ticket-scoped title itself:
+`--ticket STARK-<n>` titles the PR `chore(STARK-<n>): bump hermod to v<x>`, the
+shape this repo's `requireTicketScope` policy wants, with no hand step.
+`release-darwin.sh` forwards the same flag. The flag is **optional** — omit it
+and the PR is titled `chore: bump hermod to v<x>`, which squashes onto `main`
+with an unscoped subject. Nothing downstream catches that: the bumper opens its
+PR with plain `gh pr create`, so none of `idun gh pr-open`'s checks run on it —
+the ticket policy and the high-entropy checksum scan alike, so verify the formula
+diff, asset id and checksum by hand — and `idun gh pr-merge` only derives the
+required subject *prefix* from the PR title rather than re-checking the policy.
+
+So pass it on any bump you intend to merge. If you forget, **retitle the PR that
+is already open** instead of re-running the bumper — `idun gh pr-merge` reads the
+live title, so the retitle is the whole fix:
+
+```sh
+gh pr edit <n> -R 21StarkCom/homebrew-tap \
+  --title "chore(STARK-<n>): bump hermod to v<x>"
+```
+
+A re-run collides instead, with the branch and PR the first run left behind
+(hermod STARK-5069). A *malformed* ticket is refused by both scripts up front —
+before any network call, and before `release-darwin.sh` builds anything.
 
 To re-point at an existing release by hand, run
-`ts/scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `hermod` checkout
-(`--dry-run`, which needs no ticket, to preview).
+`ts/scripts/bump-tap.sh <version> [--ticket STARK-<n>]` from the `hermod`
+checkout (`--dry-run` to preview). Check first that `bump/hermod-<version>` is
+gone from this repo's remote: the bumper derives that branch name from the
+version alone, so a leftover one from an earlier run fails the push
+(hermod STARK-5069).
 
 ## frigg
 
