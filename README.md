@@ -77,19 +77,22 @@ are rewritten by `hermod`'s release tooling, which lives under `ts/`:
   id + sha256 back from the published release, rewrites the three
   release-specific lines, and opens a PR here.
 
-Unlike the other bumpers, hermod's **requires** `--ticket STARK-<n>` to open a
-PR, and titles it `chore(STARK-<n>): bump hermod to v<x>` — the ticket-scoped
-shape this repo's `requireTicketScope` policy demands — so there is no hand
-step. `release-darwin.sh` forwards the same flag. Omit it and both scripts
-refuse before doing any work, rather than opening a PR that would squash onto
-`main` with an unscoped subject (STARK-5059) — `idun gh pr-merge` derives the
-required subject from the PR title and does not itself re-check the ticket
-policy, so nothing downstream would catch it. Only the modes that open nothing
-(`--dry-run`, `--no-pr`, `--no-tap`, `--no-upload`) run without a ticket.
+Unlike the other bumpers, hermod's can produce the ticket-scoped title itself:
+`--ticket STARK-<n>` titles the PR `chore(STARK-<n>): bump hermod to v<x>`, the
+shape this repo's `requireTicketScope` policy wants, with no hand step.
+`release-darwin.sh` forwards the same flag. The flag is **optional** — omit it
+and the PR is titled `chore: bump hermod to v<x>`, which squashes onto `main`
+with an unscoped subject. Nothing downstream catches that: the bumper opens its
+PR with plain `gh pr create`, and `idun gh pr-merge` derives the required subject
+from the PR title rather than re-checking the ticket policy. So pass it on any
+bump you intend to merge, and note that re-running to add a forgotten scope
+collides with the branch and PR the first run left behind (hermod STARK-5069). A
+*malformed* ticket is still refused by both scripts before any network call or
+build.
 
 To re-point at an existing release by hand, run
 `ts/scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `hermod` checkout
-(`--dry-run`, which needs no ticket, to preview).
+(`--dry-run` to preview).
 
 ## frigg
 
