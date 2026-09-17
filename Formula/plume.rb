@@ -25,10 +25,10 @@ class Plume < Formula
   desc "Document toolkit CLIs: xlsx, docx, pdf and pptx read/write drivers"
   homepage "https://github.com/21StarkCom/plume"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/566080115",
+  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/570003937",
       using: PlumePrivateReleaseStrategy
-  version "0.4.0"
-  sha256 "d6ec38e18c1971d6da7ab0145efd204622d11fa6737b8c87adfebe53da637706"
+  version "0.5.0"
+  sha256 "349203b9839f5817187fe4fa52f0c8af85ae3a519c4605b5f81f03ef81a7027d"
   depends_on arch: :arm64
   depends_on :macos
 
