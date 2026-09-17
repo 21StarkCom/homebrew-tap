@@ -73,12 +73,14 @@ are rewritten by `hermod`'s release tooling, which lives under `ts/`:
 - `ts/scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
   zips, and uploads the macOS zip onto the GitHub Release, then calls…
 - `ts/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
-  the published release and rewrites the three release-specific lines.
+  the published release, rewrites the three release-specific lines, and opens a
+  PR here.
 
-Its auto-PR title is `chore: bump hermod to v<x>`, which carries no
-ticket and so fails this repo's `requireTicketScope` gate. Run
-`ts/scripts/bump-tap.sh <version> --no-pr --tap-dir <checkout>` instead, then open
-the generated change with `idun gh pr-open` under a `chore(STARK-<n>):` title.
+Unlike the other bumpers, hermod's **requires** `--ticket STARK-<n>` to open a
+PR, and titles it `chore(STARK-<n>): bump hermod to v<x>` — which clears this
+repo's `requireTicketScope` gate on its own, so there is no hand step.
+`release-darwin.sh` forwards the same flag. Omit it and the script refuses before
+doing any work, rather than opening a PR that cannot merge here (STARK-5059).
 
 To re-point at an existing release by hand, run `ts/scripts/bump-tap.sh <version>`
 from the `hermod` checkout (`--dry-run` to preview).
