@@ -70,20 +70,26 @@ yourself).
 **version**, all of which change every release. Do **not** hand-edit them. They
 are rewritten by `hermod`'s release tooling, which lives under `ts/`:
 
-- `ts/scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
-  zips, and uploads the macOS zip onto the GitHub Release, then calls…
-- `ts/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
-  the published release, rewrites the three release-specific lines, and opens a
-  PR here.
+- `ts/scripts/release-darwin.sh <version> --ticket STARK-<n>` (run on a Mac)
+  builds, ad-hoc signs, zips, and uploads the macOS zip onto the GitHub Release,
+  then calls…
+- `ts/scripts/bump-tap.sh <version> --ticket STARK-<n>`, which reads the asset
+  id + sha256 back from the published release, rewrites the three
+  release-specific lines, and opens a PR here.
 
 Unlike the other bumpers, hermod's **requires** `--ticket STARK-<n>` to open a
-PR, and titles it `chore(STARK-<n>): bump hermod to v<x>` — which clears this
-repo's `requireTicketScope` gate on its own, so there is no hand step.
-`release-darwin.sh` forwards the same flag. Omit it and the script refuses before
-doing any work, rather than opening a PR that cannot merge here (STARK-5059).
+PR, and titles it `chore(STARK-<n>): bump hermod to v<x>` — the ticket-scoped
+shape this repo's `requireTicketScope` policy demands — so there is no hand
+step. `release-darwin.sh` forwards the same flag. Omit it and both scripts
+refuse before doing any work, rather than opening a PR that would squash onto
+`main` with an unscoped subject (STARK-5059) — `idun gh pr-merge` derives the
+required subject from the PR title and does not itself re-check the ticket
+policy, so nothing downstream would catch it. Only the modes that open nothing
+(`--dry-run`, `--no-pr`, `--no-tap`, `--no-upload`) run without a ticket.
 
-To re-point at an existing release by hand, run `ts/scripts/bump-tap.sh <version>`
-from the `hermod` checkout (`--dry-run` to preview).
+To re-point at an existing release by hand, run
+`ts/scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `hermod` checkout
+(`--dry-run`, which needs no ticket, to preview).
 
 ## frigg
 
