@@ -89,24 +89,26 @@ diff, asset id and checksum by hand — and `idun gh pr-merge` only derives the
 required subject *prefix* from the PR title rather than re-checking the policy.
 
 So pass it on any bump you intend to merge. If you forget, **retitle the PR that
-is already open** instead of re-running the bumper — `idun gh pr-merge` reads the
-live title, so the retitle is the whole fix:
+is already open** — `idun gh pr-merge` reads the live title, so the retitle is
+the whole fix:
 
 ```sh
 gh pr edit <n> -R 21StarkCom/homebrew-tap \
   --title "chore(STARK-<n>): bump hermod to v<x>"
 ```
 
-A re-run collides instead, with the branch and PR the first run left behind
-(hermod STARK-5069). A *malformed* ticket is refused by both scripts up front —
-before any network call, and before `release-darwin.sh` builds anything.
+Re-running the bumper with `--ticket` fixes it too. Since hermod v0.18.1 a
+re-run reuses `bump/hermod-<version>`, fast-forwards the branch the first run
+pushed, and `gh pr edit`s the open PR's title and body rather than colliding
+with them (hermod STARK-5069). Bumper retries require a tap checkout with no tracked edits — the bumper
+refuses to open or update a PR otherwise. A *malformed* ticket is refused by both scripts up front — before
+any network call, and before `release-darwin.sh` builds anything.
 
 To re-point at an existing release by hand, run
 `ts/scripts/bump-tap.sh <version> [--ticket STARK-<n>]` from the `hermod`
-checkout (`--dry-run` to preview). Check first that `bump/hermod-<version>` is
-gone from this repo's remote: the bumper derives that branch name from the
-version alone, so a leftover one from an earlier run fails the push
-(hermod STARK-5069).
+checkout (`--dry-run` to preview). A leftover `bump/hermod-<version>` on this
+repo's remote is no longer a blocker: the bumper fetches that branch,
+fast-forwards onto it, and updates the PR already open against it in place.
 
 ## frigg
 
