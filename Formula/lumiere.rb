@@ -21,9 +21,10 @@ class LumierePrivateReleaseStrategy < CurlDownloadStrategy
 end
 
 # Signed (Developer ID) + notarized macOS build of the 21Stark visual-media
-# toolkit — 16 lumiere-* CLIs.
+# toolkit — the lumiere-* CLIs, plus the `lumiere` dispatcher that fronts them
+# in the releases that ship one.
 class Lumiere < Formula
-  desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons (16 tools)"
+  desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons"
   homepage "https://github.com/21StarkCom/lumiere"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/552933023",
@@ -34,7 +35,8 @@ class Lumiere < Formula
   depends_on :macos
 
   def install
-    bin.install Dir["lumiere-*"]
+    # The dispatcher ships as plain `lumiere`, which "lumiere-*" does not match.
+    bin.install Dir["lumiere", "lumiere-*"]
   end
 
   test do
