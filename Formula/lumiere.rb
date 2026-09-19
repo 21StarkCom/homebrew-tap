@@ -21,9 +21,10 @@ class LumierePrivateReleaseStrategy < CurlDownloadStrategy
 end
 
 # Signed (Developer ID) + notarized macOS build of the 21Stark visual-media
-# toolkit — the `lumiere` dispatcher plus 26 lumiere-* CLIs.
+# toolkit — the lumiere-* CLIs, plus the `lumiere` dispatcher that fronts them
+# in the releases that ship one.
 class Lumiere < Formula
-  desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons (26 tools)"
+  desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons"
   homepage "https://github.com/21StarkCom/lumiere"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/552933023",
