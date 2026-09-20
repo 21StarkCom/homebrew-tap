@@ -201,10 +201,10 @@ its GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). sleipnir drives system Chrome and a Swift
 AX/CGEvent helper, so there is no Linux build. sleipnir has **no build step** —
-Node 26 runs its TypeScript directly — so the release zip is the runnable tree
+Bun runs its TypeScript directly — so the release zip is the runnable tree
 (source + a vendored prod `node_modules`) plus the Developer-ID-signed + notarized
 Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp` /
-`sleipnir` over Homebrew's `node` (a formula dependency).
+`sleipnir` over Homebrew's `bun` (a formula dependency).
 
 ## Maintenance — the sleipnir formula is bumped automatically
 
