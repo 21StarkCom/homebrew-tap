@@ -32,8 +32,8 @@ class Sleipnir < Formula
   version "0.7.0"
   sha256 "50980cb2293705a1b6d431a31458786201b72b23fdde374334335a2a6fa4a4a8"
   depends_on arch: :arm64 # the shipped mac-helper is a signed arm64 Mach-O
-  depends_on "bun"
-  depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper # Bun runs the TypeScript directly; sleipnir has no build step
+  depends_on "bun" # Bun runs the TypeScript directly; sleipnir has no build step
+  depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper
 
   def install
     # The zip is the runnable tree (app.ts, bin/, packages/, vendored node_modules,
