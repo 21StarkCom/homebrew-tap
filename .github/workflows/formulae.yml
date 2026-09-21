@@ -35,19 +35,14 @@ jobs:
         run: brew style Formula Casks scripts
       - name: Missing and whitespace-only token diagnostics
         run: brew ruby scripts/verify-auth.rb
-      - name: Read-only release access
-        id: releases
-        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
-        with:
-          app-id: ${{ secrets.STARK_CLAUDE_APP_ID }}
-          private-key: ${{ secrets.STARK_CLAUDE_PRIVATE_KEY }}
-          owner: 21StarkCom
-          repositories: alfred,atlas,frigg,heimdall,hermod,idun,lumiere,plume,sleipnir,tyr
-          permission-contents: read
       - name: Audit, install, and test every formula
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ steps.releases.outputs.token }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
+          if [[ -z "$HOMEBREW_GITHUB_API_TOKEN" ]]; then
+            echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
+            exit 1
+          fi
           for path in Formula/*.rb; do
             name="${path##*/}"
             formula="21StarkCom/tap/${name%.rb}"
@@ -57,6 +52,6 @@ jobs:
           done
       - name: Verify authenticated preflight and partial resume
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ steps.releases.outputs.token }}
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
           HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check
         run: brew ruby scripts/verify-download.rb
