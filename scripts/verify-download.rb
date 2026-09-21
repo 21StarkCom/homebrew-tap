@@ -1,3 +1,4 @@
+# typed: strict
 # frozen_string_literal: true
 
 # Run with brew ruby in an isolated HOMEBREW_CACHE and a read-only release token.

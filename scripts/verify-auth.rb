@@ -1,3 +1,4 @@
+# typed: strict
 # frozen_string_literal: true
 
 # Real brew entry points, with synthetic credentials only. No request should
