@@ -1,23 +1,4 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# other formulae in this tap that ship the same pattern.
-class HermodPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private hermod tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Ad-hoc-signed macOS build of the hermod control-API CLI (renamed from
 # cmux-client, STARK-1758).
@@ -25,10 +6,17 @@ class Hermod < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
   homepage "https://github.com/21StarkCom/hermod"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/578670442",
-      using: HermodPrivateReleaseStrategy
+      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.21.0"
   sha256 "a269977bd9165b95344da4a4cf7bea53b036c5b692b6ea078a3cab3fb18fcf12"
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   depends_on arch: :arm64
   depends_on :macos
 

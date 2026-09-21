@@ -1,24 +1,4 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# the formulae/casks in this tap that ship the same pattern. Kept minimal — no
-# Homebrew-internal GitHub API helpers, which change between versions.
-class MimirPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", nil)
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private mimir tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Signed (Developer ID) + notarized + STAPLED macOS build of Mímir — a personal macOS
 # credential vault with a paired `mimir` CLI (ADR-0025) and a loopback MCP server for agents.
@@ -38,8 +18,15 @@ cask "mimir" do
   sha256 "a477d42f93f5f21a4bfbd3e5fb235930133c963e06487c3251cf1bfca0aa5a83"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/548026792",
-      using: MimirPrivateReleaseStrategy
+      header: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      url.to_s, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
   homepage "https://github.com/21StarkCom/mimir"

@@ -1,23 +1,4 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# other formulae in this tap that ship the same pattern.
-class BrainPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private brain (atlas) tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Developer-ID-signed macOS build of `brain`, the Atlas CLI (`21StarkCom/atlas`,
 # the `@atlas/cli` package). node ESM — no bun-compile; the zip ships a `pnpm deploy`
@@ -29,10 +10,17 @@ class Brain < Formula
   desc "Atlas CLI — the second-brain engine (ingest, index, retrieve, review)"
   homepage "https://github.com/21StarkCom/atlas"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/537854160",
-      using: BrainPrivateReleaseStrategy
+      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.9.3"
   sha256 "722f5c14654edffcb19b5180d3f74126cc3423aaeb97e6ba92df1524ad3f8fb1"
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   depends_on arch: :arm64 # ships signed arm64 native modules (lancedb, better-sqlite3)
   depends_on :macos
   depends_on "node" # brain is node ESM; the keg node runs dist/bin.js

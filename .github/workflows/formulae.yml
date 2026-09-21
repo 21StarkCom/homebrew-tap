@@ -1,0 +1,62 @@
+name: formulae
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formulae-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  homebrew:
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Register the PR checkout as the tap
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/21starkcom"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/21starkcom/homebrew-tap"
+      - name: Style
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
+        run: brew style Formula Casks scripts
+      - name: Missing and whitespace-only token diagnostics
+        run: brew ruby scripts/verify-auth.rb
+      - name: Read-only release access
+        id: releases
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: ${{ secrets.STARK_CLAUDE_APP_ID }}
+          private-key: ${{ secrets.STARK_CLAUDE_PRIVATE_KEY }}
+          owner: 21StarkCom
+          repositories: alfred,atlas,frigg,heimdall,hermod,idun,lumiere,plume,sleipnir,tyr
+          permission-contents: read
+      - name: Audit, install, and test every formula
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ steps.releases.outputs.token }}
+        run: |
+          for path in Formula/*.rb; do
+            name="${path##*/}"
+            formula="21StarkCom/tap/${name%.rb}"
+            brew audit --strict "$formula"
+            brew install "$formula"
+            brew test "$formula"
+          done
+      - name: Verify authenticated preflight and partial resume
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ steps.releases.outputs.token }}
+          HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check
+        run: brew ruby scripts/verify-download.rb

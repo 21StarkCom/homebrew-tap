@@ -1,23 +1,4 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# other formulae in this tap that ship the same pattern.
-class AlfredPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private alfred tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Signed (Developer ID) + notarized macOS build of alfred: the manual-ticket CLI
 # (alfred) plus its always-on local daemon (alfredd). After install, run
@@ -27,10 +8,17 @@ class Alfred < Formula
   desc "Manual-ticket CLI + always-on local daemon for the 21Stark work fleet"
   homepage "https://github.com/21StarkCom/alfred"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/578817345",
-      using: AlfredPrivateReleaseStrategy
+      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.28.1"
   sha256 "dd828a7f6f30cfcdf9f5dbb33b0e42285c858a4b13fa2a4eb6edc39263694f7a"
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   depends_on arch: :arm64
   depends_on :macos
 
