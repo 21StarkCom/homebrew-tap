@@ -1,23 +1,4 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# other formulae/casks in this tap that ship the same pattern.
-class FriggPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private frigg tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Ad-hoc-signed macOS build of the frigg 21Stark IT-ops CLIs for Google Workspace
 # (manager-edge alignment + the all@ group-of-groups). Like idun, the binaries are
@@ -30,10 +11,17 @@ class Frigg < Formula
   # version / asset id / sha256 are release-specific and rewritten by the source
   # repo's bump tooling (frigg/scripts/bump-tap.sh) — do not hand-edit them. The
   # seed values below are placeholders until the first release's bump PR lands.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/575194019",
-      using: FriggPrivateReleaseStrategy
+      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.29.1"
   sha256 "019279bd61f7c757f5a05cef01c85877a83cdde590dbce9997456ff9eb4aef1a"
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   depends_on arch: :arm64
   depends_on :macos
 

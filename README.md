@@ -14,7 +14,7 @@ brew install 21StarkCom/tap/idun
 ```
 
 The token is required: this repo and the `idun` releases are **private**, and
-the formula's `IdunPrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). The release zip is a `bun build --compile`
@@ -53,7 +53,7 @@ brew install 21StarkCom/tap/hermod
 ```
 
 The token is required: this repo and the `hermod` releases are **private**,
-and the formula's `HermodPrivateReleaseStrategy` fetches the release asset by
+and the entry's native Homebrew downloader fetches the release asset by
 its GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). Same ad-hoc signature story as `idun`: the
@@ -123,7 +123,7 @@ brew install 21StarkCom/tap/frigg
 ```
 
 The token is required: this repo and the `frigg` releases are **private**, and
-the formula's `FriggPrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). Like `idun`, the release zip is
@@ -162,7 +162,7 @@ brew install 21StarkCom/tap/lumiere
 ```
 
 The token is required: this repo and the `lumiere` releases are **private**, and
-the formula's `GitHubPrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only.** The bottle is a Developer-ID-signed + notarized
@@ -196,7 +196,7 @@ brew install 21StarkCom/tap/sleipnir
 ```
 
 The token is required: this repo and the `sleipnir` releases are **private**, and
-the formula's `SleipnirGitHubPrivateReleaseStrategy` fetches the release asset by
+the entry's native Homebrew downloader fetches the release asset by
 its GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). sleipnir drives system Chrome and a Swift
@@ -235,7 +235,7 @@ brew install --cask 21StarkCom/tap/mimir
 
 The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
 your `PATH`. The token is required: this repo and the `mimir` releases are **private**, and
-the cask's `MimirPrivateReleaseStrategy` fetches the release asset by its GitHub API URL with
+the entry's native Homebrew downloader fetches the release asset by its GitHub API URL with
 an `Authorization` header.
 
 **macOS 26 (Tahoe) arm64 only** (Apple Silicon). The release zip is the Developer-ID-signed,
@@ -271,7 +271,7 @@ brew install 21StarkCom/tap/heimdall
 ```
 
 The token is required: this repo and the `heimdall` releases are **private**, and
-the formula's `HeimdallPrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). The zip is the Developer-ID-signed +
@@ -307,7 +307,7 @@ brew install 21StarkCom/tap/plume
 ```
 
 The token is required: this repo and the `plume` releases are **private**, and
-the formula's `PlumePrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon) — matching the rest of this tap. plume is
@@ -352,7 +352,7 @@ brew install 21StarkCom/tap/brain
 ```
 
 The token is required: this repo and the `atlas` releases are **private**, and
-the formula's `BrainPrivateReleaseStrategy` fetches the release asset by its
+the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
 **macOS arm64 only** (Apple Silicon). Unlike the bun-compiled CLIs, `brain` is
@@ -409,3 +409,9 @@ signed, and notarized on a Mac holding the cert via `atlas`'s
 publishes the notarized `Atlas-<version>.zip` onto a `desktop-v*` GitHub Release.
 Re-point the cask at a release by rewriting those three lines against the
 published asset.
+
+## Download authentication and CI
+
+All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
+
+Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.

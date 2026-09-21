@@ -1,33 +1,21 @@
-require "download_strategy"
-
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# other formulae in this tap that ship the same pattern.
-class IdunPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV["HOMEBREW_GITHUB_API_TOKEN"]
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private idun tap."
-    end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
-  end
-end
+# frozen_string_literal: true
 
 # Ad-hoc-signed macOS build of the idun personal-ops maintenance CLI.
 class Idun < Formula
-  desc "Personal-ops maintenance CLI: GitHub identity swap, seat rotation, cleanup, housekeeping"
+  desc "Personal-ops CLI for GitHub identities, seat rotation, and housekeeping"
   homepage "https://github.com/21StarkCom/idun"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
+  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/idun/releases/assets/578860685",
-      using: IdunPrivateReleaseStrategy
+      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.74.3"
   sha256 "d13869efe24df8ff0bbe869c122f0acb8524dc132f384cb76203d87fc46016cd"
+  if token.empty?
+    raise CurlDownloadStrategyError.new(
+      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+    )
+  end
+
   depends_on arch: :arm64
   depends_on :macos
 

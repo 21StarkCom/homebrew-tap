@@ -1,22 +1,19 @@
+# frozen_string_literal: true
+
 require "download_strategy"
 
-# Fetches a private-repo GitHub Release asset by its API asset URL, adding the
-# HOMEBREW_GITHUB_API_TOKEN auth header. Uniquely named so it never collides with
-# the formulae/casks in this tap that ship the same pattern (Ruby classes share one
-# namespace across the tap). Kept minimal — no Homebrew-internal GitHub API helpers.
+# Cask URL specs are serialized by brew info and installed metadata. Keep the
+# credential in the downloader only; inherit all native preflight/cache/resume.
 class AtlasPrivateReleaseStrategy < CurlDownloadStrategy
-  def _fetch(url:, resolved_url:, timeout:)
-    token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", nil)
-    if token.to_s.empty?
-      raise CurlDownloadStrategyError,
-            "HOMEBREW_GITHUB_API_TOKEN is required for the private atlas tap."
+  def initialize(url, name, version, **meta)
+    super
+    token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+    if token.empty?
+      raise CurlDownloadStrategyError.new(
+        url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      )
     end
-
-    curl "--location",
-         "--header", "Accept: application/octet-stream",
-         "--header", "Authorization: token #{token}",
-         "--output", temporary_path.to_s,
-         url, timeout: timeout
+    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
   end
 end
 
