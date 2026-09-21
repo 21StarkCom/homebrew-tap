@@ -38,8 +38,18 @@ class Sleipnir < Formula
     end
   end
 
+  def caveats
+    <<~EOS
+      After `brew upgrade sleipnir` or `brew upgrade bun`, re-run `slp companion install`
+      and reload the Sleipnir Companion extension in each Chrome profile.
+    EOS
+  end
+
   test do
     # `slp ua` lists the UA profiles — no browser, no profile, no side effects.
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
+    # The MCP launcher answers `help` before it imports the server or opens stdio.
+    assert_match "Usage: sleipnir-mcp",
+                 shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/bin/sleipnir-mcp.mjs help")
   end
 end
