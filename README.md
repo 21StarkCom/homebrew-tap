@@ -412,6 +412,6 @@ published asset.
 
 ## Download authentication and CI
 
-All entries use native URL auth headers, including preflight metadata requests. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Because validation happens during evaluation, metadata commands for these private entries require the token too.
+All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
 Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. CI uses a short-lived read-only token from the existing organization GitHub App.

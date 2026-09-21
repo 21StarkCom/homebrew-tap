@@ -20,5 +20,11 @@ paths.each do |path|
     abort "#{name}: download URL missing from error" unless output.include?("Download failed: #{asset_url}")
     abort "#{name}: token guidance missing" unless output.include?("HOMEBREW_GITHUB_API_TOKEN is required")
   end
+  output, status = Open3.capture2e(
+    { "HOMEBREW_GITHUB_API_TOKEN" => "metadata-leak-sentinel", "HOMEBREW_NO_AUTO_UPDATE" => "1" },
+    HOMEBREW_BREW_FILE.to_s, "info", "--json=v2", kind, name
+  )
+  abort "#{name}: metadata command failed" unless status.success?
+  abort "#{name}: metadata exposes the token" if output.include?("metadata-leak-sentinel")
 end
-puts "#{paths.length} entries: missing and whitespace-only tokens reject with the asset URL and guidance"
+puts "#{paths.length} entries: missing/blank tokens reject with URL and guidance; JSON metadata omits credentials"

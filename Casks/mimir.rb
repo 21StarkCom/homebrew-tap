@@ -1,5 +1,22 @@
 # frozen_string_literal: true
 
+require "download_strategy"
+
+# Cask URL specs are serialized by brew info and installed metadata. Keep the
+# credential in the downloader only; inherit all native preflight/cache/resume.
+class MimirPrivateReleaseStrategy < CurlDownloadStrategy
+  def initialize(url, name, version, **meta)
+    super
+    token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+    if token.empty?
+      raise CurlDownloadStrategyError.new(
+        url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      )
+    end
+    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  end
+end
+
 # Signed (Developer ID) + notarized + STAPLED macOS build of Mímir — a personal macOS
 # credential vault with a paired `mimir` CLI (ADR-0025) and a loopback MCP server for agents.
 # A GUI app, so it ships as a cask: the .app lands in /Applications and the nested CLI is
@@ -18,15 +35,8 @@ cask "mimir" do
   sha256 "a477d42f93f5f21a4bfbd3e5fb235930133c963e06487c3251cf1bfca0aa5a83"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/548026792",
-      header: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  if token.empty?
-    raise CurlDownloadStrategyError.new(
-      url.to_s, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
-    )
-  end
-
+      using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
   homepage "https://github.com/21StarkCom/mimir"
