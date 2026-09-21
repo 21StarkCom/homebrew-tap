@@ -9,10 +9,10 @@ class Sleipnir < Formula
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/579262061",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/579405210",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.9.0"
-  sha256 "2a97d4f3f93b7839287713903bcf0be88e398243f1c8f013692eb367795a5050"
+  version "0.9.1"
+  sha256 "774561a76bb3bcc5cc0e386e3d33c43f1cc0807d642437672fb61fb8b1422fc3"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
