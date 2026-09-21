@@ -46,6 +46,7 @@ class Sleipnir < Formula
   end
 
   test do
+    assert_equal version.to_s, JSON.parse((libexec/"package.json").read)["version"]
     # `slp ua` lists the UA profiles — no browser, no profile, no side effects.
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
     # The MCP launcher answers `help` before it imports the server or opens stdio.
