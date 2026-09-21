@@ -9,10 +9,10 @@ class Sleipnir < Formula
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/576465177",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/579092589",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.7.0"
-  sha256 "50980cb2293705a1b6d431a31458786201b72b23fdde374334335a2a6fa4a4a8"
+  version "0.8.0"
+  sha256 "40a55c8dd19a2ee42933d969cd72b498ff0f0008260cd3c4139d56532371b37f"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -38,8 +38,18 @@ class Sleipnir < Formula
     end
   end
 
+  def caveats
+    <<~EOS
+      After `brew upgrade sleipnir` or `brew upgrade bun`, re-run `slp companion install`
+      and reload the Sleipnir Companion extension in each Chrome profile.
+    EOS
+  end
+
   test do
     # `slp ua` lists the UA profiles — no browser, no profile, no side effects.
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
+    # The MCP launcher answers `help` before it imports the server or opens stdio.
+    assert_match "Usage: sleipnir-mcp",
+                 shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/bin/sleipnir-mcp.mjs help")
   end
 end
