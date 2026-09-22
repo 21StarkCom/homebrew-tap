@@ -29,9 +29,11 @@ class Lucius < Formula
     # and the SDK resolves its `claude` binary from node_modules, so the layout
     # must be kept intact: install the whole tree into libexec and wrap the entry.
     libexec.install Dir["*"]
+    # Keep the caller's working directory out of the runtime: by default Bun
+    # loads its .env into process.env and runs its bunfig.toml preloads in-process.
     (bin/"lucius").write <<~SH
       #!/bin/bash
-      exec "#{formula_opt_bin("bun")}/bun" "#{libexec}/bin/lucius.ts" "$@"
+      exec "#{formula_opt_bin("bun")}/bun" --no-env-file --config=/dev/null "#{libexec}/bin/lucius.ts" "$@"
     SH
     (bin/"lucius").chmod 0755
   end
@@ -49,5 +51,12 @@ class Lucius < Formula
       console.log("runtime ok")
     TS
     assert_equal "runtime ok", shell_output("#{formula_opt_bin("bun")}/bun #{testpath}/runtime.ts").strip
+    # Every session starts the SDK's vendored `claude`; it must survive the install runnable.
+    assert_match "(Claude Code)",
+                 shell_output("#{libexec}/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude --version")
+    # A bunfig.toml preload in the working directory must not run inside lucius.
+    (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
+    (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
+    assert_equal version.to_s, shell_output("#{bin}/lucius --version").strip
   end
 end

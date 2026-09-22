@@ -244,14 +244,15 @@ dependency). The tree's one Mach-O is the Agent SDK's own `claude` binary,
 signed by Anthropic; `src/vault/publication.c` ships beside its loader because
 `bun:ffi` compiles it at runtime.
 
-## Maintenance — the lucius formula is bumped by local Mac scripts
+## Maintenance — the lucius formula is bumped by the source repo
 
 `Formula/lucius.rb` pins the release's darwin zip **asset id + sha256** and
 **version**, all of which change every release. Do **not** hand-edit them. They
-are rewritten by `lucius`'s release tooling (STARK-8629): `scripts/release-darwin.sh
-<version>` assembles and uploads the zip, then `scripts/bump-tap.sh <version>` reads
-the asset id + sha256 back from the published release and opens the bump PR here
-(`--dry-run` to preview, `--no-pr` to edit a local clone).
+are written by `lucius`'s own release tooling, which is still to be built
+(STARK-8629); document its commands here once it ships.
+
+The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
+directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
 
 ## mimir
 
