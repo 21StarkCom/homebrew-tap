@@ -222,6 +222,37 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
 from the `sleipnir` checkout (`--dry-run` to preview).
 
+## lucius
+
+The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
+partner on the Claude Agent SDK that recalls from `brain` and keeps its own vault.
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/lucius
+```
+
+The token is required: this repo and the `lucius` releases are **private**, and
+the entry's native Homebrew downloader fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). Same shape as `sleipnir`: Bun runs the
+TypeScript directly, so the release zip is the runnable tree (`bin/`, `src/`,
+`package.json`, `bun.lock`) plus a vendored prod `node_modules`. The formula
+installs it into `libexec` and wraps `lucius` over Homebrew's `bun` (a formula
+dependency). The tree's one Mach-O is the Agent SDK's own `claude` binary,
+signed by Anthropic; `src/vault/publication.c` ships beside its loader because
+`bun:ffi` compiles it at runtime.
+
+## Maintenance — the lucius formula is bumped by local Mac scripts
+
+`Formula/lucius.rb` pins the release's darwin zip **asset id + sha256** and
+**version**, all of which change every release. Do **not** hand-edit them. They
+are rewritten by `lucius`'s release tooling (STARK-8629): `scripts/release-darwin.sh
+<version>` assembles and uploads the zip, then `scripts/bump-tap.sh <version>` reads
+the asset id + sha256 back from the published release and opens the bump PR here
+(`--dry-run` to preview, `--no-pr` to edit a local clone).
+
 ## mimir
 
 [`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
