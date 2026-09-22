@@ -240,7 +240,8 @@ GitHub API URL with an `Authorization` header.
 TypeScript directly, so the release zip is the runnable tree (`bin/`, `src/`,
 `package.json`, `bun.lock`) plus a vendored prod `node_modules`. The formula
 installs it into `libexec` and wraps `lucius` over Homebrew's `bun` (a formula
-dependency). The tree's one Mach-O is the Agent SDK's own `claude` binary,
+dependency), which must be **1.4.2 or newer** — lucius refuses to start on an
+older one, so `brew upgrade bun` if you are behind. The tree's one Mach-O is the Agent SDK's own `claude` binary,
 signed by Anthropic; `src/vault/publication.c` ships beside its loader because
 `bun:ffi` compiles it at runtime.
 

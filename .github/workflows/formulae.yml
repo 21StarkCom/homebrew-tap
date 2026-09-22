@@ -29,6 +29,12 @@ jobs:
         run: |
           mkdir -p "$(brew --repository)/Library/Taps/21starkcom"
           ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/21starkcom/homebrew-tap"
+      - name: Update Homebrew
+        # The runner image's core snapshot can be behind, and HOMEBREW_NO_AUTO_UPDATE
+        # keeps it there. `lucius` needs bun >= 1.4.2; the stale snapshot poured 1.4.0
+        # and its `test do` refused to run (STARK-8070).
+        run: brew update
+
       - name: Style
         env:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
