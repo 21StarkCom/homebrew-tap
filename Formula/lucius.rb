@@ -9,10 +9,10 @@ class Lucius < Formula
   homepage "https://github.com/21StarkCom/lucius"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/581221600",
+  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/582062887",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.1.0"
-  sha256 "f1d395e72e7af562e719b45bdfb2e5d95e49cf27c83fecdabcbe54047fc3a252"
+  version "0.2.0"
+  sha256 "f76bde694281c787c97e765205d3a600547e445cdd5c47a68d2d7d620e8da681"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -41,6 +41,18 @@ class Lucius < Formula
   test do
     assert_equal version.to_s, shell_output("#{bin}/lucius --version").strip
     assert_match "Usage: lucius", shell_output("#{bin}/lucius --help")
+    # The installed one-shot interface must emit parseable versioned JSON,
+    # including its alias, without needing config, credentials or a model call.
+    result = JSON.parse(shell_output("#{bin}/lucius --json --version"))
+    assert_equal 1, result.fetch("schemaVersion")
+    assert_equal "completed", result.fetch("status")
+    assert_equal version.to_s, result.fetch("version")
+    assert_equal version.to_s, result.fetch("reply")
+    help = JSON.parse(shell_output("#{bin}/lucius --porcelain --help"))
+    assert_equal 1, help.fetch("schemaVersion")
+    assert_equal "completed", help.fetch("status")
+    assert_equal version.to_s, help.fetch("version")
+    assert_match "Usage: lucius", help.fetch("reply")
     # Session startup's own gates, with no session: the Bun floor and the pinned
     # SDK (assertRuntime), and the C shim compiling from the installed tree.
     (testpath/"runtime.ts").write <<~TS
