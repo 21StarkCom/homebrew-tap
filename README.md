@@ -153,8 +153,7 @@ from the `frigg` checkout (`--dry-run` to preview).
 
 The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
 the `lumiere-*` tools (image gen/edit, SVG suite, video, brand icons, …), fronted
-by a `lumiere` dispatcher (`lumiere <tool> [args]`, `lumiere --help` for the list)
-in the releases that ship one.
+by a `lumiere` dispatcher (`lumiere <tool> [args]`, `lumiere --help` for the list).
 
 ```sh
 export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
