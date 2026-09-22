@@ -49,6 +49,9 @@ class Lucius < Formula
     assert_equal version.to_s, result.fetch("version")
     assert_equal version.to_s, result.fetch("reply")
     help = JSON.parse(shell_output("#{bin}/lucius --porcelain --help"))
+    assert_equal 1, help.fetch("schemaVersion")
+    assert_equal "completed", help.fetch("status")
+    assert_equal version.to_s, help.fetch("version")
     assert_match "Usage: lucius", help.fetch("reply")
     # Session startup's own gates, with no session: the Bun floor and the pinned
     # SDK (assertRuntime), and the C shim compiling from the installed tree.
