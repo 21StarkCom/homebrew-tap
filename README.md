@@ -241,9 +241,11 @@ TypeScript directly, so the release zip is the runnable tree (`bin/`, `src/`,
 `package.json`, `bun.lock`) plus a vendored prod `node_modules`. The formula
 installs it into `libexec` and wraps `lucius` over Homebrew's `bun` (a formula
 dependency), which must be **1.4.2 or newer** — lucius refuses to start on an
-older one, so `brew upgrade bun` if you are behind. The tree's one Mach-O is the Agent SDK's own `claude` binary,
-signed by Anthropic; `src/vault/publication.c` ships beside its loader because
-`bun:ffi` compiles it at runtime.
+older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that
+floor on a formula dependency, so `brew install` succeeds and the refusal only
+shows on the first run. The tree's one Mach-O is the Agent SDK's own `claude`
+binary, signed by Anthropic; `src/vault/publication.c` ships beside its loader
+because `bun:ffi` compiles it at runtime.
 
 ## Maintenance — the lucius formula is bumped by local Mac scripts
 
@@ -252,12 +254,14 @@ signed by Anthropic; `src/vault/publication.c` ships beside its loader because
 are rewritten by `lucius`'s release tooling (STARK-8629), run from a clean
 checkout of the pushed tag:
 
-- `scripts/release-darwin.sh <version> --ticket STARK-<n>` stages the tree from
-  `git archive` of the tagged commit, vendors the prod `node_modules`, refuses any
-  Mach-O but the SDK's Anthropic-signed `claude` (it adds no signing of its own),
-  zips it with a `.sha256` sidecar, uploads both onto the GitHub Release, then
-  calls…
-- `scripts/bump-tap.sh <version> --ticket STARK-<n>`, which reads the asset id +
+Both take the tag, `vX.Y.Z` — the leading `v` is required, unlike sleipnir's.
+
+- `scripts/release-darwin.sh v<x.y.z> --ticket STARK-<n>` stages the tree from
+  `git archive` of the tagged commit, vendors the prod `node_modules`, zips it
+  with a `.sha256` sidecar, then scans the packaged zip and refuses any Mach-O
+  but the SDK's Anthropic-signed `claude` (it adds no signing of its own) before
+  uploading both onto the GitHub Release, then calls…
+- `scripts/bump-tap.sh v<x.y.z> --ticket STARK-<n>`, which reads the asset id +
   sha256 back from the published release (pinning the sha only when the sidecar,
   the asset's size and GitHub's digest agree), rewrites the three
   release-specific lines, and opens a PR here.
@@ -265,10 +269,10 @@ checkout of the pushed tag:
 Like hermod's, the bumper takes an optional `--ticket` that titles its PR
 `chore(STARK-<n>): bump lucius to v<x>`, the shape this repo's
 `requireTicketScope` wants; without it the title is the unscoped `chore:` form.
-A retry reuses the version's branch and open PR. To re-point at an existing
-release, run `scripts/bump-tap.sh <version>` from the `lucius` checkout
-(`--dry-run` to preview, `--no-pr --tap-dir <dir>` to edit a checkout without
-committing).
+A retry reuses the version's branch and open PR, and refuses a tap checkout that
+carries tracked edits. To re-point at an existing release, run
+`scripts/bump-tap.sh v<x.y.z>` from the `lucius` checkout (`--dry-run` to
+preview, `--no-pr --tap-dir <dir>` to edit a checkout without committing).
 
 The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
 directory can't inject a `.env` or a `bunfig.toml` preload into lucius.

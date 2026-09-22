@@ -50,7 +50,11 @@ class Lucius < Formula
       assertPublicationSupport()
       console.log("runtime ok")
     TS
-    assert_equal "runtime ok", shell_output("#{formula_opt_bin("bun")}/bun #{testpath}/runtime.ts").strip
+    # Same isolation flags as the wrapper, so this gate cannot be swayed by a
+    # stray .env or bunfig.toml in testpath (one is seeded below).
+    assert_equal "runtime ok", shell_output(
+      "#{formula_opt_bin("bun")}/bun --no-env-file --config=/dev/null #{testpath}/runtime.ts",
+    ).strip
     # Every session starts the SDK's vendored `claude`; it must survive the install runnable.
     assert_match "(Claude Code)",
                  shell_output("#{libexec}/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude --version")
