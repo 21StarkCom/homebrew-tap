@@ -1,8 +1,7 @@
 # frozen_string_literal: true
 
 # Signed (Developer ID) + notarized macOS build of the 21Stark visual-media
-# toolkit — the lumiere-* CLIs, plus the `lumiere` dispatcher that fronts them
-# in the releases that ship one.
+# toolkit — the lumiere-* CLIs, plus the `lumiere` dispatcher that fronts them.
 class Lumiere < Formula
   desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons"
   homepage "https://github.com/21StarkCom/lumiere"
@@ -28,5 +27,8 @@ class Lumiere < Formula
 
   test do
     assert_match version.to_s, shell_output("#{bin}/lumiere-svg -version")
+    assert_match version.to_s, shell_output("#{bin}/lumiere --version")
+    # The dispatcher execs `lumiere-<tool>` from beside itself in the keg.
+    assert_match(/\Alumiere-svg v?#{Regexp.escape(version.to_s)}$/, shell_output("#{bin}/lumiere svg -version"))
   end
 end
