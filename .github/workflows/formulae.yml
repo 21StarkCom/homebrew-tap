@@ -25,6 +25,16 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Update Homebrew
+        # The runner image's core snapshot can be behind, and HOMEBREW_NO_AUTO_UPDATE
+        # keeps it there. `lucius` needs bun >= 1.4.2; the stale snapshot poured 1.4.0
+        # and its `test do` refused to run (STARK-8070). This must run BEFORE the tap
+        # is registered below: `brew update` git-fetches every registered tap, and the
+        # symlinked PR checkout points at a private repo with no credentials
+        # (persist-credentials: false), so that fetch fails the whole step even though
+        # homebrew/core updated. Don't "fix" it by persisting the checkout token.
+        # HOMEBREW_NO_AUTO_UPDATE keeps the later steps from re-triggering the fetch.
+        run: brew update
       - name: Register the PR checkout as the tap
         run: |
           mkdir -p "$(brew --repository)/Library/Taps/21starkcom"

@@ -222,6 +222,61 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
 from the `sleipnir` checkout (`--dry-run` to preview).
 
+## lucius
+
+The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
+partner on the Claude Agent SDK that recalls from `brain` and keeps its own vault.
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install 21StarkCom/tap/lucius
+```
+
+The token is required: this repo and the `lucius` releases are **private**, and
+the entry's native Homebrew downloader fetches the release asset by its
+GitHub API URL with an `Authorization` header.
+
+**macOS arm64 only** (Apple Silicon). Same shape as `sleipnir`: Bun runs the
+TypeScript directly, so the release zip is the runnable tree (`bin/`, `src/`,
+`package.json`, `bun.lock`) plus a vendored prod `node_modules`. The formula
+installs it into `libexec` and wraps `lucius` over Homebrew's `bun` (a formula
+dependency), which must be **1.4.2 or newer** — lucius refuses to start on an
+older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that
+floor on a formula dependency, so `brew install` succeeds and the refusal only
+shows on the first run. The tree's one Mach-O is the Agent SDK's own `claude`
+binary, signed by Anthropic; `src/vault/publication.c` ships beside its loader
+because `bun:ffi` compiles it at runtime.
+
+## Maintenance — the lucius formula is bumped by local Mac scripts
+
+`Formula/lucius.rb` pins the release's darwin zip **asset id + sha256** and
+**version**, all of which change every release. Do **not** hand-edit them. They
+are rewritten by `lucius`'s release tooling (STARK-8629), run from a clean
+checkout of the pushed tag:
+
+Both take the tag, `vX.Y.Z` — the leading `v` is required, unlike sleipnir's.
+
+- `scripts/release-darwin.sh v<x.y.z> --ticket STARK-<n>` stages the tree from
+  `git archive` of the tagged commit, vendors the prod `node_modules`, zips it
+  with a `.sha256` sidecar, then scans the packaged zip and refuses any Mach-O
+  but the SDK's Anthropic-signed `claude` (it adds no signing of its own) before
+  uploading both onto the GitHub Release, then calls…
+- `scripts/bump-tap.sh v<x.y.z> --ticket STARK-<n>`, which reads the asset id +
+  sha256 back from the published release (pinning the sha only when the sidecar,
+  the asset's size and GitHub's digest agree), rewrites the three
+  release-specific lines, and opens a PR here.
+
+Like hermod's, the bumper takes an optional `--ticket` that titles its PR
+`chore(STARK-<n>): bump lucius to v<x>`, the shape this repo's
+`requireTicketScope` wants; without it the title is the unscoped `chore:` form.
+A retry reuses the version's branch and open PR, and refuses a tap checkout that
+carries tracked edits. To re-point at an existing release, run
+`scripts/bump-tap.sh v<x.y.z>` from the `lucius` checkout (`--dry-run` to
+preview, `--no-pr --tap-dir <dir>` to edit a checkout without committing).
+
+The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
+directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
+
 ## mimir
 
 [`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
