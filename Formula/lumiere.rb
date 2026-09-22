@@ -8,10 +8,10 @@ class Lumiere < Formula
   homepage "https://github.com/21StarkCom/lumiere"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/552933023",
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/582082677",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.2.1"
-  sha256 "0bb732c60cbdea0d7beeccd86303460d52bda82ede85a43d3027fd2d8e7e0bd3"
+  version "0.4.0"
+  sha256 "4666e463b56f816ba9d1723bbda4271765bd4b475a902ac856ea18b49839c97e"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
