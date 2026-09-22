@@ -12,10 +12,10 @@ class Frigg < Formula
   # repo's bump tooling (frigg/scripts/bump-tap.sh) — do not hand-edit them. The
   # seed values below are placeholders until the first release's bump PR lands.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/579269187",
+  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/581129720",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.30.0"
-  sha256 "219533236965e1ef240b99680e5f5d555ba167fac3d4b07b714ea40dcba094e9"
+  version "0.30.1"
+  sha256 "b20f72deef9edcce3d50e0a8631cfd1dacb31dc969e07f55f4819909c2837e00"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
