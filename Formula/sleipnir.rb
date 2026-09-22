@@ -42,6 +42,9 @@ class Sleipnir < Formula
     <<~EOS
       After `brew upgrade sleipnir` or `brew upgrade bun`, re-run `slp companion install`
       and reload the Sleipnir Companion extension in each Chrome profile.
+
+      The Companion Authenticator tab additionally needs Mimir 0.27.0 or newer
+      (`brew upgrade --cask 21StarkCom/tap/mimir`) plus a per-installation grant.
     EOS
   end
 
