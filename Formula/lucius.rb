@@ -9,10 +9,10 @@ class Lucius < Formula
   homepage "https://github.com/21StarkCom/lucius"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/584228659",
+  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/584590818",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.3.0"
-  sha256 "aa94259f04a0ec12b804307b11d98aedc871e95174543944fa5318d3ac776b0e"
+  version "0.4.0"
+  sha256 "439be2fa3945fb1898d9b7aaafd3bc467b752c436c2cbb33c26e31923711b825"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
