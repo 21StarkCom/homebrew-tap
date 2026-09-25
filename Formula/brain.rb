@@ -11,10 +11,10 @@ class Brain < Formula
   homepage "https://github.com/21StarkCom/atlas"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/537854160",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/588794656",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.9.3"
-  sha256 "722f5c14654edffcb19b5180d3f74126cc3423aaeb97e6ba92df1524ad3f8fb1"
+  version "0.10.2"
+  sha256 "f1f7680724f87dec391b984b89513be2b1df2f289f808aa08a4ca2216e2f3d94"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
