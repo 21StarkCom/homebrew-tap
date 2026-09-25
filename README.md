@@ -77,7 +77,8 @@ are rewritten by `hermod`'s release tooling, which lives under `ts/`:
   id + sha256 back from the published release, rewrites the three
   release-specific lines, and opens a PR here.
 
-Unlike the other bumpers, hermod's can produce the ticket-scoped title itself:
+Like lucius's and brain's, and unlike the other bumpers, hermod's can produce
+the ticket-scoped title itself:
 `--ticket STARK-<n>` titles the PR `chore(STARK-<n>): bump hermod to v<x>`, the
 shape this repo's `requireTicketScope` policy wants, with no hand step.
 `release-darwin.sh` forwards the same flag. The flag is **optional** — omit it
@@ -429,12 +430,37 @@ desktop app's `desktop-v*`.
 are rewritten by `atlas`'s release tooling, run on a Mac holding the signing
 cert:
 
-- `scripts/release-darwin.sh cli-vX.Y.Z` — `pnpm -r build`, `pnpm deploy`, prune,
-  Developer-ID sign, zip, upload onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh cli-vX.Y.Z`, which reads the asset id + sha256 back from
-  the published release and opens the bump PR here (`--dry-run` to preview,
-  `--no-pr` to edit a local clone). Re-point at an existing release by running
-  `bump-tap.sh cli-vX.Y.Z` on its own.
+- `scripts/release-darwin.sh cli-vX.Y.Z [--ticket STARK-<n>]` — `pnpm -r build`,
+  `pnpm deploy`, prune, bundle the command registry, Developer-ID sign, zip,
+  notarize (it refuses to upload an un-notarized zip unless `--skip-notarize`),
+  upload onto the GitHub Release, then calls…
+- `scripts/bump-tap.sh cli-vX.Y.Z [--ticket STARK-<n>]`, which reads the asset
+  id + sha256 back from the published release and opens the bump PR here
+  (`--dry-run` to preview, `--no-pr --tap-dir <dir>` to edit a checkout without
+  committing). Re-point at an existing release by running
+  `bump-tap.sh cli-vX.Y.Z [--ticket STARK-<n>]` on its own.
+
+Pass `--ticket` (`release-darwin.sh` forwards it): it titles the PR
+`chore(STARK-<n>): bump brain to cli-vX.Y.Z` — the shape `requireTicketScope`
+wants — and scopes the commit the same way, plus its `(asset <id>)` suffix. A
+*malformed* ticket is refused up front, before any network call and before
+`release-darwin.sh` builds anything. A re-run for the same version reuses
+`bump/brain-X.Y.Z` (the bare version, no `cli-v`): it fetches the branch the
+first run pushed and fast-forwards it. With that PR still open, the re-run
+`gh pr edit`s its body, and its title only with `--ticket`, instead of failing
+on the push, so a hand retitle survives an unscoped re-run. With no PR open, it
+merges `main` into the branch and opens a new PR, or, when `main` already
+carries the release, opens nothing and exits 0 (atlas STARK-9579), so a
+forgotten `--ticket` can no longer be added once the PR has merged. It needs a
+tap checkout with no tracked edits. Like hermod's, the bumper opens its PR with
+plain `gh pr create`, so verify the formula diff, asset id and checksum by hand.
+
+Two traps hermod's and lucius's bumpers don't have. `--dry-run --tap-dir <dir>`
+rewrites that checkout's formula in place (atlas STARK-8193), so a real run
+against the same checkout refuses the tracked edit until you restore the file;
+preview without `--tap-dir`, in the bumper's own temporary clone. And `--no-pr`
+without `--tap-dir` edits a temporary clone that is deleted on exit, so the
+edit is lost.
 
 ## atlas (desktop app — cask)
 
