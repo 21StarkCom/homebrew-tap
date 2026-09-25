@@ -77,7 +77,8 @@ are rewritten by `hermod`'s release tooling, which lives under `ts/`:
   id + sha256 back from the published release, rewrites the three
   release-specific lines, and opens a PR here.
 
-Unlike the other bumpers, hermod's can produce the ticket-scoped title itself:
+Like lucius's and brain's, and unlike the other bumpers, hermod's can produce
+the ticket-scoped title itself:
 `--ticket STARK-<n>` titles the PR `chore(STARK-<n>): bump hermod to v<x>`, the
 shape this repo's `requireTicketScope` policy wants, with no hand step.
 `release-darwin.sh` forwards the same flag. The flag is **optional** — omit it
@@ -429,12 +430,23 @@ desktop app's `desktop-v*`.
 are rewritten by `atlas`'s release tooling, run on a Mac holding the signing
 cert:
 
-- `scripts/release-darwin.sh cli-vX.Y.Z` — `pnpm -r build`, `pnpm deploy`, prune,
-  Developer-ID sign, zip, upload onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh cli-vX.Y.Z`, which reads the asset id + sha256 back from
-  the published release and opens the bump PR here (`--dry-run` to preview,
-  `--no-pr` to edit a local clone). Re-point at an existing release by running
-  `bump-tap.sh cli-vX.Y.Z` on its own.
+- `scripts/release-darwin.sh cli-vX.Y.Z [--ticket STARK-<n>]` — `pnpm -r build`,
+  `pnpm deploy`, prune, Developer-ID sign, zip, upload onto the GitHub Release,
+  then calls…
+- `scripts/bump-tap.sh cli-vX.Y.Z [--ticket STARK-<n>]`, which reads the asset
+  id + sha256 back from the published release and opens the bump PR here
+  (`--dry-run` to preview, `--no-pr` to edit a local clone). Re-point at an
+  existing release by running `bump-tap.sh cli-vX.Y.Z` on its own.
+
+Pass `--ticket` (`release-darwin.sh` forwards it): it titles the PR, and scopes
+its commit, `chore(STARK-<n>): bump brain to cli-vX.Y.Z` — the shape
+`requireTicketScope` wants. A *malformed* ticket is refused up front, before
+any network call and before `release-darwin.sh` builds anything. A re-run for
+the same version reuses `bump/brain-<version>`: it fetches the branch the first
+run pushed, fast-forwards it, and `gh pr edit`s the open PR (its title only
+with `--ticket`) instead of failing on the push (atlas STARK-9579). It needs a
+tap checkout with no tracked edits. Like hermod's, the bumper opens its PR with
+plain `gh pr create`, so verify the formula diff, asset id and checksum by hand.
 
 ## atlas (desktop app — cask)
 
