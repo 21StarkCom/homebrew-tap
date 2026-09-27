@@ -23,8 +23,8 @@ end
 # symlinked onto PATH — the same layout `make install` produces. The zip is the notarized,
 # stapled bundle (Mimir.app at the archive root), so Gatekeeper validates it offline.
 cask "mimir" do
-  # version / asset id / sha256 are release-specific and rewritten by the source repo's
-  # bump tooling (mimir/scripts/bump-tap.sh) — do not hand-edit them.
+  # version / asset id / sha256 are release-specific and rewritten when mimir's release
+  # calls the bumper (the README's caller table) — do not hand-edit them.
   #
   # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version
   # string is not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, DELIBERATELY:

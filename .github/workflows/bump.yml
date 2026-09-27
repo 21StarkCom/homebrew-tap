@@ -1,0 +1,43 @@
+name: bump
+
+# scripts/bump.sh's tests (scripts/test-bump.sh) on both kinds of runner that call
+# the bumper. ADR-0008 Decision 4: bump.sh --merge waits for this workflow, so its
+# pull_request trigger must stay unfiltered, and scripts/test-bump.sh fails if the
+# gate's workflow list and this directory's pull_request workflows disagree.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bump-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bash: bash
+          # macOS's own bash 3.2: the oldest bash a signing Mac can run bump.sh under.
+          - os: macos-26
+            bash: /bin/bash
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Shellcheck
+        if: runner.os == 'Linux'
+        run: shellcheck scripts/bump.sh scripts/test-bump.sh
+      - name: Test bump.sh
+        env:
+          BUMP_TEST_BASH: ${{ matrix.bash }}
+        run: scripts/test-bump.sh

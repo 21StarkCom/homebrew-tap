@@ -24,21 +24,6 @@ the tools below, so a raw unzip outside Homebrew hits Gatekeeper. The live,
 repo-tracking install is the wrapper in the `idun` repo (`./setup.sh`); this
 formula is for repo-less machines.
 
-## Maintenance — the idun formula is bumped automatically
-
-`Formula/idun.rb` pins the release's darwin zip **asset id + sha256**, both of
-which change every release. Do **not** hand-edit them. They are rewritten by
-`idun`'s release tooling:
-
-- `scripts/release-darwin.sh <version>` (run on a Mac) builds, ad-hoc signs,
-  zips, and uploads the macOS zip onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from
-  the published release, rewrites the three release-specific lines, and opens a
-  PR here.
-
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
-from the `idun` checkout (`--dry-run` to preview).
-
 ## hermod
 
 The [`hermod`](https://github.com/21StarkCom/hermod) CLI + engine for
@@ -64,53 +49,6 @@ hits Gatekeeper. `hermod` reaches its cmux app over the inherited
 `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or set the socket env
 yourself).
 
-## Maintenance — the hermod formula is bumped automatically
-
-`Formula/hermod.rb` pins the release's darwin zip **asset id + sha256** and the
-**version**, all of which change every release. Do **not** hand-edit them. They
-are rewritten by `hermod`'s release tooling, which lives under `ts/`:
-
-- `ts/scripts/release-darwin.sh <version> [--ticket STARK-<n>]` (run on a Mac)
-  builds, ad-hoc signs, zips, and uploads the macOS zip onto the GitHub Release,
-  then calls…
-- `ts/scripts/bump-tap.sh <version> [--ticket STARK-<n>]`, which reads the asset
-  id + sha256 back from the published release, rewrites the three
-  release-specific lines, and opens a PR here.
-
-Like lucius's and brain's, and unlike the other bumpers, hermod's can produce
-the ticket-scoped title itself:
-`--ticket STARK-<n>` titles the PR `chore(STARK-<n>): bump hermod to v<x>`, the
-shape this repo's `requireTicketScope` policy wants, with no hand step.
-`release-darwin.sh` forwards the same flag. The flag is **optional** — omit it
-and the PR is titled `chore: bump hermod to v<x>`, which squashes onto `main`
-with an unscoped subject. Nothing downstream catches that: the bumper opens its
-PR with plain `gh pr create`, so none of `idun gh pr-open`'s checks run on it —
-the ticket policy and the high-entropy checksum scan alike, so verify the formula
-diff, asset id and checksum by hand — and `idun gh pr-merge` only derives the
-required subject *prefix* from the PR title rather than re-checking the policy.
-
-So pass it on any bump you intend to merge. If you forget, **retitle the PR that
-is already open** — `idun gh pr-merge` reads the live title, so the retitle is
-the whole fix:
-
-```sh
-gh pr edit <n> -R 21StarkCom/homebrew-tap \
-  --title "chore(STARK-<n>): bump hermod to v<x>"
-```
-
-Re-running the bumper with `--ticket` fixes it too. Since hermod v0.18.1 a
-re-run reuses `bump/hermod-<version>`, fast-forwards the branch the first run
-pushed, and `gh pr edit`s the open PR's title and body rather than colliding
-with them (hermod STARK-5069). Bumper retries require a tap checkout with no tracked edits — the bumper
-refuses to open or update a PR otherwise. A *malformed* ticket is refused by both scripts up front — before
-any network call, and before `release-darwin.sh` builds anything.
-
-To re-point at an existing release by hand, run
-`ts/scripts/bump-tap.sh <version> [--ticket STARK-<n>]` from the `hermod`
-checkout (`--dry-run` to preview). A leftover `bump/hermod-<version>` on this
-repo's remote is no longer a blocker: the bumper fetches that branch,
-fast-forwards onto it, and updates the PR already open against it in place.
-
 ## frigg
 
 The [`frigg`](https://github.com/21StarkCom/frigg) 21Stark IT-ops CLIs for Google
@@ -132,24 +70,6 @@ GitHub API URL with an `Authorization` header.
 Homebrew (which strips the quarantine xattr) but a raw unzip outside Homebrew
 hits Gatekeeper. Non-macOS or repo-less: `go install` from the `frigg` repo.
 
-## Maintenance — the frigg formula is bumped automatically (by GitLab CI)
-
-`Formula/frigg.rb` pins the release's darwin zip **asset id + sha256** and
-**version**, all of which change every release. Do **not** hand-edit them. Unlike
-the other tools here (local Mac scripts / GitHub Actions), frigg is built and
-published by a **GitLab CI/CD pipeline** on the self-hosted `gitlab.evinced.cloud`
-(STARK-1193). Pushing a tag `vX.Y.Z` to `21StarkCom/frigg` runs the pipeline,
-which:
-
-- cross-builds the ad-hoc-signed darwin/arm64 zip on a Linux runner
-  (`frigg/scripts/build-darwin.sh`), uploads it onto the GitHub Release, then…
-- runs `frigg/scripts/bump-tap.sh`, which reads the asset id + sha256 back from
-  the published release, rewrites the three release-specific lines, and opens a
-  PR here.
-
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
-from the `frigg` checkout (`--dry-run` to preview).
-
 ## lumiere
 
 The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
@@ -169,29 +89,6 @@ GitHub API URL with an `Authorization` header.
 `lumiere-product`, `lumiere-upscale`) are built for macOS 26.0. The bottle is a Developer-ID-signed + notarized
 `darwin_arm64` build (Apple Silicon). Linux users build from source in the
 `lumiere` repo (`make build`).
-
-## Maintenance — the formula is bumped automatically
-
-`Formula/lumiere.rb` pins the release's darwin zip **asset id + sha256**, both of
-which change every release. Do **not** hand-edit them. They are rewritten by
-`lumiere`'s release tooling:
-
-- `scripts/release-darwin.sh <version> [--ticket STARK-<n>]` (run on the Mac that
-  holds the signing cert) builds, signs, notarizes, and uploads the macOS zip, then
-  calls…
-- `scripts/bump-tap.sh <version> [--ticket STARK-<n>]`, which reads the asset id +
-  sha256 back from the published release, rewrites the three release-specific
-  lines, and opens a PR here titled `chore(STARK-<n>): bump lumiere to v<x>`. Pass
-  `--ticket`, which `release-darwin.sh` forwards: this tap requires ticket-scoped
-  titles.
-
-To re-point at an existing release by hand, run
-`scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `lumiere` checkout
-(`--dry-run` to preview, `--no-pr --tap-dir <dir>` to edit a checkout without
-committing). A `--tap-dir` PR run needs that checkout clean and at
-`origin/main`. Unlike hermod's, lucius's and brain's, a re-run never reuses or
-updates an open bump PR (see CLAUDE.md), so fix a forgotten `--ticket` by
-retitling it: `gh pr edit <n> --title "chore(STARK-<n>): bump lumiere to v<x>"`.
 
 ## sleipnir
 
@@ -220,22 +117,6 @@ Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp`
 `brew upgrade 21StarkCom/tap/sleipnir` — since a bare `sleipnir` is homebrew/cask's
 browser of the same name.
 
-## Maintenance — the sleipnir formula is bumped automatically
-
-`Formula/sleipnir.rb` pins the release's darwin zip **asset id + sha256**, both of
-which change every release. Do **not** hand-edit them. They are rewritten by
-`sleipnir`'s release tooling:
-
-- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing
-  cert) builds the Swift helper, assembles + signs + notarizes the macOS zip,
-  creates the release, uploads the asset, then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the
-  published release, rewrites the three release-specific lines, and opens a PR
-  here.
-
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
-from the `sleipnir` checkout (`--dry-run` to preview).
-
 ## lucius
 
 The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
@@ -261,33 +142,6 @@ shows on the first run. The tree's one Mach-O is the Agent SDK's own `claude`
 binary, signed by Anthropic; `src/vault/publication.c` ships beside its loader
 because `bun:ffi` compiles it at runtime.
 
-## Maintenance — the lucius formula is bumped by local Mac scripts
-
-`Formula/lucius.rb` pins the release's darwin zip **asset id + sha256** and
-**version**, all of which change every release. Do **not** hand-edit them. They
-are rewritten by `lucius`'s release tooling (STARK-8629), run from a clean
-checkout of the pushed tag:
-
-Both take the tag, `vX.Y.Z` — the leading `v` is required, unlike sleipnir's.
-
-- `scripts/release-darwin.sh v<x.y.z> --ticket STARK-<n>` stages the tree from
-  `git archive` of the tagged commit, vendors the prod `node_modules`, zips it
-  with a `.sha256` sidecar, then scans the packaged zip and refuses any Mach-O
-  but the SDK's Anthropic-signed `claude` (it adds no signing of its own) before
-  uploading both onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh v<x.y.z> --ticket STARK-<n>`, which reads the asset id +
-  sha256 back from the published release (pinning the sha only when the sidecar,
-  the asset's size and GitHub's digest agree), rewrites the three
-  release-specific lines, and opens a PR here.
-
-Like hermod's, the bumper takes an optional `--ticket` that titles its PR
-`chore(STARK-<n>): bump lucius to v<x>`, the shape this repo's
-`requireTicketScope` wants; without it the title is the unscoped `chore:` form.
-A retry reuses the version's branch and open PR, and refuses a tap checkout that
-carries tracked edits. To re-point at an existing release, run
-`scripts/bump-tap.sh v<x.y.z>` from the `lucius` checkout (`--dry-run` to
-preview, `--no-pr --tap-dir <dir>` to edit a checkout without committing).
-
 The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
 directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
 
@@ -312,22 +166,6 @@ notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `bre
 --cask mimir` removes the app; `--zap` also trashes its local data (but never the
 login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
 
-## Maintenance — the mimir cask is bumped automatically
-
-`Casks/mimir.rb` pins the release's darwin zip **asset id + sha256** and the **version**, all
-of which change every release. Do **not** hand-edit them. They are rewritten by `mimir`'s
-release tooling:
-
-- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing cert) builds +
-  signs the app (`make app`), notarizes + staples it, re-zips the stapled bundle, records the
-  notarization in the `apple-developer` ledger, uploads the asset onto the hand-cut release,
-  then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the published
-  release, rewrites the three release-specific lines, and opens a PR here.
-
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from the
-`mimir` checkout (`--dry-run` to preview).
-
 ## heimdall
 
 The [`heimdall`](https://github.com/21StarkCom/heimdall) CLI — personal
@@ -346,22 +184,6 @@ GitHub API URL with an `Authorization` header.
 **macOS arm64 only** (Apple Silicon). The zip is the Developer-ID-signed +
 notarized `heimdall` binary. Config (backend URL + send-secret) reads from the
 login Keychain (service `heimdall`), or `HEIMDALL_URL` / `HEIMDALL_SEND_SECRET`.
-
-## Maintenance — the heimdall formula is bumped by local Mac scripts
-
-`Formula/heimdall.rb` pins the release's darwin zip **asset id + sha256** — both
-change every release, so they are rewritten by the source repo's tooling, never
-hand-edited:
-
-- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing
-  cert) builds, Developer-ID-signs, notarizes, and uploads the darwin/arm64 zip,
-  then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the
-  published release, rewrites the three release-specific lines, and opens a PR here.
-
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>` from
-the `heimdall` checkout (`--dry-run` to preview). heimdall has no release-please —
-cut the tag + GitHub Release first, then run the release script.
 
 ## plume
 
@@ -386,49 +208,6 @@ GitHub API URL with an `Authorization` header.
 tarball only. That build carries Go's linker **ad-hoc** signature (not Developer-ID
 notarized), so it runs under Homebrew (which strips the quarantine xattr) but a
 raw untar outside Homebrew hits Gatekeeper.
-
-## Maintenance — the plume formula is bumped automatically (by GitHub Actions)
-
-`Formula/plume.rb` pins the release's darwin/arm64 tarball **asset id + sha256**
-and **version**, all of which change every release. Do **not** hand-edit them.
-Unlike the local-Mac-script tools and frigg's GitLab pipeline above, `plume`
-builds, publishes, and bumps entirely from a **GitHub Actions** workflow
-(`release.yml`) on a semver tag push, which cross-compiles the four-platform
-release, publishes it, then runs its `bump-tap` job:
-
-- `scripts/bump-tap.sh -- <tag>` reads the darwin/arm64 tarball's asset id +
-  sha256 back from the published GitHub Release, rewrites the three
-  release-specific lines, pushes them to a `bump/plume-X.Y.Z` branch (the bare
-  version, no `v`), and opens a PR here titled `chore: bump plume to vX.Y.Z`, or
-  reuses the one already open for that branch. It prints the PR number on
-  stdout, or nothing when there is nothing to merge.
-- The job then squash-merges that PR once `mergeStateStatus` reads `CLEAN` for
-  a head it first saw `UNSTABLE` or `BLOCKED`, that is, once every check here
-  has gone green (the token gets 403 on check runs, so that field is its only
-  view of them). It polls for 20-odd minutes: a check that is red, or still
-  pending when that budget runs out, fails the job and leaves the PR open. Fix
-  or re-run the check, then merge the PR with `idun gh pr-merge`. Don't push a
-  fix onto the bump branch and re-run the job: a re-run force-pushes a freshly
-  computed commit over that branch.
-
-The job skips a prerelease tag (`v*-*`; that guard lives in `release.yml`, not
-in the script), and the script never opens a PR that would move the formula to
-an older `X.Y.Z` than the one it pins.
-
-The job authenticates to this (separate) tap repo through the shared
-`HOMEBREW_TAP_TOKEN` secret on the `plume` repo, a fine-grained PAT with
-`contents:write` **and** `pull_requests:write` here, plus `contents:read` on
-`plume` to read the release back. If that secret is unset, the job fails; it
-does not skip, so a release that leaves the tap stale is loud.
-
-To bump by hand (the secret was unset, or to re-point at an existing release),
-follow CLAUDE.md for a bumper that cannot title its PR with a ticket. plume's
-cannot: it titles `chore: bump plume to vX.Y.Z` and has no `--ticket` flag. In
-a dedicated tap checkout on a new branch at `origin/main`, run
-`scripts/bump-tap.sh v<x.y.z> --no-pr --tap-dir <dir>` from the `plume`
-checkout, which edits that checkout's formula without committing, then open the
-change with `idun gh pr-open` under a `chore(STARK-<n>): bump plume to v<x>`
-title. `--dry-run` previews the formula diff and touches nothing.
 
 ## brain
 
@@ -458,45 +237,6 @@ be offline-**stapled**, so it's online-notarized — moot under Homebrew, which
 strips the quarantine xattr anyway. Released from `cli-v*` tags, parallel to the
 desktop app's `desktop-v*`.
 
-## Maintenance — the brain formula is bumped automatically
-
-`Formula/brain.rb` pins the release's darwin/arm64 zip **asset id + sha256** and
-**version**, all of which change every release. Do **not** hand-edit them. They
-are rewritten by `atlas`'s release tooling, run on a Mac holding the signing
-cert:
-
-- `scripts/release-darwin.sh cli-vX.Y.Z [--ticket STARK-<n>]` — `pnpm -r build`,
-  `pnpm deploy`, prune, bundle the command registry, Developer-ID sign, zip,
-  notarize (it refuses to upload an un-notarized zip unless `--skip-notarize`),
-  upload onto the GitHub Release, then calls…
-- `scripts/bump-tap.sh cli-vX.Y.Z [--ticket STARK-<n>]`, which reads the asset
-  id + sha256 back from the published release and opens the bump PR here
-  (`--dry-run` to preview, `--no-pr --tap-dir <dir>` to edit a checkout without
-  committing). Re-point at an existing release by running
-  `bump-tap.sh cli-vX.Y.Z [--ticket STARK-<n>]` on its own.
-
-Pass `--ticket` (`release-darwin.sh` forwards it): it titles the PR
-`chore(STARK-<n>): bump brain to cli-vX.Y.Z` — the shape `requireTicketScope`
-wants — and scopes the commit the same way, plus its `(asset <id>)` suffix. A
-*malformed* ticket is refused up front, before any network call and before
-`release-darwin.sh` builds anything. A re-run for the same version reuses
-`bump/brain-X.Y.Z` (the bare version, no `cli-v`): it fetches the branch the
-first run pushed and fast-forwards it. With that PR still open, the re-run
-`gh pr edit`s its body, and its title only with `--ticket`, instead of failing
-on the push, so a hand retitle survives an unscoped re-run. With no PR open, it
-merges `main` into the branch and opens a new PR, or, when `main` already
-carries the release, opens nothing and exits 0 (atlas STARK-9579), so a
-forgotten `--ticket` can no longer be added once the PR has merged. It needs a
-tap checkout with no tracked edits. Like hermod's, the bumper opens its PR with
-plain `gh pr create`, so verify the formula diff, asset id and checksum by hand.
-
-Two traps hermod's, lucius's and lumiere's bumpers don't have. `--dry-run --tap-dir <dir>`
-rewrites that checkout's formula in place (atlas STARK-8193), so a real run
-against the same checkout refuses the tracked edit until you restore the file;
-preview without `--tap-dir`, in the bumper's own temporary clone. And `--no-pr`
-without `--tap-dir` edits a temporary clone that is deleted on exit, so the
-edit is lost.
-
 ## atlas (desktop app — cask)
 
 The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
@@ -514,16 +254,6 @@ be shadowed. **macOS 12+ arm64.** The build is Developer-ID **signed + notarized
 (`spctl` reports "Notarized Developer ID"); `brew install --cask` strips the
 quarantine xattr, so Gatekeeper never gates it. Released from the source repo's
 `desktop-v*` tags (parallel to the CLI's `cli-v*`).
-
-## Maintenance — the atlas cask is bumped by local Mac scripts
-
-`Casks/atlas.rb` pins the release's **asset id + sha256** and **version**, all of
-which change every release. Do **not** hand-edit them. The desktop app is built,
-signed, and notarized on a Mac holding the cert via `atlas`'s
-`apps/desktop/scripts/{sign-app.mjs --notarize, release.mjs --publish}`, which
-publishes the notarized `Atlas-<version>.zip` onto a `desktop-v*` GitHub Release.
-Re-point the cask at a release by rewriting those three lines against the
-published asset.
 
 ## goldfinger (background computer use — cask)
 
@@ -554,23 +284,36 @@ Neither revokes the grants: remove Goldfinger in System Settings → Privacy & S
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
 
-## Maintenance — the goldfinger cask is bumped by local Mac scripts
+## Releases: who bumps each entry
 
-`Casks/goldfinger.rb` pins the release's darwin zip **asset id + sha256** and the
-**version**. Do **not** hand-edit them. They are rewritten by `goldfinger`'s release tooling,
-run from a clean checkout of the release tag on the Mac that holds the signing cert:
-`macos/scripts/release-darwin.sh <version>` builds, signs, notarizes, staples and uploads the
-app, then calls `macos/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back
-from the published release and opens a PR here with plain `gh pr create`. That PR's title
-carries no ticket, so pass `--no-tap` to `release-darwin.sh`, then run
-`macos/scripts/bump-tap.sh <version> --no-pr --tap-dir <a dedicated checkout>` and open the
-change with `idun gh pr-open`; the same `bump-tap.sh` run re-points the cask at an existing
-release. Like brain's, the bumper edits the cask before it checks `--dry-run`, so
-`--dry-run --tap-dir <dir>` rewrites that checkout's cask in place, and `--no-pr` without
-`--tap-dir` edits a temporary clone that is deleted on exit. Preview with `--dry-run` alone.
+Each entry pins three release-specific lines: `version`, the release asset's id in its
+`url`, and `sha256`. Do **not** hand-edit them. The source repo's release step calls the
+bumper, which reads them back from the published GitHub Release and opens a PR here.
+`scripts/bump.sh --help` is the bumper's reference, and CLAUDE.md says how to run it by hand.
+
+| Entry | Source repo | Release step that calls the bumper | Runs on |
+|---|---|---|---|
+| `alfred` | alfred | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
+| `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
+| `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
+| `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
+| `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
+| `idun` | idun | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
+| `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
+| `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
+| `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
+| `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
+| `tyr` | tyr | `scripts/release-darwin.sh`; `scripts/release-tyr-darwin.sh` | the signing Mac |
+| `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release | — |
+| `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
+| `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
+
+idun's and alfred's releases and plume's `release.yml` merge their own bump PR once this
+tap's checks pass. Every other bump PR stays open until someone merges it with
+`idun gh pr-merge`, under a ticket-scoped title.
 
 ## Download authentication and CI
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
-Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
+Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu and macOS. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
