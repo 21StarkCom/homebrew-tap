@@ -9,10 +9,10 @@ class Sleipnir < Formula
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/592179420",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/592428929",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.11.0"
-  sha256 "c41693d166f47a07179fbcfc3cf1b27edf52368ee1992f4d98cfdab54269dd07"
+  version "0.12.0"
+  sha256 "074cb446cc6424e59436139da4ccfba9c2c6da2f1890e64354a7046d19aa8a3d"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -53,6 +53,10 @@ class Sleipnir < Formula
 
       MCP clients wired to #{opt_libexec}/bin/sleipnir-mcp.mjs (0.10.0 and older)
       must point at #{opt_libexec}/apps/mcp/bin/sleipnir-mcp.mjs.
+
+      0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <uuid>`,
+      and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
+      (`run_cap` takes `huginn`, not `companion`).
 
       The Huginn Authenticator tab additionally needs Mimir 0.27.0 or newer
       (`brew upgrade --cask 21StarkCom/tap/mimir`) plus a per-installation grant.
