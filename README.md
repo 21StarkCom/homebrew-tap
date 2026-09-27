@@ -391,21 +391,36 @@ raw untar outside Homebrew hits Gatekeeper.
 and **version**, all of which change every release. Do **not** hand-edit them.
 Unlike the local-Mac-script tools above, `plume` builds, publishes, and bumps
 entirely from a **GitHub Actions** workflow (`release.yml`) on a semver tag push,
-which cross-compiles the four-platform release, publishes it, then runs
-`plume/scripts/bump-tap.sh --push`, which:
+which cross-compiles the four-platform release, publishes it, then runs its
+`bump-tap` job:
 
-- reads the darwin/arm64 tarball's asset id + sha256 back from the published
-  GitHub Release, rewrites the three release-specific lines, and pushes the bump
-  straight to this tap's default branch — **no PR**, the same CI hands-off path
-  idun / alfred / tyr use.
+- `scripts/bump-tap.sh <tag>` reads the darwin/arm64 tarball's asset id + sha256
+  back from the published GitHub Release, rewrites the three release-specific
+  lines, pushes them to a `bump/plume-X.Y.Z` branch (the bare version, no `v`),
+  and opens a PR here titled `chore: bump plume to vX.Y.Z`, or reuses the one
+  already open for that branch. It prints the PR number on stdout.
+- The job then squash-merges that PR once `mergeStateStatus` reads `CLEAN` for
+  a head it first saw `UNSTABLE` or `BLOCKED`, that is, once every check here
+  has gone green (the token gets 403 on check runs, so that field is its only
+  view of them). A red check fails the job and leaves the PR open: fix the
+  check, then merge it.
 
-The bump job authenticates to this (separate) tap repo through the shared
-`HOMEBREW_TAP_TOKEN` secret on the `plume` repo (a fine-grained PAT with
-`contents:write` here — a direct push needs no Pull-requests scope); if that
-secret is unset the job self-skips and the formula must be bumped by hand. To
-open a review PR instead (or re-point at an existing release by hand), run
-`scripts/bump-tap.sh <version>` from the `plume` checkout (`--dry-run` to preview,
-default path opens a PR).
+A prerelease tag, or a release older than the one the formula pins, never opens
+a PR.
+
+The job authenticates to this (separate) tap repo through the shared
+`HOMEBREW_TAP_TOKEN` secret on the `plume` repo, a fine-grained PAT with
+`contents:write` **and** `pull_requests:write` here. If that secret is unset,
+the job fails; it does not skip, so a release that leaves the tap stale is loud.
+
+To bump by hand (the secret was unset, or to re-point at an existing release),
+follow CLAUDE.md for a bumper that cannot title its PR with a ticket. plume's
+cannot: it titles `chore: bump plume to vX.Y.Z` and has no `--ticket` flag. In
+a dedicated tap checkout on a new branch at `origin/main`, run
+`scripts/bump-tap.sh v<x.y.z> --no-pr --tap-dir <dir>` from the `plume`
+checkout, which edits that checkout's formula without committing, then open the
+change with `idun gh pr-open` under a `chore(STARK-<n>): bump plume to v<x>`
+title. `--dry-run` previews the formula diff and touches nothing.
 
 ## brain
 
