@@ -365,8 +365,8 @@ cut the tag + GitHub Release first, then run the release script.
 
 The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — one
 `plume-<format>` driver per format (`plume-xlsx`, `plume-docx`, `plume-pdf`,
-`plume-pptx`), each a thin CLI over the format's library package (the library is
-the product; these binaries are the drivers).
+`plume-pptx`, `plume-handwriting`), each a thin CLI over the format's library
+package (the library is the product; these binaries are the drivers).
 
 ```sh
 export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
@@ -389,29 +389,35 @@ raw untar outside Homebrew hits Gatekeeper.
 
 `Formula/plume.rb` pins the release's darwin/arm64 tarball **asset id + sha256**
 and **version**, all of which change every release. Do **not** hand-edit them.
-Unlike the local-Mac-script tools above, `plume` builds, publishes, and bumps
-entirely from a **GitHub Actions** workflow (`release.yml`) on a semver tag push,
-which cross-compiles the four-platform release, publishes it, then runs its
-`bump-tap` job:
+Unlike the local-Mac-script tools and frigg's GitLab pipeline above, `plume`
+builds, publishes, and bumps entirely from a **GitHub Actions** workflow
+(`release.yml`) on a semver tag push, which cross-compiles the four-platform
+release, publishes it, then runs its `bump-tap` job:
 
-- `scripts/bump-tap.sh <tag>` reads the darwin/arm64 tarball's asset id + sha256
-  back from the published GitHub Release, rewrites the three release-specific
-  lines, pushes them to a `bump/plume-X.Y.Z` branch (the bare version, no `v`),
-  and opens a PR here titled `chore: bump plume to vX.Y.Z`, or reuses the one
-  already open for that branch. It prints the PR number on stdout.
+- `scripts/bump-tap.sh -- <tag>` reads the darwin/arm64 tarball's asset id +
+  sha256 back from the published GitHub Release, rewrites the three
+  release-specific lines, pushes them to a `bump/plume-X.Y.Z` branch (the bare
+  version, no `v`), and opens a PR here titled `chore: bump plume to vX.Y.Z`, or
+  reuses the one already open for that branch. It prints the PR number on
+  stdout, or nothing when there is nothing to merge.
 - The job then squash-merges that PR once `mergeStateStatus` reads `CLEAN` for
   a head it first saw `UNSTABLE` or `BLOCKED`, that is, once every check here
   has gone green (the token gets 403 on check runs, so that field is its only
-  view of them). A red check fails the job and leaves the PR open: fix the
-  check, then merge it.
+  view of them). It polls for 20-odd minutes: a check that is red, or still
+  pending when that budget runs out, fails the job and leaves the PR open. Fix
+  or re-run the check, then merge the PR with `idun gh pr-merge`. Don't push a
+  fix onto the bump branch and re-run the job: a re-run force-pushes a freshly
+  computed commit over that branch.
 
-A prerelease tag, or a release older than the one the formula pins, never opens
-a PR.
+The job skips a prerelease tag (`v*-*`; that guard lives in `release.yml`, not
+in the script), and the script never opens a PR that would move the formula to
+an older `X.Y.Z` than the one it pins.
 
 The job authenticates to this (separate) tap repo through the shared
 `HOMEBREW_TAP_TOKEN` secret on the `plume` repo, a fine-grained PAT with
-`contents:write` **and** `pull_requests:write` here. If that secret is unset,
-the job fails; it does not skip, so a release that leaves the tap stale is loud.
+`contents:write` **and** `pull_requests:write` here, plus `contents:read` on
+`plume` to read the release back. If that secret is unset, the job fails; it
+does not skip, so a release that leaves the tap stale is loud.
 
 To bump by hand (the secret was unset, or to re-point at an existing release),
 follow CLAUDE.md for a bumper that cannot title its PR with a ticket. plume's
