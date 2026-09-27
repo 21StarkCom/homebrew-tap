@@ -525,6 +525,35 @@ publishes the notarized `Atlas-<version>.zip` onto a `desktop-v*` GitHub Release
 Re-point the cask at a release by rewriting those three lines against the
 published asset.
 
+## goldfinger (background computer use — cask)
+
+[`goldfinger`](https://github.com/21StarkCom/goldfinger) — background computer use for
+agents: `Goldfinger.app` runs the daemon that holds the macOS grants, and the `goldfinger`
+CLI observes and operates native apps without taking the user's focus or moving the cursor.
+The daemon is a GUI app, so it ships as a **cask** (`Casks/goldfinger.rb`):
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install --cask 21StarkCom/tap/goldfinger
+goldfinger setup      # once: grant Accessibility and Screen Recording
+```
+
+The cask drops `Goldfinger.app` into `/Applications` and symlinks its executable, which is
+both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) arm64
+only.** The release zip is the Developer-ID-signed, notarized and **stapled**
+`Goldfinger.app`. `brew upgrade` quits the running daemon (`uninstall quit:`), and the next
+`goldfinger` command starts the new one.
+
+## Maintenance — the goldfinger cask is bumped by local Mac scripts
+
+`Casks/goldfinger.rb` pins the release's darwin zip **asset id + sha256** and the
+**version**. Do **not** hand-edit them. They are rewritten by `goldfinger`'s release tooling,
+from the `goldfinger` checkout on the Mac that holds the signing cert:
+`macos/scripts/release-darwin.sh <version>` builds, signs, notarizes, staples and uploads the
+app, then calls `macos/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back
+from the published release and opens a PR here. Its PR title carries no ticket, so run it
+with `--no-pr --tap-dir <a dedicated checkout>` and open the change with `idun gh pr-open`.
+
 ## Download authentication and CI
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
