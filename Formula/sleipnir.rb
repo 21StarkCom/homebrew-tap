@@ -54,6 +54,10 @@ class Sleipnir < Formula
       MCP clients wired to #{opt_libexec}/bin/sleipnir-mcp.mjs (0.10.0 and older)
       must point at #{opt_libexec}/apps/mcp/bin/sleipnir-mcp.mjs.
 
+      0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <uuid>`,
+      and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
+      (`run_cap` takes `huginn`, not `companion`).
+
       The Huginn Authenticator tab additionally needs Mimir 0.27.0 or newer
       (`brew upgrade --cask 21StarkCom/tap/mimir`) plus a per-installation grant.
     EOS
