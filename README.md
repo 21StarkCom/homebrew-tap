@@ -187,7 +187,11 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 
 To re-point at an existing release by hand, run
 `scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `lumiere` checkout
-(`--dry-run` to preview).
+(`--dry-run` to preview, `--no-pr --tap-dir <dir>` to edit a checkout without
+committing). A `--tap-dir` PR run needs that checkout clean and at
+`origin/main`. Unlike hermod's, lucius's and brain's, a re-run never reuses or
+updates an open bump PR (see CLAUDE.md), so fix a forgotten `--ticket` by
+retitling it: `gh pr edit <n> --title "chore(STARK-<n>): bump lumiere to v<x>"`.
 
 ## sleipnir
 
@@ -463,7 +467,7 @@ forgotten `--ticket` can no longer be added once the PR has merged. It needs a
 tap checkout with no tracked edits. Like hermod's, the bumper opens its PR with
 plain `gh pr create`, so verify the formula diff, asset id and checksum by hand.
 
-Two traps hermod's and lucius's bumpers don't have. `--dry-run --tap-dir <dir>`
+Two traps hermod's, lucius's and lumiere's bumpers don't have. `--dry-run --tap-dir <dir>`
 rewrites that checkout's formula in place (atlas STARK-8193), so a real run
 against the same checkout refuses the tracked edit until you restore the file;
 preview without `--tap-dir`, in the bumper's own temporary clone. And `--no-pr`
