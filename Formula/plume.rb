@@ -7,10 +7,10 @@ class Plume < Formula
   homepage "https://github.com/21StarkCom/plume"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/570003937",
+  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/593320290",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.5.0"
-  sha256 "349203b9839f5817187fe4fa52f0c8af85ae3a519c4605b5f81f03ef81a7027d"
+  version "0.5.1"
+  sha256 "21de3997e76908ba67c16f6f24ea32b83a843fc5bdf8a3ec1b96c50d7a5f1bfc"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
