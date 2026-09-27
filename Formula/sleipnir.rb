@@ -55,6 +55,10 @@ class Sleipnir < Formula
       in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
       tool call from the keg the upgrade removed.
 
+      A journey script from `slp cap export-journey` imports the versioned keg it was
+      exported from, which the upgrade's cleanup removes: export it again after
+      `brew upgrade 21StarkCom/tap/sleipnir`.
+
       Point MCP clients at #{opt_bin}/sleipnir-mcp. A client that runs bun on a
       sleipnir-mcp.mjs in a sleipnir keg's libexec loads its working directory's .env
       (which can set SLEIPNIR_MCP_ALLOW_MUTATE=1) and bunfig.toml preloads: rewire it.
