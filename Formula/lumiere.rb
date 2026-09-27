@@ -18,7 +18,7 @@ class Lumiere < Formula
   end
 
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :tahoe # the four cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
 
   def install
     # The dispatcher ships as plain `lumiere`, which "lumiere-*" does not match.
@@ -30,5 +30,11 @@ class Lumiere < Formula
     assert_match version.to_s, shell_output("#{bin}/lumiere --version")
     # The dispatcher execs `lumiere-<tool>` from beside itself in the keg.
     assert_match(/\Alumiere-svg v?#{Regexp.escape(version.to_s)}$/, shell_output("#{bin}/lumiere svg -version"))
+    # One cgo (ONNX) tool, offline. Launching it fails if it was built for a newer macOS than
+    # this one (v0.4.0 shipped minos 27.0, STARK-8882). Without the library-validation
+    # entitlement it can't load the ONNX Runtime it downloads (v0.1.1-v0.4.1, STARK-9716).
+    assert_match version.to_s, shell_output("#{bin}/lumiere-upscale -version")
+    assert_match "com.apple.security.cs.disable-library-validation",
+                 shell_output("codesign -d --entitlements - --xml #{bin}/lumiere-upscale 2>&1")
   end
 end

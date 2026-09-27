@@ -165,7 +165,8 @@ The token is required: this repo and the `lumiere` releases are **private**, and
 the entry's native Homebrew downloader fetches the release asset by its
 GitHub API URL with an `Authorization` header.
 
-**macOS arm64 only.** The bottle is a Developer-ID-signed + notarized
+**macOS 26 (Tahoe) arm64 only.** The ONNX tools (`lumiere-bg`, `lumiere-bg-swap`,
+`lumiere-product`, `lumiere-upscale`) are built for macOS 26.0. The bottle is a Developer-ID-signed + notarized
 `darwin_arm64` build (Apple Silicon). Linux users build from source in the
 `lumiere` repo (`make build`).
 
@@ -175,14 +176,18 @@ GitHub API URL with an `Authorization` header.
 which change every release. Do **not** hand-edit them. They are rewritten by
 `lumiere`'s release tooling:
 
-- `scripts/release-darwin.sh <version>` (run on the Mac that holds the signing
-  cert) builds, signs, notarizes, and uploads the macOS zip, then calls…
-- `scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back from the
-  published release, rewrites the three release-specific lines, and opens a PR
-  here.
+- `scripts/release-darwin.sh <version> [--ticket STARK-<n>]` (run on the Mac that
+  holds the signing cert) builds, signs, notarizes, and uploads the macOS zip, then
+  calls…
+- `scripts/bump-tap.sh <version> [--ticket STARK-<n>]`, which reads the asset id +
+  sha256 back from the published release, rewrites the three release-specific
+  lines, and opens a PR here titled `chore(STARK-<n>): bump lumiere to v<x>`. Pass
+  `--ticket`, which `release-darwin.sh` forwards: this tap requires ticket-scoped
+  titles.
 
-To re-point at an existing release by hand, run `scripts/bump-tap.sh <version>`
-from the `lumiere` checkout (`--dry-run` to preview).
+To re-point at an existing release by hand, run
+`scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `lumiere` checkout
+(`--dry-run` without `--tap-dir` to preview; see CLAUDE.md).
 
 ## sleipnir
 
