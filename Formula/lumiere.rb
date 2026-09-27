@@ -7,10 +7,10 @@ class Lumiere < Formula
   homepage "https://github.com/21StarkCom/lumiere"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/582082677",
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/592292376",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.4.0"
-  sha256 "4666e463b56f816ba9d1723bbda4271765bd4b475a902ac856ea18b49839c97e"
+  version "0.4.2"
+  sha256 "5db903a769d4d877a1295900bc06a734082df19c9a630a54dc7c4527924dfd30"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -18,7 +18,7 @@ class Lumiere < Formula
   end
 
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :tahoe # the four cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
 
   def install
     # The dispatcher ships as plain `lumiere`, which "lumiere-*" does not match.
@@ -30,5 +30,11 @@ class Lumiere < Formula
     assert_match version.to_s, shell_output("#{bin}/lumiere --version")
     # The dispatcher execs `lumiere-<tool>` from beside itself in the keg.
     assert_match(/\Alumiere-svg v?#{Regexp.escape(version.to_s)}$/, shell_output("#{bin}/lumiere svg -version"))
+    # One cgo (ONNX) tool, offline. Launching it fails if it was built for a newer macOS than
+    # this one (v0.4.0 shipped minos 27.0, STARK-8882). Without the library-validation
+    # entitlement it can't load the ONNX Runtime it downloads (v0.1.1-v0.4.1, STARK-9716).
+    assert_match version.to_s, shell_output("#{bin}/lumiere-upscale -version")
+    assert_match "com.apple.security.cs.disable-library-validation",
+                 shell_output("codesign -d --entitlements - --xml #{bin}/lumiere-upscale 2>&1")
   end
 end
