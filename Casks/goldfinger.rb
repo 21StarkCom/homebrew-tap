@@ -48,10 +48,13 @@ cask "goldfinger" do
   # start nothing.
   binary "#{appdir}/Goldfinger.app/Contents/MacOS/goldfinger"
 
-  # `brew upgrade` quits the old daemon, so the next client starts the new version.
+  # `brew upgrade` quits the old daemon, then reopens the app by bundle id (`open -b`), which serves
+  # as the new daemon. On a Mac holding other copies with this id (dev builds), LaunchServices may
+  # reopen one of those instead: `goldfinger stop`, and the next client starts the installed one.
   uninstall quit: "com.21stark.goldfinger"
 
-  # `brew uninstall --zap` only: the socket, lock, screenshots and the snapshot epoch.
+  # `brew uninstall --zap` only: the socket, lock, screenshots and the snapshot epoch. The grants
+  # stay until System Settings or `tccutil reset {Accessibility,ScreenCapture} <bundle id>` drops them.
   zap trash: [
     "~/Library/Application Support/goldfinger",
     "~/Library/Caches/goldfinger",
@@ -64,5 +67,7 @@ cask "goldfinger" do
     Grant Goldfinger Accessibility and Screen Recording once, from a terminal:
       goldfinger setup
     It asks for each grant, opens its System Settings pane, and waits until both are allowed.
+    Homebrew installs the app quarantined, so macOS may first ask whether to open Goldfinger:
+    allow it, and run `goldfinger setup` again if it gave up waiting for the daemon.
   EOS
 end

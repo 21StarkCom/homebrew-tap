@@ -541,18 +541,33 @@ goldfinger setup      # once: grant Accessibility and Screen Recording
 The cask drops `Goldfinger.app` into `/Applications` and symlinks its executable, which is
 both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) arm64
 only.** The release zip is the Developer-ID-signed, notarized and **stapled**
-`Goldfinger.app`. `brew upgrade` quits the running daemon (`uninstall quit:`), and the next
-`goldfinger` command starts the new one.
+`Goldfinger.app`. Homebrew installs it quarantined, so macOS may first ask whether to open
+Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for the daemon.
+
+`brew upgrade` quits the running daemon (`uninstall quit:`), then reopens the app by bundle id,
+which serves as the new daemon. On a Mac that also holds dev builds (same bundle id),
+LaunchServices may reopen one of those instead: run `goldfinger stop`, and the next `goldfinger`
+command starts the installed one. `brew uninstall --cask goldfinger` quits the daemon and
+removes the app and its link; `--zap` also trashes `~/Library/Caches/goldfinger` (socket,
+lock, screenshots) and `~/Library/Application Support/goldfinger` (the snapshot epoch).
+Neither revokes the grants: remove Goldfinger in System Settings → Privacy & Security, or run
+`tccutil reset Accessibility com.21stark.goldfinger` and
+`tccutil reset ScreenCapture com.21stark.goldfinger`.
 
 ## Maintenance — the goldfinger cask is bumped by local Mac scripts
 
 `Casks/goldfinger.rb` pins the release's darwin zip **asset id + sha256** and the
 **version**. Do **not** hand-edit them. They are rewritten by `goldfinger`'s release tooling,
-from the `goldfinger` checkout on the Mac that holds the signing cert:
+run from a clean checkout of the release tag on the Mac that holds the signing cert:
 `macos/scripts/release-darwin.sh <version>` builds, signs, notarizes, staples and uploads the
 app, then calls `macos/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back
-from the published release and opens a PR here. Its PR title carries no ticket, so run it
-with `--no-pr --tap-dir <a dedicated checkout>` and open the change with `idun gh pr-open`.
+from the published release and opens a PR here with plain `gh pr create`. That PR's title
+carries no ticket, so pass `--no-tap` to `release-darwin.sh`, then run
+`macos/scripts/bump-tap.sh <version> --no-pr --tap-dir <a dedicated checkout>` and open the
+change with `idun gh pr-open`; the same `bump-tap.sh` run re-points the cask at an existing
+release. Like brain's, the bumper edits the cask before it checks `--dry-run`, so
+`--dry-run --tap-dir <dir>` rewrites that checkout's cask in place, and `--no-pr` without
+`--tap-dir` edits a temporary clone that is deleted on exit. Preview with `--dry-run` alone.
 
 ## Download authentication and CI
 
