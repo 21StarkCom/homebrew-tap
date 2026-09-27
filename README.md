@@ -187,7 +187,7 @@ which change every release. Do **not** hand-edit them. They are rewritten by
 
 To re-point at an existing release by hand, run
 `scripts/bump-tap.sh <version> --ticket STARK-<n>` from the `lumiere` checkout
-(`--dry-run` without `--tap-dir` to preview; see CLAUDE.md).
+(`--dry-run` to preview).
 
 ## sleipnir
 
