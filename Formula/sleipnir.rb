@@ -29,13 +29,15 @@ class Sleipnir < Formula
     # resolved relative to packages/mac/src, so the layout must be kept intact —
     # install the whole tree into libexec and wrap each command's launcher.
     libexec.install Dir["*"]
-    # `huginn` is the browser extension's CLI (`huginn <action>` = `slp huginn <action>`).
+    # `huginn` is the browser extension's CLI (`huginn <action>` = `slp huginn <action>`), and
+    # `sleipnir-mcp` the stdio MCP server an agent client starts from its own working directory.
     # Keep the caller's working directory out of the runtime: by default Bun loads its
     # .env (SLEIPNIR_HOME, CHROME_BINARY, SLEIPNIR_MIMIR_BIN) and runs its bunfig.toml preloads.
     {
-      "sleipnir" => "apps/sleipnir/bin/sleipnir.mjs",
-      "slp"      => "apps/sleipnir/bin/sleipnir.mjs",
-      "huginn"   => "apps/huginn/bin/huginn.mjs",
+      "sleipnir"     => "apps/sleipnir/bin/sleipnir.mjs",
+      "slp"          => "apps/sleipnir/bin/sleipnir.mjs",
+      "huginn"       => "apps/huginn/bin/huginn.mjs",
+      "sleipnir-mcp" => "apps/mcp/bin/sleipnir-mcp.mjs",
     }.each do |name, entry|
       (bin/name).write <<~SH
         #!/bin/bash
@@ -51,8 +53,9 @@ class Sleipnir < Formula
       and reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
       in each Chrome profile.
 
-      MCP clients wired to #{opt_libexec}/bin/sleipnir-mcp.mjs (0.10.0 and older)
-      must point at #{opt_libexec}/apps/mcp/bin/sleipnir-mcp.mjs.
+      MCP clients run #{opt_bin}/sleipnir-mcp, which keeps the client's working
+      directory .env and bunfig.toml out of the server. A client wired to a
+      sleipnir-mcp.mjs path under #{opt_libexec} should switch to it.
 
       0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <uuid>`,
       and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
@@ -70,8 +73,7 @@ class Sleipnir < Formula
     # `huginn --help` prints its usage without reaching a browser or the native host.
     assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
     # The MCP launcher answers `help` before it imports the server or opens stdio.
-    assert_match "Usage: sleipnir-mcp",
-                 shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/mcp/bin/sleipnir-mcp.mjs help")
+    assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
     # `slp huginn install` registers this native host with Chrome; `--probe` loads its
     # whole module graph from the installed tree without starting a host.
     host = "#{libexec}/apps/huginn/bin/huginn-host.mjs"
@@ -82,6 +84,7 @@ class Sleipnir < Formula
     (testpath/".env").write "SLEIPNIR_HOME=#{testpath}/from-dotenv\n"
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
     assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
+    assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
     refute_match "from-dotenv", shell_output("#{bin}/slp profile")
   end
 end
