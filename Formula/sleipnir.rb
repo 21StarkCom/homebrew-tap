@@ -55,9 +55,12 @@ class Sleipnir < Formula
       in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
       tool call from the keg the upgrade removed.
 
-      A journey script from `slp cap export-journey` imports the versioned keg it was
-      exported from, which the upgrade's cleanup removes: export it again after
-      `brew upgrade 21StarkCom/tap/sleipnir`.
+      A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
+      or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
+      cleans up: after upgrading past 0.12.2, export it again, once, or keep your edits by
+      pointing its import at #{opt_libexec}/apps/huginn-bridge/src/journey-script.ts.
+      A later version's export imports through #{opt_prefix}, which each upgrade points at
+      the new keg.
 
       Point MCP clients at #{opt_bin}/sleipnir-mcp. A client that runs bun on a
       sleipnir-mcp.mjs in a sleipnir keg's libexec loads its working directory's .env
