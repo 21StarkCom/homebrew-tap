@@ -525,6 +525,50 @@ publishes the notarized `Atlas-<version>.zip` onto a `desktop-v*` GitHub Release
 Re-point the cask at a release by rewriting those three lines against the
 published asset.
 
+## goldfinger (background computer use — cask)
+
+[`goldfinger`](https://github.com/21StarkCom/goldfinger) — background computer use for
+agents: `Goldfinger.app` runs the daemon that holds the macOS grants, and the `goldfinger`
+CLI observes and operates native apps without taking the user's focus or moving the cursor.
+The daemon is a GUI app, so it ships as a **cask** (`Casks/goldfinger.rb`):
+
+```sh
+export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
+brew install --cask 21StarkCom/tap/goldfinger
+goldfinger setup      # once: grant Accessibility and Screen Recording
+```
+
+The cask drops `Goldfinger.app` into `/Applications` and symlinks its executable, which is
+both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) arm64
+only.** The release zip is the Developer-ID-signed, notarized and **stapled**
+`Goldfinger.app`. Homebrew installs it quarantined, so macOS may first ask whether to open
+Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for the daemon.
+
+`brew upgrade` quits the running daemon (`uninstall quit:`), then reopens the app by bundle id,
+which serves as the new daemon. On a Mac that also holds dev builds (same bundle id),
+LaunchServices may reopen one of those instead: run `goldfinger stop`, and the next `goldfinger`
+command starts the installed one. `brew uninstall --cask goldfinger` quits the daemon and
+removes the app and its link; `--zap` also trashes `~/Library/Caches/goldfinger` (socket,
+lock, screenshots) and `~/Library/Application Support/goldfinger` (the snapshot epoch).
+Neither revokes the grants: remove Goldfinger in System Settings → Privacy & Security, or run
+`tccutil reset Accessibility com.21stark.goldfinger` and
+`tccutil reset ScreenCapture com.21stark.goldfinger`.
+
+## Maintenance — the goldfinger cask is bumped by local Mac scripts
+
+`Casks/goldfinger.rb` pins the release's darwin zip **asset id + sha256** and the
+**version**. Do **not** hand-edit them. They are rewritten by `goldfinger`'s release tooling,
+run from a clean checkout of the release tag on the Mac that holds the signing cert:
+`macos/scripts/release-darwin.sh <version>` builds, signs, notarizes, staples and uploads the
+app, then calls `macos/scripts/bump-tap.sh <version>`, which reads the asset id + sha256 back
+from the published release and opens a PR here with plain `gh pr create`. That PR's title
+carries no ticket, so pass `--no-tap` to `release-darwin.sh`, then run
+`macos/scripts/bump-tap.sh <version> --no-pr --tap-dir <a dedicated checkout>` and open the
+change with `idun gh pr-open`; the same `bump-tap.sh` run re-points the cask at an existing
+release. Like brain's, the bumper edits the cask before it checks `--dry-run`, so
+`--dry-run --tap-dir <dir>` rewrites that checkout's cask in place, and `--no-pr` without
+`--tap-dir` edits a temporary clone that is deleted on exit. Preview with `--dry-run` alone.
+
 ## Download authentication and CI
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
