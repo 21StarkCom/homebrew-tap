@@ -23,8 +23,8 @@ end
 # ships as a cask: the .app lands in /Applications and its executable is symlinked onto PATH. The
 # zip is the notarized, stapled bundle (Goldfinger.app at the archive root).
 cask "goldfinger" do
-  # version / asset id / sha256 are release-specific and rewritten by the source repo's
-  # bump tooling (goldfinger/macos/scripts/bump-tap.sh) — do not hand-edit them.
+  # version / asset id / sha256 are release-specific and rewritten when goldfinger's
+  # release calls the bumper (the README's caller table) — do not hand-edit them.
   #
   # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version
   # string is not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, as mimir's

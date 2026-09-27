@@ -4,13 +4,12 @@
 # (manager-edge alignment + the all@ group-of-groups). Like idun, the binaries are
 # ad-hoc-signed (Go's linker), NOT Developer-ID/notarized — Homebrew strips the
 # quarantine xattr on install, so Gatekeeper is not in the path. Built + published
-# by a GitLab CI/CD pipeline on gitlab.evinced.cloud (STARK-1193).
+# by frigg's GitHub Actions release workflow (STARK-2219).
 class Frigg < Formula
   desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-cockpit TUI, and gws-* CLIs"
   homepage "https://github.com/21StarkCom/frigg"
-  # version / asset id / sha256 are release-specific and rewritten by the source
-  # repo's bump tooling (frigg/scripts/bump-tap.sh) — do not hand-edit them. The
-  # seed values below are placeholders until the first release's bump PR lands.
+  # version / asset id / sha256 are release-specific and rewritten when frigg's
+  # release calls the bumper (the README's caller table) — do not hand-edit them.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/592673825",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]

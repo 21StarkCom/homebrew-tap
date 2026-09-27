@@ -27,8 +27,8 @@ end
 # is notarized (spctl: "Notarized Developer ID"). It is not offline-stapled, which is harmless
 # here — `brew install --cask` strips the quarantine xattr, so Gatekeeper never gates it.
 cask "atlas" do
-  # version / asset id / sha256 are release-specific and rewritten by the source repo's
-  # desktop bump tooling — do not hand-edit them.
+  # version / asset id / sha256 are release-specific. No release step bumps this cask (the
+  # README's caller table): re-point it with the bumper — do not hand-edit them.
   #
   # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version is
   # not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, DELIBERATELY: :no_check
