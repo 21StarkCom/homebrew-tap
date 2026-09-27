@@ -304,13 +304,13 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `tyr` | tyr | `scripts/release-darwin.sh`; `scripts/release-tyr-darwin.sh` | the signing Mac |
-| `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release | — |
+| `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-idun's and alfred's releases and plume's `release.yml` merge their own bump PR once this
-tap's checks pass. Every other bump PR stays open until someone merges it with
-`idun gh pr-merge`, under a ticket-scoped title.
+idun's and alfred's releases and plume's `release.yml` merge their own bump PR unattended;
+once migrated, `bump.sh --merge` waits for every check here first. Every other bump PR
+stays open until someone merges it with `idun gh pr-merge`, under a ticket-scoped title.
 
 ## Download authentication and CI
 

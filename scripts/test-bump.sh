@@ -12,7 +12,7 @@
 # shellcheck disable=SC2016,SC2034,SC2249,SC2310,SC2312
 set -uo pipefail
 
-here="$(cd "${BASH_SOURCE[0]%/*}" && pwd -P)"
+here="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)"
 root="${here%/*}"
 for tool in git perl jq ruby mktemp
 do
@@ -189,6 +189,11 @@ case "$cmd" in
           echo "gh: Resource not accessible by personal access token (HTTP 403)" >&2
           exit 1
         }
+        [ ! -f "$S/runs.ratelimit" ] || {
+          echo '{"message":"API rate limit exceeded for user ID 1.","status":"403"}'
+          echo "gh: API rate limit exceeded for user ID 1. (HTTP 403)" >&2
+          exit 1
+        }
         sha="${path#*head_sha=}"
         sha="${sha%%&*}"
         f="$S/runs.json"
@@ -241,8 +246,10 @@ case "$cmd" in
         }
         state="$(cat "$d/state")"
         [ ! -f "$S/view_state" ] || state="$(cat "$S/view_state")"
-        jq -n --arg state "$state" --arg mss "$(cat "$S/view_mss" 2>/dev/null || echo CLEAN)" \
-          --arg oid "$(g rev-parse -q --verify "refs/heads/$(cat "$d/head")" || echo gone)" \
+        oid="$(g rev-parse -q --verify "refs/heads/$(cat "$d/head")" || echo gone)"
+        # The first view after a push can still name the branch's previous head.
+        [ ! -f "$S/stale_head" ] || [ "$views" -gt 1 ] || oid="$(cat "$S/stale_head")"
+        jq -n --arg state "$state" --arg mss "$(cat "$S/view_mss" 2>/dev/null || echo CLEAN)" --arg oid "$oid" \
           '{state: $state, headRefOid: $oid, mergeStateStatus: $mss}' | emit
         ;;
       merge)
@@ -365,13 +372,9 @@ set_runs() { # [--for <sha>] <line>...
 }
 ALL_GREEN=("bump.yml completed success" "formulae.yml completed success" "secret-scan.yml completed success")
 
-# bump <args...>: runs the rig clone's bump.sh from outside it, as a caller's
-# `pr="$("$tap/scripts/bump.sh" ...)"` does. Sets code, out (exact) and err.
-bump() {
-  (cd "${R}" && PATH="${R}/bin:${PATH}" FAKE_GH="${R}/gh" FAKE_REMOTE="${R}/remote.git" \
-    BUMP_POLL_SECONDS=0 BUMP_POLL_BUDGET="${BUDGET:-5}" "${sut_bash}" "${R}/tap/scripts/bump.sh" "$@") \
-    >"${R}/out" 2>"${R}/err"
-  code=$?
+# collect <exit code>: sets code, and out (exact) and err from $R/out and $R/err.
+collect() {
+  code="$1"
   out="$(
     cat "${R}/out"
     printf .
@@ -380,19 +383,22 @@ bump() {
   err="$(cat "${R}/err")"
 }
 
+# bump <args...>: runs the rig clone's bump.sh from outside it, as a caller's
+# `pr="$("$tap/scripts/bump.sh" ...)"` does.
+bump() {
+  (cd "${R}" && PATH="${R}/bin:${PATH}" FAKE_GH="${R}/gh" FAKE_REMOTE="${R}/remote.git" \
+    BUMP_POLL_SECONDS=0 BUMP_POLL_BUDGET="${BUDGET:-5}" "${sut_bash}" "${R}/tap/scripts/bump.sh" "$@") \
+    >"${R}/out" 2>"${R}/err"
+  collect $?
+}
+
 # bump_bare <args...>: bump.sh with nothing but traps on PATH: any external tool
 # it runs is logged to $work/traps.log and fails.
 bump_bare() {
   : >"${work}/traps.log"
   (cd "${R}" && env -i PATH="${work}/traps" TRAP_LOG="${work}/traps.log" "${sut_bash}" "${R}/tap/scripts/bump.sh" "$@") \
     >"${R}/out" 2>"${R}/err"
-  code=$?
-  out="$(
-    cat "${R}/out"
-    printf .
-  )"
-  out="${out%.}"
-  err="$(cat "${R}/err")"
+  collect $?
 }
 no_tools() { [[ ! -s "${work}/traps.log" ]]; }
 mkdir -p "${work}/traps"
@@ -477,7 +483,7 @@ check "no branch, commit or PR" eval '[ -z "$(git -C "$R/tap" branch --list "bum
 check "I10: one release read, asset and sidecar downloaded by id" eval '[ "$(gh_calls "api repos/21StarkCom/demo/releases/tags/v1.2.3")" = 1 ] && [ "$(gh_calls "api -H Accept: application/octet-stream repos/21StarkCom/demo/releases/assets/501")" = 1 ] && [ "$(gh_calls "api -H Accept: application/octet-stream repos/21StarkCom/demo/releases/assets/502")" = 1 ]'
 git -C "${R}/tap" checkout -q -- Formula/demo.rb
 (cd "${R}/tap" && PATH="${R}/bin:${PATH}" FAKE_GH="${R}/gh" FAKE_REMOTE="${R}/remote.git" "${sut_bash}" scripts/bump.sh demo v1.2.3 --dry-run) >"${R}/out" 2>"${R}/err"
-code=$? out="$(cat "${R}/out")" err="$(cat "${R}/err")"
+collect $?
 check "a relative scripts/bump.sh from the tap's root works too" eval 'is_code 0 && stdout_is "" && stderr_has "+  version \"1.2.3\""'
 
 begin "I5: the three lines must each occur once"
@@ -666,6 +672,23 @@ check "no Actions: read fails at once, naming the permission" eval 'is_code 1 &&
 
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+touch "${R}/gh/runs.ratelimit"
+BUDGET=3 bump demo v1.2.3 --merge
+check "a rate-limited 403 is retried, not read as a missing Actions: read" eval 'is_code 1 && [ "$(gh_calls "pr view")" = 3 ] && [ "$(gh_calls "pr merge")" = 0 ] && stderr_has "rate limit exceeded" && stderr_lacks "without Actions: read" && stderr_has "after 3 polls"'
+
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+bump demo v1.2.3
+old_head="$(tip_of bump/demo-1.2.3)"
+set_runs --for "${old_head}" "bump.yml completed success" "formulae.yml completed failure" "secret-scan.yml completed success"
+set_runs "${ALL_GREEN[@]}"
+add_release 21StarkCom/demo v1.2.3 601 demo_v1.2.3_darwin_arm64.zip
+echo "${old_head}" >"${R}/gh/stale_head"
+BUDGET=5 bump demo v1.2.3 --merge
+check "a first reading still on the previous head is not gated: the pushed head merges" eval 'is_code 0 && stdout_is "42$NL" && stderr_has "not the pushed" && stderr_lacks "did not succeed" && [ "$(gh_calls "pr merge")" = 1 ] && ! grep -q "match-head-commit $old_head" "$R/gh/log"'
+
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 set_runs "${ALL_GREEN[@]}"
 echo CLOSED >"${R}/gh/view_state"
 BUDGET=50 bump demo v1.2.3 --merge
@@ -680,17 +703,31 @@ check "a conflict on the gated head fails at once" eval 'is_code 1 && [ "$(gh_ca
 
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+# A concurrent retry's rebuild: the bumper's own shape, another asset.
 other_clone
-echo moved >"${R}/other/NOTES"
-git -C "${R}/other" add NOTES
-git -C "${R}/other" commit -q -m moved
+formula_text 1.2.3 777 "${ONES}" >"${R}/other/Formula/demo.rb"
+git -C "${R}/other" commit -q -a -m "a concurrent rebuild"
 git -C "${R}/other" push -q origin HEAD:refs/heads/scratch
 moved="$(tip_of scratch)"
 echo "${moved}" >"${R}/gh/move_to"
 set_runs "bump.yml in_progress -" "formulae.yml completed success" "secret-scan.yml completed success"
 set_runs --for "${moved}" "${ALL_GREEN[@]}"
 BUDGET=10 bump demo v1.2.3 --merge
-check "a head that moves restarts the gate on the new head" eval 'is_code 0 && stderr_has "head moved to $moved" && grep -q "match-head-commit $moved$" "$R/gh/log" && [ "$(gh_calls "pr merge")" = 1 ]'
+check "a head that moves to another bumper commit restarts the gate on it" eval 'is_code 0 && stderr_has "head moved to $moved" && grep -q "match-head-commit $moved$" "$R/gh/log" && [ "$(gh_calls "pr merge")" = 1 ]'
+
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+other_clone
+echo "a human's edit" >"${R}/other/NOTES"
+git -C "${R}/other" add NOTES
+git -C "${R}/other" commit -q -m "a human's edit"
+git -C "${R}/other" push -q origin HEAD:refs/heads/scratch
+moved="$(tip_of scratch)"
+echo "${moved}" >"${R}/gh/move_to"
+set_runs "bump.yml in_progress -" "formulae.yml completed success" "secret-scan.yml completed success"
+set_runs --for "${moved}" "${ALL_GREEN[@]}"
+BUDGET=10 bump demo v1.2.3 --merge
+check "a head that moves to a human's edit is never merged unattended" eval 'is_code 1 && stderr_has "not merging a human" && [ "$(gh_calls "pr merge")" = 0 ] && [ "$(gh_calls "pr view")" = 2 ]'
 
 begin "every entry in this tap has the bumper's three lines, once each"
 for path in "${root}"/Formula/*.rb "${root}"/Casks/*.rb

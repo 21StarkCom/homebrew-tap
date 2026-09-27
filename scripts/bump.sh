@@ -34,7 +34,7 @@ NL=$'\n'
 entry="" tag="" version="" ticket="" suffix="darwin_arm64.zip"
 dry_run=false no_pr=false merge=false npos=0
 tap_root="" rel="" repo="" pinned="" tmp="" restore_ref="" branch=""
-a_id="" a_name="" sha="" pr=""
+a_id="" a_name="" sha="" pr="" pushed=""
 
 usage() {
   local text
@@ -74,9 +74,11 @@ pins a newer X.Y.Z. The checkout ends the run back on the ref it started on.
 
 --merge merges only once every workflow this tap runs on pull requests (bump,
 formulae, secret-scan) has a run for the PR's exact head that concluded
-success, with gh pr merge --squash --delete-branch --match-head-commit. It fails
-at once on a closed PR, a failed run or a conflict, and gives up after 240 polls
-5 s apart. Reading the runs needs Actions: read on the token.
+success, with gh pr merge --squash --delete-branch --match-head-commit. A head
+that moves while it waits is gated afresh, and only if it is still the bumper's
+own one-commit shape. It fails at once on a closed PR, a failed run, a conflict
+or a human's head, and gives up after 240 polls 5 s apart. Reading the runs
+needs Actions: read on the token.
 
 stdout: the PR number and nothing else. Empty means there is nothing to merge.
 Exit: 0 done or nothing to do, 1 refused or failed, 2 usage error.
@@ -323,10 +325,12 @@ publish_pr() {
   copy_file "${tmp}/updated" "${tap_root}/${rel}" || die "could not write ${rel}"
   git -C "${tap_root}" add -- "${rel}" || die "could not stage ${rel}"
   git -C "${tap_root}" commit -q -m "${title} (asset ${a_id})" >&2 || die "could not commit ${rel}"
+  pushed="$(git -C "${tap_root}" rev-parse HEAD)" || die "could not read the bump commit"
   tree="$(git -C "${tap_root}" rev-parse 'HEAD^{tree}')" || die "could not read the bump commit's tree"
   if [[ -n "${tip}" ]] && [[ "${tip_tree}" = "${tree}" ]]
   then
     say "==> ${branch} already carries this bump; reusing it as it stands"
+    pushed="${tip}"
   else
     # I13: the refspec names the bump branch alone. The lease is the tip read
     # above (empty: the branch must not exist yet).
@@ -367,10 +371,14 @@ checks_verdict() {
     | ("'"${GATE_WORKFLOWS}"'" | split(" "))[] as $f
     | ([$r[] | select(.path == ".github/workflows/" + $f)] | max_by(.id)) as $x
     | "\($f) \($x.status // "missing") \($x.conclusion // "-")"'
-  if ! out="$(gh api "repos/${TAP_REPO}/actions/runs?head_sha=$1&event=pull_request&per_page=100" --jq "${newest}" 2>&1)"
+  # stderr apart: a gh diagnostic (GH_DEBUG) must not parse as a workflow line.
+  if ! out="$(gh api "repos/${TAP_REPO}/actions/runs?head_sha=$1&event=pull_request&per_page=100" --jq "${newest}" 2>"${tmp}/gh.err")"
   then
+    out="${out}${out:+${NL}}$(<"${tmp}/gh.err")"
     printf '  %s\n' "${out}"
     case "${out}" in
+      # A rate limit answers 403 too, and waiting may clear it.
+      *"rate limit"*) ;;
       *"HTTP 403"*)
         printf '  %s\n' "reading ${TAP_REPO}'s workflow runs needs Actions: read on this token"
         return 2
@@ -398,16 +406,17 @@ checks_verdict() {
 # I14, Decision 4: merge only when every named workflow concluded success for the
 # PR's exact head, pinned to that head.
 merge_gate() {
-  local polls=0 gated="" view state head mss runs rc reading="" shown="" out
+  local polls=0 gated="" view state head mss runs rc reading="" shown="" out merge_shown=""
   local why="PR #${pr} is still not mergeable after ${POLL_BUDGET} polls"
   local fields='"\(.state) \(.headRefOid) \(.mergeStateStatus)"'
   while [[ "${polls}" -lt "${POLL_BUDGET}" ]]
   do
     polls=$((polls + 1))
     [[ "${polls}" -eq 1 ]] || pause
-    if ! view="$(gh pr view "${pr}" -R "${TAP_REPO}" --json state,headRefOid,mergeStateStatus --jq "${fields}" 2>&1)"
+    # stderr apart: a gh diagnostic (GH_DEBUG) must not parse as the PR's fields.
+    if ! view="$(gh pr view "${pr}" -R "${TAP_REPO}" --json state,headRefOid,mergeStateStatus --jq "${fields}" 2>"${tmp}/gh.err")"
     then
-      reading="could not read PR #${pr}: ${view}"
+      reading="could not read PR #${pr}: $(<"${tmp}/gh.err")"
       continue
     fi
     read -r state head mss <<<"${view}"
@@ -421,11 +430,28 @@ merge_gate() {
       why="PR #${pr} is closed"
       break
     fi
-    if [[ "${head}" != "${gated}" ]]
+    # A reading just after a force-push can still name the branch's previous
+    # head, whose runs are an older bump's: gate nothing until the PR shows the
+    # commit this run pushed. Only then does a moved head restart the gate.
+    if [[ -z "${gated}" ]] && [[ "${head}" != "${pushed}" ]]
     then
-      [[ -z "${gated}" ]] || say "==> PR #${pr}'s head moved to ${head}: gating that head"
-      gated="${head}"
+      reading="PR #${pr} still shows head ${head}, not the pushed ${pushed}"
+      [[ "${reading}" = "${shown}" ]] || say "${reading}"
+      shown="${reading}"
+      continue
     fi
+    if [[ -n "${gated}" ]] && [[ "${head}" != "${gated}" ]]
+    then
+      say "==> PR #${pr}'s head moved to ${head}: gating that head"
+      # Decision 6: a head that is not the bumper's own commit holds a human's
+      # edit, and that is never merged unattended.
+      if ! bumper_shape "${head}" >/dev/null
+      then
+        why="PR #${pr}'s new head ${head} is not this bumper's own commit; not merging a human's edit unattended"
+        break
+      fi
+    fi
+    gated="${head}"
     if [[ "${mss}" = DIRTY ]]
     then
       why="PR #${pr} conflicts with main at ${head} (a newer bump of ${entry} may have landed)"
@@ -454,8 +480,10 @@ merge_gate() {
         return 0
       fi
       # A moved head, or a merge that landed before its response was lost: the
-      # next reading settles it.
+      # next reading settles it. Say each new refusal now, not only at the end.
       reading="${reading}${NL}gh pr merge: ${out}"
+      [[ "${out}" = "${merge_shown}" ]] || say "gh pr merge: ${out}"
+      merge_shown="${out}"
     fi
   done
   # Decision 4: the last reading, replayed unsilenced.
@@ -524,7 +552,8 @@ main() {
     */*) tap_root="${BASH_SOURCE[0]%/*}/.." ;;
     *) tap_root=.. ;;
   esac
-  tap_root="$(cd "${tap_root}" && pwd -P)"
+  # CDPATH off: a relative scripts/.. must resolve against the working directory.
+  tap_root="$(CDPATH='' cd -- "${tap_root}" && pwd -P)"
   local found=0 cand
   for cand in "Formula/${entry}.rb" "Casks/${entry}.rb"
   do
