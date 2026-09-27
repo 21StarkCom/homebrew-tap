@@ -31,8 +31,9 @@ class Sleipnir < Formula
     libexec.install Dir["*"]
     # `huginn` is the browser extension's CLI (`huginn <action>` = `slp huginn <action>`), and
     # `sleipnir-mcp` the stdio MCP server an agent client starts from its own working directory.
-    # Keep the caller's working directory out of the runtime: by default Bun loads its
-    # .env (SLEIPNIR_HOME, CHROME_BINARY, SLEIPNIR_MIMIR_BIN) and runs its bunfig.toml preloads.
+    # Keep the caller's working directory out of the runtime: by default Bun loads its .env
+    # (SLEIPNIR_HOME, CHROME_BINARY, SLEIPNIR_MIMIR_BIN, and for the MCP server
+    # SLEIPNIR_MCP_ALLOW_MUTATE, which lifts its mutate-cap gate) and runs its bunfig.toml preloads.
     {
       "sleipnir"     => "apps/sleipnir/bin/sleipnir.mjs",
       "slp"          => "apps/sleipnir/bin/sleipnir.mjs",
@@ -49,13 +50,14 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
-      After `brew upgrade 21StarkCom/tap/sleipnir` or `brew upgrade bun`, re-run `slp huginn install`
-      and reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
-      in each Chrome profile.
+      After `brew upgrade 21StarkCom/tap/sleipnir` or `brew upgrade bun`, re-run `slp huginn install`,
+      reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
+      in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
+      tool call from the keg the upgrade removed.
 
-      MCP clients run #{opt_bin}/sleipnir-mcp, which keeps the client's working
-      directory .env and bunfig.toml out of the server. A client wired to a
-      sleipnir-mcp.mjs path under #{opt_libexec} should switch to it.
+      Point MCP clients at #{opt_bin}/sleipnir-mcp. A client that runs bun on a
+      sleipnir-mcp.mjs in a sleipnir keg's libexec loads its working directory's .env
+      (which can set SLEIPNIR_MCP_ALLOW_MUTATE=1) and bunfig.toml preloads: rewire it.
 
       0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <uuid>`,
       and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
@@ -84,7 +86,12 @@ class Sleipnir < Formula
     (testpath/".env").write "SLEIPNIR_HOME=#{testpath}/from-dotenv\n"
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
     assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
-    assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
+    # `help` returns before the server loads; `initialize` over stdio loads its whole module
+    # graph from the installed tree, and the server exits when stdin closes.
+    init = { jsonrpc: "2.0", id: 1, method: "initialize",
+             params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "brew", version: "0" } } }
+    reply = JSON.parse(pipe_output("#{bin}/sleipnir-mcp", "#{init.to_json}\n", 0))
+    assert_equal version.to_s, reply.dig("result", "serverInfo", "version")
     refute_match "from-dotenv", shell_output("#{bin}/slp profile")
   end
 end
