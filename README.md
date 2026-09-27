@@ -204,7 +204,10 @@ AX/CGEvent helper, so there is no Linux build. sleipnir has **no build step** �
 Bun runs its TypeScript directly — so the release zip is the runnable tree
 (source + a vendored prod `node_modules`) plus the Developer-ID-signed + notarized
 Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp` /
-`sleipnir` over Homebrew's `bun` (a formula dependency).
+`sleipnir` and `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0)
+over Homebrew's `bun` (a formula dependency). Name it in full —
+`brew upgrade 21StarkCom/tap/sleipnir` — since a bare `sleipnir` is homebrew/cask's
+browser of the same name.
 
 ## Maintenance — the sleipnir formula is bumped automatically
 
