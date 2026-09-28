@@ -50,10 +50,14 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
-      After `brew upgrade 21StarkCom/tap/sleipnir` or `brew upgrade bun`, re-run `slp huginn install`,
+      After `brew upgrade 21StarkCom/tap/sleipnir`, re-run `slp huginn install`,
       reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
       in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
-      tool call from the keg the upgrade removed.
+      tool call from the keg the upgrade removed. After `brew upgrade bun` (or a `brew upgrade`
+      that upgrades it), restart MCP clients for the same reason, and re-run `slp huginn install`
+      if you last ran it with sleipnir 0.12.2 or earlier: that version's native-host launcher
+      names the versioned bun keg, where a later version's launcher names
+      #{formula_opt_bin("bun")}/bun.
 
       A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
       or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
