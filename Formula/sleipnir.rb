@@ -54,7 +54,7 @@ class Sleipnir < Formula
       reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
       in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
       tool call from the keg the upgrade removed. After `brew upgrade bun` (or a `brew upgrade`
-      that upgrades it), restart an MCP client whose sleipnir-mcp was started by sleipnir 0.12.2
+      that upgrades it), restart an MCP client still running a sleipnir-mcp from sleipnir 0.12.2
       or earlier (later versions run tool calls through #{formula_opt_bin("bun")}/bun), and
       re-run `slp huginn install` if you last ran it with sleipnir 0.12.2 or earlier: that
       version's native-host launcher names the versioned bun keg, where a later version's
