@@ -9,10 +9,10 @@ class Alfred < Formula
   homepage "https://github.com/21StarkCom/alfred"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/594808190",
+  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/595365611",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.35.0"
-  sha256 "d99b55309d4cc893ea5b2381e001f767101868fba335fea99da468ed16246ed2"
+  version "0.36.0"
+  sha256 "8c9e5055392e8682da899521845e0d2b359a495927dce2fc184d343f6a5c8944"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
