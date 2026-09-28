@@ -53,7 +53,8 @@ cask "goldfinger" do
   # reopen one of those instead: `goldfinger stop`, and the next client starts the installed one.
   uninstall quit: "com.21stark.goldfinger"
 
-  # `brew uninstall --zap` only: the socket, lock, screenshots and the snapshot epoch. The grants
+  # `brew uninstall --zap` only: the socket, lock, screenshots, the snapshot epoch and every
+  # recording (the trajectories and videos under Application Support/goldfinger/recordings). The grants
   # stay until System Settings or `tccutil reset {Accessibility,ScreenCapture} <bundle id>` drops them.
   zap trash: [
     "~/Library/Application Support/goldfinger",
@@ -69,5 +70,10 @@ cask "goldfinger" do
     It asks for each grant, opens its System Settings pane, and waits until both are allowed.
     Homebrew installs the app quarantined, so macOS may first ask whether to open Goldfinger:
     allow it, and run `goldfinger setup` again if it gave up waiting for the daemon.
+
+    Before `brew upgrade` or `brew uninstall`, run `goldfinger stop`: quitting the app ends a
+    `record start --video` recording without finishing its video.mp4.
+    After `brew upgrade`, restart any agent running `goldfinger mcp`: until it restarts, the
+    new daemon answers its calls with `version_mismatch`.
   EOS
 end
