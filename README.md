@@ -277,9 +277,14 @@ Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for th
 `brew upgrade` quits the running daemon (`uninstall quit:`), then reopens the app by bundle id,
 which serves as the new daemon. On a Mac that also holds dev builds (same bundle id),
 LaunchServices may reopen one of those instead: run `goldfinger stop`, and the next `goldfinger`
-command starts the installed one. `brew uninstall --cask goldfinger` quits the daemon and
+command starts the installed one. Run `goldfinger stop` before `brew upgrade` or
+`brew uninstall`: quitting the app ends a `record start --video` recording without finishing
+its `video.mp4`, while `stop` closes every recording first. After `brew upgrade`, restart any
+agent running `goldfinger mcp`: until it restarts, the new daemon answers its calls with
+`version_mismatch`. `brew uninstall --cask goldfinger` quits the daemon and
 removes the app and its link; `--zap` also trashes `~/Library/Caches/goldfinger` (socket,
-lock, screenshots) and `~/Library/Application Support/goldfinger` (the snapshot epoch).
+lock, screenshots) and `~/Library/Application Support/goldfinger` (the snapshot epoch and
+every recording: the trajectories and videos under `recordings/`).
 Neither revokes the grants: remove Goldfinger in System Settings → Privacy & Security, or run
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
