@@ -11,10 +11,10 @@ class Frigg < Formula
   # version / asset id / sha256 are release-specific and rewritten when frigg's
   # release calls the bumper (the README's caller table) — do not hand-edit them.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/592673825",
+  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/595141483",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.35.0"
-  sha256 "ef76489d22cd8eb39080d9eae90de703d45f48181c352713bf27f01cd3805724"
+  version "0.36.0"
+  sha256 "625a1cdc117b24b364a0519c6da11cae070574a75cfe883053d90cf9b615303b"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
