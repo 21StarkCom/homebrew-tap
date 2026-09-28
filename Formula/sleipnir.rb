@@ -54,10 +54,11 @@ class Sleipnir < Formula
       reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
       in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
       tool call from the keg the upgrade removed. After `brew upgrade bun` (or a `brew upgrade`
-      that upgrades it), restart MCP clients for the same reason, and re-run `slp huginn install`
-      if you last ran it with sleipnir 0.12.2 or earlier: that version's native-host launcher
-      names the versioned bun keg, where a later version's launcher names
-      #{formula_opt_bin("bun")}/bun.
+      that upgrades it), restart an MCP client whose sleipnir-mcp was started by sleipnir 0.12.2
+      or earlier (later versions run tool calls through #{formula_opt_bin("bun")}/bun), and
+      re-run `slp huginn install` if you last ran it with sleipnir 0.12.2 or earlier: that
+      version's native-host launcher names the versioned bun keg, where a later version's
+      launcher names #{formula_opt_bin("bun")}/bun.
 
       A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
       or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
@@ -101,7 +102,7 @@ class Sleipnir < Formula
     # graph from the installed tree, and the server exits when stdin closes.
     init = { jsonrpc: "2.0", id: 1, method: "initialize",
              params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "brew", version: "0" } } }
-    reply = JSON.parse(pipe_output("#{bin}/sleipnir-mcp", "#{init.to_json}\n", 0))
+    reply = JSON.parse(pipe_output(bin/"sleipnir-mcp", "#{init.to_json}\n", 0))
     assert_equal version.to_s, reply.dig("result", "serverInfo", "version")
     refute_match "from-dotenv", shell_output("#{bin}/slp profile")
   end
