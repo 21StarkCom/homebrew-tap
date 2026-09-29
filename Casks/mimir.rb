@@ -32,7 +32,7 @@ cask "mimir" do
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
   version "0.27.0"
-  sha256 "575570b937b064a5246695114d8f53e47a6f3e72d9901203f2fe65f5a666aac3"
+  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/581086216",
