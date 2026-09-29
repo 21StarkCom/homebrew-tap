@@ -5,7 +5,8 @@
 class Tyr < Formula
   desc "Vendor-integration CLI: gh, Workspace, Atlassian, Slack, ClickUp, GCP and more"
   homepage "https://github.com/21StarkCom/tyr"
-  # API asset URL (private repo). No release bumps this formula: tyr ships no binary now.
+  # API asset URL (private repo). asset id is release-specific, but no release bumps this
+  # formula: tyr ships no binary now.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
   url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/532798162",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
