@@ -425,6 +425,12 @@ done
 remote() { git --git-dir="${R}/remote.git" "$@"; }
 tip_of() { remote rev-parse -q --verify "refs/heads/$1" || true; }
 pr_field() { cat "${R}/gh/prs/$1/$2" 2>/dev/null; }
+# The line of the last gh call logged whose arguments start with $1 (0: none).
+log_line() {
+  local n
+  n="$(grep -n -F -- "$1" "${R}/gh/log" | grep "^[0-9]*:$1" | tail -n 1)"
+  printf '%s\n' "${n%%:*}"
+}
 clone_on_main() {
   [[ "$(git -C "${R}/tap" symbolic-ref -q HEAD)" = refs/heads/main ]] &&
     [[ -z "$(git -C "${R}/tap" status --porcelain)" ]] &&
@@ -631,32 +637,61 @@ hand_tip="$(tip_of bump/demo-1.2.3)"
 bump demo v1.2.3
 check "a branch two commits ahead is refused" eval 'is_code 1 && stderr_has "2 commits ahead" && [ "$(tip_of bump/demo-1.2.3)" = "$hand_tip" ]'
 
-begin "no-ticket: an unticketed PR is labeled, a re-run converges, --ticket drops the label"
+begin "no-ticket: the label follows the PR's final title"
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 bump demo v1.2.3
-check "a PR run without --ticket labels its unscoped PR no-ticket, after opening it" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(gh_calls "pr edit 42 -R $TAP --add-label no-ticket")" = 1 ]'
+check "a run without --ticket labels its unscoped PR once it is open, with the retitle hint" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(log_line "pr create")" -lt "$(log_line "pr edit 42 -R $TAP --add-label")" ] && stderr_has "drop the label, then retitle"'
 add_release 21StarkCom/demo v1.2.3 601 demo_v1.2.3_darwin_arm64.zip
 bump demo v1.2.3
-check "a re-run without --ticket leaves the one label as it is, with no label call" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(grep -c -- -label "$R/gh/log")" = 1 ]'
+check "a re-run without --ticket keeps the one label, with no label call" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(grep -c -- -label "$R/gh/log")" = 1 ]'
 bump demo v1.2.3 --ticket STARK-9
-check "--ticket on the reused PR retitles it and removes no-ticket" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ -z "$(pr_field 42 labels)" ]'
+check "--ticket drops the label, then retitles" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ -z "$(pr_field 42 labels)" ] && [ "$(log_line "pr edit 42 -R $TAP --remove-label")" -lt "$(log_line "pr edit 42 -R $TAP --title chore(STARK-9)")" ] && stderr_lacks "drop the label, then retitle"'
+: >"${R}/gh/log"
+bump demo v1.2.3 --ticket STARK-9
+check "--ticket on an unlabeled PR makes no label call" eval 'is_code 0 && ! grep -q -- -label "$R/gh/log"'
 bump demo v1.2.3
-check "a ticket-titled PR re-run without --ticket is not labeled again" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ]'
+check "a ticket-titled PR re-run without --ticket gains no label" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ]'
 
-begin "no-ticket: a failed label is a warning, and the next run adds it"
+begin "no-ticket: a human's retitle, read with idun's title grammar"
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+bump demo v1.2.3
+printf '%s' "chore(STARK-12): bump demo to v1.2.3" >"${R}/gh/prs/42/title"
+bump demo v1.2.3
+check "a re-run drops the label from a PR a human retitled to a ticket" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ] && [ "$(pr_field 42 title)" = "chore(STARK-12): bump demo to v1.2.3" ]'
+for t in "chore(STARK-12)!: bump demo to v1.2.3" "chore(STARK-12):bump demo to v1.2.3" "  chore(ABC-3): bump demo to v1.2.3"
+do
+  printf '%s' "${t}" >"${R}/gh/prs/42/title"
+  printf 'no-ticket\n' >"${R}/gh/prs/42/labels"
+  bump demo v1.2.3
+  check "idun reads '${t}' as ticket-titled, so the label goes" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ]'
+done
+printf '%s' "chore: bump demo to v1.2.3" >"${R}/gh/prs/42/title"
+printf 'No-Ticket\n' >"${R}/gh/prs/42/labels"
+: >"${R}/gh/log"
+bump demo v1.2.3
+check "a mark in another case counts, as idun counts it: no label call" eval 'is_code 0 && ! grep -q -- -label "$R/gh/log"'
+
+begin "no-ticket: a failed label step"
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 : >"${R}/gh/label.fail"
 bump demo v1.2.3
-check "the PR is open and the run succeeds, warning that the label is missing" eval 'is_code 0 && stdout_is "42$NL" && [ -z "$(pr_field 42 labels)" ] && stderr_has "could not label PR #42 no-ticket"'
+check "a failed add is a warning: the PR is open and the run succeeds" eval 'is_code 0 && stdout_is "42$NL" && [ -z "$(pr_field 42 labels)" ] && stderr_has "could not label PR #42 no-ticket" && stderr_lacks "drop the label, then retitle"'
 rm "${R}/gh/label.fail"
 bump demo v1.2.3
-check "an identical re-run labels the unscoped PR it reuses" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ]'
+check "the next identical run labels it" eval 'is_code 0 && [ "$(pr_field 42 labels)" = no-ticket ]'
 : >"${R}/gh/label.fail"
 bump demo v1.2.3 --ticket STARK-9
-check "a failed removal still retitles, and warns" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ "$(pr_field 42 labels)" = no-ticket ] && stderr_has "could not remove no-ticket from PR #42"'
+check "a failed drop under --ticket stops the run with nothing retitled" eval 'is_code 1 && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(pr_field 42 labels)" = no-ticket ] && stderr_has "nothing was retitled"'
 rm "${R}/gh/label.fail"
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+set_runs "${ALL_GREEN[@]}"
+: >"${R}/gh/label.fail"
+bump demo v1.2.3 --merge
+check "--merge still merges when the label step fails" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 state)" = MERGED ] && stderr_has "could not label PR #42"'
 
 begin "main already carries the release: nothing to merge"
 new_rig

@@ -18,11 +18,11 @@ set -euo pipefail
 TAP_REPO="21StarkCom/homebrew-tap"
 # The fleet's below-the-ticket-bar mark. idun gh pr-merge skips its ticket stamp
 # only for a PR carrying it; unlabeled, the stamp falls back to whatever ticket
-# the merging session is bound to. publish_pr puts it on an unticketed PR in a
-# step of its own, after the PR opens, and a later run adds it if that failed.
+# the merging session is bound to. publish_pr syncs it to the PR's final title.
 NO_TICKET_LABEL="no-ticket"
-# A PR title that carries a ticket scope: chore(STARK-<n>): ...
-SCOPED_TITLE_RE='^[a-z]+\(STARK-[0-9]+\): '
+# A title that names a ticket, as idun gh pr-merge reads one (TICKET_PREFIX_RE
+# in idun's src/gh/lib/draft_schema.ts, matched against the trimmed title).
+TICKET_TITLE_RE='^[a-z]+\([A-Z][A-Z0-9]{1,9}-[0-9]+\)!?:'
 # Every workflow this tap runs on a pull request: --merge waits for all of them
 # (Decision 4). scripts/test-bump.sh fails when this differs from the
 # .github/workflows/ files that trigger on pull_request.
@@ -59,9 +59,8 @@ The checkout this script sits in is the one it reads and edits: clone the tap
                       be X.Y.Z or X.Y.Z-<pre>.
   --ticket STARK-<n>  scope the commit and PR title:
                       chore(STARK-<n>): bump <entry> to <tag>
-                      Without it, the PR is labeled no-ticket (a failed label
-                      is a warning, retried by the next run); with it, a reused
-                      PR is retitled and loses that label.
+                      The PR is labeled no-ticket exactly when its title names
+                      no ticket (see the no-ticket label, below).
   --asset-suffix <s>  the asset to pin (default darwin_arm64.zip)
   --dry-run           print the diff to stderr and change nothing
   --no-pr             edit this checkout's entry, with no commit and no PR
@@ -82,6 +81,13 @@ changes nothing but those three lines; any other branch is a human's edit, and
 the run refuses it. Nothing is opened when main already pins the release, or
 pins a newer X.Y.Z. The checkout ends the run back on the ref it started on.
 
+
+The no-ticket label: every PR run syncs it to the PR's final title, read as idun
+gh pr-merge reads one. A PR opened without --ticket gets it once open. A reused
+PR keeps its live title without --ticket and gains or loses the label to match.
+--ticket drops it BEFORE the retitle, and a failed drop stops the run with
+nothing retitled. Any other failed add or drop is a warning, retried by the
+next run on the branch.
 --merge merges only once every workflow this tap runs on pull requests (bump,
 formulae, secret-scan) has a run for the PR's exact head that concluded
 success, with gh pr merge --squash --delete-branch --match-head-commit. A head
@@ -307,7 +313,7 @@ bumper_shape() {
 
 # Commit the rewrite on bump/<entry>-<version>, push it, and open or reuse its PR.
 publish_pr() {
-  local scope="chore" title body tip tip_tree="" tree url found rest pr_marked=false pr_title="" label_op=""
+  local scope="chore" title body tip tip_tree="" tree url found pr_marked=false pr_title="" final_title want=false
   [[ -z "${ticket}" ]] || scope="chore(${ticket})"
   title="${scope}: bump ${entry} to ${tag}"
   body="Point \`${rel}\` at \`${a_name}\` (asset \`${a_id}\`, sha256 \`${sha}\`) from ${repo} ${tag}."
@@ -316,17 +322,13 @@ publish_pr() {
   tip="$(git -C "${tap_root}" ls-remote origin "refs/heads/${branch}")" || die "could not read ${branch} from origin"
   tip="${tip%%[[:space:]]*}"
   # The open PR on the branch, if any: its number, whether it carries the
-  # no-ticket mark, and its live title (a human may have retitled it).
+  # no-ticket mark (matched as idun matches it: trimmed, any case), and its live
+  # title (a human may have retitled it).
   found="$(gh pr list -R "${TAP_REPO}" --head "${branch}" --base main --state open --json number,title,labels \
-    --jq '.[0] // empty | "\(.number)\t\(any(.labels[]; .name == "'"${NO_TICKET_LABEL}"'"))\t\(.title)"')" ||
-    die "could not list the open PRs on ${branch}"
-  pr="${found%%$'\t'*}"
-  if [[ -n "${found}" ]]
-  then
-    rest="${found#*$'\t'}"
-    pr_marked="${rest%%$'\t'*}"
-    pr_title="${rest#*$'\t'}"
-  fi
+    --jq '.[0] // empty | [.number, any(.labels[]; .name | test("^\\s*'"${NO_TICKET_LABEL}"'\\s*$"; "i")), .title]
+      | map(tostring) | join("\u001f")')" || die "could not list the open PRs on ${branch}"
+  pr=""
+  [[ -z "${found}" ]] || IFS=$'\x1f' read -r pr pr_marked pr_title <<<"${found}"
   if [[ -n "${tip}" ]]
   then
     tip_tree="$(bumper_shape "${tip}")" ||
@@ -365,40 +367,67 @@ publish_pr() {
     say "==> reusing PR #${pr}"
     if [[ -n "${ticket}" ]]
     then
+      # The mark goes BEFORE the ticket title (the operator rule), so the PR is
+      # never ticket-titled and marked no-ticket at once.
+      if [[ "${pr_marked}" = true ]]
+      then
+        gh pr edit "${pr}" -R "${TAP_REPO}" --remove-label "${NO_TICKET_LABEL}" >&2 ||
+          die "could not remove ${NO_TICKET_LABEL} from PR #${pr}, so nothing was retitled; re-run to retry"
+        pr_marked=false
+      fi
       gh pr edit "${pr}" -R "${TAP_REPO}" --title "${title}" --body "${body}" >&2 || die "could not retitle PR #${pr}"
-      # Now ticket work: the title carries the ticket, so the mark goes.
-      [[ "${pr_marked}" != true ]] || label_op=remove
+      final_title="${title}"
     else
       gh pr edit "${pr}" -R "${TAP_REPO}" --body "${body}" >&2 ||
         say "bump.sh: warning: could not refresh PR #${pr}'s body; it may name the previous asset"
-      # An unscoped live title is unticketed work still missing its mark (the
-      # run that opened it could not label it). A ticket title, from --ticket
-      # or a human's retitle, is left unmarked.
-      [[ "${pr_marked}" = true ]] || [[ ${pr_title} =~ ${SCOPED_TITLE_RE} ]] || label_op=add
+      final_title="${pr_title}"
     fi
   else
     url="$(gh pr create -R "${TAP_REPO}" --base main --head "${branch}" --title "${title}" --body "${body}")" ||
       die "could not open a PR for ${branch}"
     say "==> opened ${url}"
     pr="${url##*/}"
-    [[ -n "${ticket}" ]] || label_op=add
+    final_title="${title}"
   fi
   case "${pr}" in
     "" | *[!0-9]*) die "could not determine the PR number (got '${pr}')" ;;
   esac
+  sync_no_ticket
+}
 
-  # The label is a step of its own and only warns: gh refuses a label the repo
-  # lacks, and a bump that is pushed and open must not fail over its mark.
-  case "${label_op}" in
-    add)
-      gh pr edit "${pr}" -R "${TAP_REPO}" --add-label "${NO_TICKET_LABEL}" >&2 ||
-        say "bump.sh: warning: could not label PR #${pr} ${NO_TICKET_LABEL}; add it before idun gh pr-merge, or that merge stamps the session's bound ticket (a re-run retries it)"
-      ;;
-    remove)
-      gh pr edit "${pr}" -R "${TAP_REPO}" --remove-label "${NO_TICKET_LABEL}" >&2 ||
-        say "bump.sh: warning: could not remove ${NO_TICKET_LABEL} from PR #${pr}; remove it before idun gh pr-merge, or that merge skips the ticket stamp"
-      ;;
-  esac
+# Sync publish_pr's PR to one rule: it carries the no-ticket mark exactly when
+# its final title names no ticket. The add is never folded into gh pr create,
+# which fails whole on a label the repo lacks; a pushed, open bump must not fail
+# over its mark, so both steps only warn, and the next run on the branch retries.
+sync_no_ticket() {
+  ticket_titled "${final_title}" || want=true
+  if [[ "${want}" = true ]] && [[ "${pr_marked}" != true ]]
+  then
+    if gh pr edit "${pr}" -R "${TAP_REPO}" --add-label "${NO_TICKET_LABEL}" >&2
+    then
+      pr_marked=true
+    else
+      say "bump.sh: warning: could not label PR #${pr} ${NO_TICKET_LABEL}; add it before idun gh pr-merge, or that merge stamps the session's bound ticket (the next run retries it)"
+    fi
+  elif [[ "${want}" != true ]] && [[ "${pr_marked}" = true ]]
+  then
+    if gh pr edit "${pr}" -R "${TAP_REPO}" --remove-label "${NO_TICKET_LABEL}" >&2
+    then
+      pr_marked=false
+    else
+      say "bump.sh: warning: could not remove ${NO_TICKET_LABEL} from PR #${pr}, whose title names a ticket; remove it before idun gh pr-merge, or that merge skips the ticket stamp (the next run retries it)"
+    fi
+  fi
+  [[ "${pr_marked}" != true ]] ||
+    say "==> PR #${pr} is labeled ${NO_TICKET_LABEL}: its title names no ticket. If a ticket covers this bump, drop the label, then retitle: gh pr edit ${pr} -R ${TAP_REPO} --remove-label ${NO_TICKET_LABEL}; gh pr edit ${pr} -R ${TAP_REPO} --title 'chore(STARK-<n>): bump ${entry} to ${tag}'"
+}
+
+# Whether title $1 names a ticket, as idun gh pr-merge reads it: TICKET_TITLE_RE
+# against the title with its leading whitespace trimmed.
+ticket_titled() {
+  local t="$1"
+  t="${t#"${t%%[![:space:]]*}"}"
+  [[ ${t} =~ ${TICKET_TITLE_RE} ]]
 }
 
 # One reading of the gate's named checks for head $1: a line per workflow, then
