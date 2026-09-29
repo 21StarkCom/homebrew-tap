@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-# Ad-hoc-signed macOS build of the frigg 21Stark IT-ops CLIs for Google Workspace
-# (manager-edge alignment + the all@ group-of-groups). Like idun, the binaries are
-# ad-hoc-signed (Go's linker), NOT Developer-ID/notarized — Homebrew strips the
-# quarantine xattr on install, so Gatekeeper is not in the path. Built + published
-# by frigg's GitHub Actions release workflow (STARK-2219).
+# Ad-hoc-signed macOS build of the frigg 21Stark IT-ops tools for Google Workspace and
+# the vendor fleet. The binaries carry Go's linker ad-hoc signature, NOT
+# Developer-ID/notarized — a formula's files install without the quarantine xattr, so
+# Gatekeeper is not in the path. Built + published by frigg's GitHub Actions release
+# workflow (STARK-2219).
 class Frigg < Formula
   desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-cockpit TUI, and gws-* CLIs"
   homepage "https://github.com/21StarkCom/frigg"

@@ -251,9 +251,9 @@ brew install --cask 21StarkCom/tap/atlas
 closure (a standalone Node + `brain` bin it spawns for status checks), so — unlike
 `mimir` — the cask exposes **no `binary`**: `brain` is its own formula and must not
 be shadowed. **macOS 12+ arm64.** The build is Developer-ID **signed + notarized**
-(`spctl` reports "Notarized Developer ID") but not stapled: Homebrew installs it
-quarantined, so its first launch checks the notarization online. Released from the source repo's
-`desktop-v*` tags (parallel to the CLI's `cli-v*`).
+(`spctl` reports "Notarized Developer ID") but not stapled: every install or upgrade
+lands it quarantined, so the first launch after each checks the notarization online.
+Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`).
 
 ## goldfinger (background computer use — cask)
 

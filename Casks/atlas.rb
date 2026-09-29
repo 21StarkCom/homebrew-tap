@@ -24,8 +24,8 @@ end
 # the cask exposes NO `binary`: `brain` is its own formula and must not be shadowed.
 #
 # Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`); the app
-# is notarized (spctl: "Notarized Developer ID"). It is not offline-stapled, which is harmless
-# here — `brew install --cask` strips the quarantine xattr, so Gatekeeper never gates it.
+# is notarized (spctl: "Notarized Developer ID") but not stapled: every install or upgrade
+# lands it quarantined, so the first launch after each checks the notarization online.
 cask "atlas" do
   # version / asset id / sha256 are release-specific. No release step bumps this cask (the
   # README's caller table): re-point it with the bumper — do not hand-edit them.
@@ -37,7 +37,7 @@ cask "atlas" do
   version "0.9.2"
   sha256 "3cecb66f12c044283f644bb3106a1d83036c70d20e53bfc75f2d503c2ba82294"
 
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
+  # API asset URL (private repo). asset id is release-specific; re-point it with the bumper.
   url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/502421943",
       using: AtlasPrivateReleaseStrategy
   name "Atlas"
