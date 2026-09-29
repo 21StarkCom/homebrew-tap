@@ -80,6 +80,7 @@ jobs:
               # homebrew/core has an unrelated `atlas` formula, and the runner taps
               # core. The cask is only ever installed as 21StarkCom/tap/atlas.
               atlas) except+=,token_conflicts ;;
+              goldfinger) except=token_conflicts ;; # planted negative 2
             esac
             brew fetch --cask "$cask"
             brew audit --cask --strict --except="$except" "$cask"
