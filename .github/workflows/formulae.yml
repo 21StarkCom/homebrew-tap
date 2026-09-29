@@ -60,6 +60,31 @@ jobs:
             brew install "$formula"
             brew test "$formula"
           done
+      - name: Fetch and audit every cask
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
+        run: |
+          if [[ -z "$HOMEBREW_GITHUB_API_TOKEN" ]]; then
+            echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
+            exit 1
+          fi
+          for path in Casks/*.rb; do
+            name="${path##*/}"
+            name="${name%.rb}"
+            cask="21StarkCom/tap/${name}"
+            # Every cask pins its release by numeric asset id, a URL this audit reads
+            # as unversioned and so wants `sha256 :no_check`. The pinned sha256 is the
+            # only check on the asset, and the fetch below verifies it.
+            except=sha256_no_check_if_unversioned
+            case "$name" in
+              # homebrew/core has an unrelated `atlas` formula, and the runner taps
+              # core. The cask is only ever installed as 21StarkCom/tap/atlas.
+              atlas) except+=,token_conflicts ;;
+            esac
+            brew fetch --cask "$cask"
+            brew audit --cask --strict --except="$except" "$cask"
+            echo "${cask}: fetched and audited"
+          done
       - name: Verify authenticated preflight and partial resume
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
