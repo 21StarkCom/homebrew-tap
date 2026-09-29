@@ -46,7 +46,7 @@ supports one (the frigg, lumiere and plume sections say how).
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
-| `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | any |
+| `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 26 (Tahoe) |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
@@ -136,8 +136,10 @@ brew install 21StarkCom/tap/hermod
 ```
 
 The release zip is a `bun build --compile` binary carrying bun's linker-signed **ad-hoc**
-signature, not a Developer ID. `hermod` reaches its cmux app over the inherited
-`CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or set the socket env yourself).
+signature, not a Developer ID. It is compiled with the release Mac's Homebrew `bun`, whose
+build targets macOS 26.0, so the formula requires macOS 26 (Tahoe). `hermod` reaches its
+cmux app over the inherited `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or
+set the socket env yourself).
 
 ## idun
 

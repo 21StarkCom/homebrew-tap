@@ -18,7 +18,7 @@ class Hermod < Formula
   end
 
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :tahoe # compiled with the release Mac's Homebrew bun, built for macOS 26.0; bare symbol == ">="
 
   def install
     bin.install "hermod"
