@@ -71,8 +71,6 @@ cask "goldfinger" do
     Homebrew installs the app quarantined, so macOS may first ask whether to open Goldfinger:
     allow it, and run `goldfinger setup` again if it gave up waiting for the daemon.
 
-    Before `brew upgrade` or `brew uninstall`, run `goldfinger stop`: quitting the app ends a
-    `record start --video` recording without finishing its video.mp4.
     After `brew upgrade`, restart any agent running `goldfinger mcp`: until it restarts, the
     new daemon answers its calls with `version_mismatch`.
   EOS
