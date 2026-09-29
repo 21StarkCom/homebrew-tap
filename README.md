@@ -1,170 +1,107 @@
 # homebrew-tap
 
-Private [Homebrew](https://brew.sh) tap for the 21Stark fleet.
+Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
+`21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
+`brew install`: 11 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+macOS arm64 build pulled from a private GitHub Release. The tap builds nothing. It only
+pins each entry to a published release, and each source repo's release re-pins its own
+entry by pull request.
 
-## idun
+**Status:** active. Every entry installs today; 12 of the 14 are re-pinned on each release
+of their source repo, and the other two are named under
+[How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
+entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
 
-The [`idun`](https://github.com/21StarkCom/idun) personal-ops maintenance CLI —
-one bun/TypeScript binary, one subcommand per tool (GitHub identity swap, seat
-rotation, cleanup, housekeeping, updates).
-
-```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/idun
-```
-
-The token is required: this repo and the `idun` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
-
-**macOS arm64 only** (Apple Silicon). The release zip is a `bun build --compile`
-binary carrying bun's linker-signed **ad-hoc** signature — it runs under Homebrew
-(which strips the quarantine xattr) but is **not** Developer-ID notarized like
-the tools below, so a raw unzip outside Homebrew hits Gatekeeper. The live,
-repo-tracking install is the wrapper in the `idun` repo (`./setup.sh`); this
-formula is for repo-less machines.
-
-## hermod
-
-The [`hermod`](https://github.com/21StarkCom/hermod) CLI + engine for
-the [cmux](https://github.com/manaflow-ai/cmux) control API — one bun/TypeScript
-binary that spawns/splits tabs, drives the per-workspace todo checklist (a one-
-shot command group plus an interactive TUI), and finds orphaned surface
-processes.
+## Install
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/hermod
+# A GitHub token with contents:read on the private 21StarkCom release repos.
+export HOMEBREW_GITHUB_API_TOKEN=<token>
+# Once. The tap repo is private too, so clone it over SSH with your own GitHub key.
+brew tap 21StarkCom/tap git@github.com:21StarkCom/homebrew-tap.git
+brew install 21StarkCom/tap/<formula>
+brew install --cask 21StarkCom/tap/<cask>
+brew upgrade 21StarkCom/tap/<name>
 ```
 
-The token is required: this repo and the `hermod` releases are **private**,
-and the entry's native Homebrew downloader fetches the release asset by
-its GitHub API URL with an `Authorization` header.
+The token authenticates the release downloads only. It must be set for every `brew`
+command that reads a formula, `brew info` included: a formula refuses to evaluate without
+it. A cask needs it only to download. A formula's files are installed without the
+quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
+unzip the release by hand. Casks install their apps quarantined. Every entry is
+**macOS arm64 only**; for another platform, build from the tool's own repo where it
+supports one (the frigg, lumiere and plume sections say how).
 
-**macOS arm64 only** (Apple Silicon). Same ad-hoc signature story as `idun`: the
-release zip is a `bun build --compile` binary carrying bun's linker-signed
-**ad-hoc** signature — it runs under Homebrew (which strips the quarantine
-xattr) but is **not** Developer-ID notarized, so a raw unzip outside Homebrew
-hits Gatekeeper. `hermod` reaches its cmux app over the inherited
-`CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or set the socket env
-yourself).
+## Entries
+
+| Entry | Kind | Source repo | Installs | Build | Signing | macOS |
+|---|---|---|---|---|---|---|
+| `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
+| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
+| `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
+| `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
+| `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | any |
+| `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | any |
+| `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
+| `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
+| `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
+| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized `mac-helper` | any |
+| `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
+| `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
+| `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app`, `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
+| `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
+
+"any" means the entry declares no macOS floor beyond Apple Silicon.
+
+## alfred
+
+The [`alfred`](https://github.com/21StarkCom/alfred) ops butler: the `alfred` ticket and
+ops CLI, plus `alfredd`, its always-on local daemon.
+
+```sh
+brew install 21StarkCom/tap/alfred
+alfredd install      # once: write the daemon's LaunchAgent plist and load it
+```
+
+The plist pins Homebrew's stable `opt` path, so an upgrade never orphans the daemon. Both
+binaries are Developer-ID signed + notarized Go builds.
+
+## brain
+
+The [`brain`](https://github.com/21StarkCom/atlas) CLI — the **Atlas** engine
+(`@atlas/cli`): ingest notes, build the retrieval index, query/answer over a
+vault, and run the review/housekeep surfaces.
+
+```sh
+brew install 21StarkCom/tap/brain
+```
+
+Unlike the single-binary CLIs, `brain` is **node ESM** inside a pnpm monorepo, so the
+release zip is a **`pnpm deploy` tree** — `dist/`, a vendored `node_modules` (workspace
+`@atlas/*` deps plus the two used native modules, `better-sqlite3` and
+`@lancedb/lancedb-darwin-arm64`; LanceDB's optional ML embedding stack is pruned), and the
+runtime command registry at `docs/specs/cli-contract/`. The formula installs that tree into
+`libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so the
+registry always resolves. The natives are **Developer-ID signed + notarized** (submission
+recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline-**stapled**,
+so it's online-notarized — moot under Homebrew, which installs a formula's files without the
+quarantine xattr.
+Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
 
 ## frigg
 
-The [`frigg`](https://github.com/21StarkCom/frigg) 21Stark IT-ops CLIs for Google
-Workspace — `gws-align-managers` (bulk-align org-chart manager edges) and
-`gws-build-all-group` (maintain `all@evinced.com` as a group-of-groups). Both
+The [`frigg`](https://github.com/21StarkCom/frigg) IT-ops toolkit for Google Workspace and
+the vendor fleet: the `frigg` CLI, the `frigg-cockpit` TUI, and two single-purpose
+Workspace CLIs, `gws-align-managers` (bulk-align org-chart manager edges from a CSV) and
+`gws-build-all-group` (rebuild the all-hands group from the directory). Both `gws-*` tools
 dry-run by default; `--apply` mutates the live directory.
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
 brew install 21StarkCom/tap/frigg
 ```
 
-The token is required: this repo and the `frigg` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
-
-**macOS arm64 only** (Apple Silicon). Like `idun`, the release zip is
-**ad-hoc-signed** (Go's linker), **not** Developer-ID notarized — it runs under
-Homebrew (which strips the quarantine xattr) but a raw unzip outside Homebrew
-hits Gatekeeper. Non-macOS or repo-less: `go install` from the `frigg` repo.
-
-## lumiere
-
-The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
-the `lumiere-*` tools (image gen/edit, SVG suite, video, brand icons, …), fronted
-by a `lumiere` dispatcher (`lumiere <tool> [args]`, `lumiere --help` for the list).
-
-```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/lumiere
-```
-
-The token is required: this repo and the `lumiere` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
-
-**macOS 26 (Tahoe) arm64 only.** The ONNX tools (`lumiere-bg`, `lumiere-bg-swap`,
-`lumiere-product`, `lumiere-upscale`) are built for macOS 26.0. The bottle is a Developer-ID-signed + notarized
-`darwin_arm64` build (Apple Silicon). Linux users build from source in the
-`lumiere` repo (`make build`).
-
-## sleipnir
-
-The [`sleipnir`](https://github.com/21StarkCom/sleipnir) CLI — drives dedicated,
-persistent Chrome profiles for ad-hoc agent tasks (per-task user-agent, headless
-or headed, plus a suite of capabilities).
-
-```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/sleipnir
-```
-
-The token is required: this repo and the `sleipnir` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by
-its GitHub API URL with an `Authorization` header.
-
-**macOS arm64 only** (Apple Silicon). sleipnir drives system Chrome and a Swift
-AX/CGEvent helper, so there is no Linux build. sleipnir has **no build step** —
-Bun runs its TypeScript directly — so the release zip is the runnable tree
-(source + a vendored prod `node_modules`) plus the Developer-ID-signed + notarized
-Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp` /
-`sleipnir`, `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0) and
-`sleipnir-mcp` (the MCP server an agent client runs, from 0.12.1) over Homebrew's
-`bun` (a formula dependency), each keeping the caller's working-directory `.env` and
-`bunfig.toml` out. Name it in full —
-`brew upgrade 21StarkCom/tap/sleipnir` — since a bare `sleipnir` is homebrew/cask's
-browser of the same name.
-
-## lucius
-
-The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
-partner on the Claude Agent SDK that recalls from `brain` and keeps its own vault.
-
-```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/lucius
-```
-
-The token is required: this repo and the `lucius` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
-
-**macOS arm64 only** (Apple Silicon). Same shape as `sleipnir`: Bun runs the
-TypeScript directly, so the release zip is the runnable tree (`bin/`, `src/`,
-`package.json`, `bun.lock`) plus a vendored prod `node_modules`. The formula
-installs it into `libexec` and wraps `lucius` over Homebrew's `bun` (a formula
-dependency), which must be **1.4.2 or newer** — lucius refuses to start on an
-older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that
-floor on a formula dependency, so `brew install` succeeds and the refusal only
-shows on the first run. The tree's one Mach-O is the Agent SDK's own `claude`
-binary, signed by Anthropic; `src/vault/publication.c` ships beside its loader
-because `bun:ffi` compiles it at runtime.
-
-The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
-directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
-
-## mimir
-
-[`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
-with a paired `mimir` CLI and a loopback MCP server for agents. Unlike the CLIs above,
-it is a **GUI app**, so it ships as a **cask** (`Casks/mimir.rb`):
-
-```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install --cask 21StarkCom/tap/mimir
-```
-
-The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
-your `PATH`. The token is required: this repo and the `mimir` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its GitHub API URL with
-an `Authorization` header.
-
-**macOS 26 (Tahoe) arm64 only** (Apple Silicon). The release zip is the Developer-ID-signed,
-notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `brew uninstall
---cask mimir` removes the app; `--zap` also trashes its local data (but never the
-login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+The binaries carry Go's linker **ad-hoc** signature, not a Developer ID. Non-macOS or
+repo-less: `go install` from the `frigg` repo.
 
 ## heimdall
 
@@ -173,17 +110,79 @@ native-APNs push relay. `heimdall send <title>` fires a Mac banner **and** pushe
 to your iPhone / iPad via your own APNs key and app (no third-party push service).
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
 brew install 21StarkCom/tap/heimdall
 ```
 
-The token is required: this repo and the `heimdall` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
+The zip is the Developer-ID-signed + notarized `heimdall` binary. Config (backend URL +
+send-secret) reads from the login Keychain (service `heimdall`), or `HEIMDALL_URL` /
+`HEIMDALL_SEND_SECRET`.
 
-**macOS arm64 only** (Apple Silicon). The zip is the Developer-ID-signed +
-notarized `heimdall` binary. Config (backend URL + send-secret) reads from the
-login Keychain (service `heimdall`), or `HEIMDALL_URL` / `HEIMDALL_SEND_SECRET`.
+## hermod
+
+The [`hermod`](https://github.com/21StarkCom/hermod) CLI + engine for
+the [cmux](https://github.com/manaflow-ai/cmux) control API — one bun/TypeScript
+binary that spawns/splits tabs, drives the per-workspace todo checklist (a one-shot
+command group plus an interactive TUI), finds orphaned surface processes, and discovers
+and messages peer agent sessions (`msg`).
+
+```sh
+brew install 21StarkCom/tap/hermod
+```
+
+The release zip is a `bun build --compile` binary carrying bun's linker-signed **ad-hoc**
+signature, not a Developer ID. `hermod` reaches its cmux app over the inherited
+`CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or set the socket env yourself).
+
+## idun
+
+The [`idun`](https://github.com/21StarkCom/idun) personal-ops maintenance CLI —
+one bun/TypeScript binary, one subcommand per tool (GitHub identity swap, seat
+rotation, cleanup, housekeeping, updates).
+
+```sh
+brew install 21StarkCom/tap/idun
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized. A
+checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
+`./setup.sh`, which steps aside when this formula is installed.
+
+## lucius
+
+The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
+partner on the Claude Agent SDK by default, with a selectable OpenAI backend, that
+recalls from `brain` and keeps its own vault.
+
+```sh
+brew install 21StarkCom/tap/lucius
+```
+
+Same shape as `sleipnir`: Bun runs the TypeScript directly, so the release zip is the
+runnable tree (`bin/`, `src/`, `package.json`, `bun.lock`) plus a vendored prod
+`node_modules`. The formula installs it into `libexec` and wraps `lucius` over Homebrew's
+`bun` (a formula dependency), which must be **1.4.2 or newer** — lucius refuses to start on
+an older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that floor
+on a formula dependency, so `brew install` succeeds and the refusal only shows on the first
+run. The tree's one Mach-O is the Agent SDK's own `claude` binary, signed by Anthropic;
+`src/vault/publication.c` ships beside its loader because `bun:ffi` compiles it at runtime.
+
+The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
+directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
+
+## lumiere
+
+The [`lumiere`](https://github.com/21StarkCom/lumiere) visual-media CLI toolkit —
+the `lumiere-*` tools (image gen/edit, SVG suite, video, brand icons, …), fronted
+by a `lumiere` dispatcher (`lumiere <tool> [args]`, `lumiere --help` for the list).
+
+```sh
+brew install 21StarkCom/tap/lumiere
+```
+
+**macOS 26 (Tahoe) or newer.** The ONNX tools (`lumiere-bg`, `lumiere-bg-swap`,
+`lumiere-product`, `lumiere-upscale`) are built for macOS 26.0. The release zip is a
+Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source in the
+`lumiere` repo (`make build`).
 
 ## plume
 
@@ -193,49 +192,45 @@ The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — 
 package (the library is the product; these binaries are the drivers).
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
 brew install 21StarkCom/tap/plume
 ```
 
-The token is required: this repo and the `plume` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
-
-**macOS arm64 only** (Apple Silicon) — matching the rest of this tap. plume is
-`CGO_ENABLED=0` pure Go and its `release.yml` genuinely cross-compiles
+plume is `CGO_ENABLED=0` pure Go and its `release.yml` genuinely cross-compiles
 `{linux,darwin}/{amd64,arm64}`, so a non-Mac (or Intel Mac) can `make build` /
 `go install` straight from the `plume` repo; the formula pins the darwin/arm64
-tarball only. That build carries Go's linker **ad-hoc** signature (not Developer-ID
-notarized), so it runs under Homebrew (which strips the quarantine xattr) but a
-raw untar outside Homebrew hits Gatekeeper.
+tarball only. That build carries Go's linker **ad-hoc** signature, not a Developer ID.
 
-## brain
+## sleipnir
 
-The [`brain`](https://github.com/21StarkCom/atlas) CLI — the **Atlas** engine
-(`@atlas/cli`): ingest notes, build the retrieval index, query/answer over a
-vault, and run the review/housekeep surfaces.
+The [`sleipnir`](https://github.com/21StarkCom/sleipnir) CLI — drives dedicated,
+persistent Chrome profiles for ad-hoc agent tasks (per-task user-agent, headless
+or headed, plus a suite of capabilities).
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
-brew install 21StarkCom/tap/brain
+brew install 21StarkCom/tap/sleipnir
 ```
 
-The token is required: this repo and the `atlas` releases are **private**, and
-the entry's native Homebrew downloader fetches the release asset by its
-GitHub API URL with an `Authorization` header.
+sleipnir drives system Chrome and a Swift AX/CGEvent helper, so there is no Linux build.
+sleipnir has **no build step** — Bun runs its TypeScript directly — so the release zip is
+the runnable tree (source + a vendored prod `node_modules`) plus the Developer-ID-signed +
+notarized Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp` /
+`sleipnir`, `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0) and
+`sleipnir-mcp` (the MCP server an agent client runs, from 0.12.1) over Homebrew's
+`bun` (a formula dependency), each keeping the caller's working-directory `.env` and
+`bunfig.toml` out. Name it in full —
+`brew upgrade 21StarkCom/tap/sleipnir` — since a bare `sleipnir` is homebrew/cask's
+browser of the same name.
 
-**macOS arm64 only** (Apple Silicon). Unlike the bun-compiled CLIs, `brain` is
-**node ESM** inside a pnpm monorepo, so the release zip is a **`pnpm deploy`
-tree** — `dist/`, a vendored `node_modules` (workspace `@atlas/*` deps plus the
-two used native modules, `better-sqlite3` and `@lancedb/lancedb-darwin-arm64`;
-LanceDB's optional ML embedding stack is pruned), and the runtime command
-registry at `docs/specs/cli-contract/`. The formula installs that tree into
-`libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so
-the registry always resolves. The natives are **Developer-ID signed + notarized**
-(submission recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't
-be offline-**stapled**, so it's online-notarized — moot under Homebrew, which
-strips the quarantine xattr anyway. Released from `cli-v*` tags, parallel to the
-desktop app's `desktop-v*`.
+## tyr
+
+```sh
+brew install 21StarkCom/tap/tyr
+```
+
+A frozen CLI: [`tyr`](https://github.com/21StarkCom/tyr) is now a library-only Go module,
+the vendor-integration capabilities that `frigg` drives, and it ships no binary. No release
+bumps this formula, so it stays on the last CLI build, v0.109.0, Developer-ID signed +
+notarized. For the live capabilities, use `frigg`.
 
 ## atlas (desktop app — cask)
 
@@ -243,7 +238,6 @@ The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
 `21StarkCom/atlas` repo). A GUI `.app`, so it ships as a **cask**:
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
 brew install --cask 21StarkCom/tap/atlas
 ```
 
@@ -251,8 +245,8 @@ brew install --cask 21StarkCom/tap/atlas
 closure (a standalone Node + `brain` bin it spawns for status checks), so — unlike
 `mimir` — the cask exposes **no `binary`**: `brain` is its own formula and must not
 be shadowed. **macOS 12+ arm64.** The build is Developer-ID **signed + notarized**
-(`spctl` reports "Notarized Developer ID"); `brew install --cask` strips the
-quarantine xattr, so Gatekeeper never gates it. Released from the source repo's
+(`spctl` reports "Notarized Developer ID") but not stapled: Homebrew installs it
+quarantined, so its first launch checks the notarization online. Released from the source repo's
 `desktop-v*` tags (parallel to the CLI's `cli-v*`).
 
 ## goldfinger (background computer use — cask)
@@ -263,14 +257,13 @@ CLI observes and operates native apps without taking the user's focus or moving 
 The daemon is a GUI app, so it ships as a **cask** (`Casks/goldfinger.rb`):
 
 ```sh
-export HOMEBREW_GITHUB_API_TOKEN=<a GitHub PAT with read access to 21StarkCom>
 brew install --cask 21StarkCom/tap/goldfinger
 goldfinger setup      # once: grant Accessibility and Screen Recording
 ```
 
 The cask drops `Goldfinger.app` into `/Applications` and symlinks its executable, which is
-both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) arm64
-only.** The release zip is the Developer-ID-signed, notarized and **stapled**
+both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) or
+newer.** The release zip is the Developer-ID-signed, notarized and **stapled**
 `Goldfinger.app`. Homebrew installs it quarantined, so macOS may first ask whether to open
 Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for the daemon.
 
@@ -288,6 +281,48 @@ every recording: the trajectories and videos under `recordings/`).
 Neither revokes the grants: remove Goldfinger in System Settings → Privacy & Security, or run
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
+
+## mimir (credential vault — cask)
+
+[`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
+with a paired `mimir` CLI and a loopback MCP server for agents. It is a **GUI app**, so it
+ships as a **cask** (`Casks/mimir.rb`):
+
+```sh
+brew install --cask 21StarkCom/tap/mimir
+```
+
+The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
+your `PATH`. **macOS 26 (Tahoe) or newer.** The release zip is the Developer-ID-signed,
+notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `brew uninstall
+--cask mimir` removes the app; `--zap` also trashes its local data (but never the
+login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+
+## Repo layout
+
+| Path | What it holds |
+|---|---|
+| `Formula/` | One Ruby formula per CLI. |
+| `Casks/` | One cask per GUI app, each with an initialization-only download adapter. |
+| `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
+| `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
+| `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors, with synthetic credentials only. |
+| `scripts/verify-download.rb` | Checks hermod's authenticated preflight and a partial-download resume against the pinned checksum. |
+| `.github/workflows/formulae.yml` | Styles every entry, runs both verify scripts, and audits, installs and tests every formula on macOS arm64. |
+| `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu and macOS. |
+| `.github/workflows/secret-scan.yml` | The fleet's shared secret scan. |
+
+## How it fits the fleet
+
+The tap is a passive publish target. Each source repo's release re-pins its own entry by
+running this repo's `scripts/bump.sh` (21stark ADR-0008), which reads the asset id and
+checksum back from the published release and opens a PR here. Two entries have no release
+that bumps them: the atlas cask, re-pointed by hand at a `desktop-v*` release, and tyr, a
+frozen v0.109.0 CLI from before tyr became library-only.
+
+On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
+and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
+next rebuilt machine with no change to the installer.
 
 ## Releases: who bumps each entry
 
@@ -308,17 +343,23 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
-| `tyr` | tyr | `scripts/release-darwin.sh`; `scripts/release-tyr-darwin.sh` | the signing Mac |
+| `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-idun's and alfred's releases and plume's `release.yml` merge their own bump PR unattended;
-once migrated, `bump.sh --merge` waits for every check here first. Every other bump PR
-stays open until someone merges it with `idun gh pr-merge`, under a ticket-scoped title.
+idun's and alfred's releases and plume's `release.yml` merge their own bump PR unattended:
+`bump.sh --merge` waits for every check here first. Every other bump PR stays open for a
+hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it.
 
 ## Download authentication and CI
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
 Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu and macOS. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
+
+---
+
+## In the saga
+
+Pens and pictures reach the operator's hands through [homebrew-tap](https://github.com/21StarkCom/homebrew-tap), the house's private Homebrew tap and home of the one bumper script that source repos' releases run to re-pin their entries by pull request. It appears in [plume](https://github.com/21StarkCom/plume)'s chapter of [The Saga of House Stark](https://github.com/21StarkCom/.github/blob/main/fleet/saga.md).
