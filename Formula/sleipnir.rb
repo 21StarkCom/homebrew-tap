@@ -51,13 +51,16 @@ class Sleipnir < Formula
   def caveats
     <<~EOS
       From 0.13.0 on, Huginn, Huginn Scan and Huginn Secrets update themselves. Upgrading
-      to 0.13.0 from an earlier version, run `slp huginn install` once and reload the
-      Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0) once in each
-      Chrome profile (`slp huginn reload <uuid> --yes`, or a browser restart): the hosts
-      already running predate auto-update, and a launcher from sleipnir 0.12.2 or earlier
-      names the versioned bun keg. After that, each `brew upgrade 21StarkCom/tap/sleipnir`
-      reaches every browser whose Huginn is 0.30.0 or newer with no command, about six
-      minutes later when nothing is using Huginn there (`slp huginn auto-update off` stops it).
+      from sleipnir 0.12.3 or earlier, run `#{opt_bin}/slp huginn install` once and reload
+      the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0) once in
+      each Chrome profile: press Reload on it in chrome://extensions, or, for Huginn 0.30.0
+      or newer, run `slp huginn reload <uuid> --yes`, which needs that installation's
+      `reload` grant. The hosts already running predate auto-update, and a launcher from
+      sleipnir 0.12.2 or earlier names the versioned bun keg. After that, each
+      `brew upgrade 21StarkCom/tap/sleipnir` reaches every browser whose Huginn is 0.30.0 or
+      newer with no command, once nothing is using the extension there: Huginn and Huginn
+      Secrets about six minutes later, Huginn Scan within 30 minutes
+      (`slp huginn auto-update off` stops it).
 
       Restart MCP clients after every `brew upgrade 21StarkCom/tap/sleipnir`: a running
       sleipnir-mcp starts each tool call from the keg the upgrade removed. After
@@ -80,13 +83,14 @@ class Sleipnir < Formula
       and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
       (`run_cap` takes `huginn`, not `companion`).
 
-      0.13.0 adds two extensions beside Huginn, each loaded once with Load unpacked from the
-      folder `slp huginn install` prints: Huginn Scan (accessibility scans), and Huginn
-      Secrets, which now shows the one-time codes Huginn used to and fills and saves Mimir
-      sign-ins. Load Secrets only in a browser you sign in to by hand. Huginn Secrets needs
-      Mimir 0.27.0 or newer for codes and fill, and Mimir 0.28.0 or newer for collect
-      (`brew upgrade --cask 21StarkCom/tap/mimir`); its `huginn secrets` command line also
-      needs the grants you tick in its popup.
+      0.13.0 adds two extensions beside Huginn, each loaded with Load unpacked, once per Chrome
+      profile, from the folders `slp huginn install` prints: Huginn Scan (accessibility scans),
+      and Huginn Secrets, which fills and saves Mimir sign-ins and now shows the one-time
+      codes Huginn used to. Load Secrets only in a browser you sign in to by hand. Huginn's
+      `mimir.authenticator` native capability is gone: use `huginn secrets codes`.
+      Huginn Secrets needs Mimir 0.27.0 or newer for codes and fill, and Mimir 0.28.0 or newer,
+      with Allow vault writes on, to save (`brew upgrade --cask 21StarkCom/tap/mimir`); its
+      `huginn secrets` command line also needs the grants you tick in its popup.
     EOS
   end
 
@@ -98,14 +102,13 @@ class Sleipnir < Formula
     assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
     # The MCP launcher answers `help` before it imports the server or opens stdio.
     assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
-    # `slp huginn install` registers this native host with Chrome; `--probe` loads its
-    # whole module graph from the installed tree without starting a host.
-    host = "#{libexec}/apps/huginn/bin/huginn-host.mjs"
-    assert_equal true, JSON.parse(shell_output("#{formula_opt_bin("bun")}/bun #{host} --probe")).fetch("ok")
-    # Huginn Secrets' own native host (`com.21stark.huginn.secrets`), probed the same way.
-    secrets_host = "#{libexec}/apps/huginn/bin/huginn-secrets-host.mjs"
-    assert_equal true,
-                 JSON.parse(shell_output("#{formula_opt_bin("bun")}/bun #{secrets_host} --probe")).fetch("ok")
+    # `slp huginn install` registers Huginn's native host and Huginn Secrets' own
+    # (`com.21stark.huginn.secrets`) with Chrome; `--probe` loads each one's whole module
+    # graph from the installed tree without starting a host.
+    %w[huginn-host.mjs huginn-secrets-host.mjs].each do |host|
+      probe = shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/huginn/bin/#{host} --probe")
+      assert_equal true, JSON.parse(probe).fetch("ok")
+    end
     # A bunfig.toml preload or .env in the working directory must not reach the wrappers.
     (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
