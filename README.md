@@ -355,7 +355,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 
 idun's and alfred's releases and plume's `release.yml` merge their own bump PR unattended:
 `bump.sh --merge` waits for every check here first. Every other bump PR stays open for a
-hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it.
+hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and
+labeled `no-ticket` (by `bump.sh`) when none does.
 
 ## Download authentication and CI
 
