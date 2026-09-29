@@ -241,11 +241,15 @@ case "$cmd" in
           echo "gh: could not add label: 'no-ticket' not found" >&2
           exit 1
         }
+        [ ! -f "$S/title.fail" ] || [ -z "$title" ] || {
+          echo "gh: GraphQL: could not update the pull request" >&2
+          exit 1
+        }
         [ -z "$title" ] || printf '%s' "$title" >"$d/title"
         [ -z "$body" ] || printf '%s' "$body" >"$d/body"
         [ -z "$add_l" ] || grep -qxF "${add_l%"$nl"}" "$d/labels" || printf '%s' "$add_l" >>"$d/labels"
         [ -z "$rm_l" ] || {
-          grep -vxF -f <(printf '%s' "$rm_l") "$d/labels" >"$d/labels.new" 2>/dev/null
+          grep -vixF -f <(printf '%s' "$rm_l") "$d/labels" >"$d/labels.new" 2>/dev/null
           mv "$d/labels.new" "$d/labels"
         }
         echo "https://github.com/$TAP/pull/$num"
@@ -425,12 +429,9 @@ done
 remote() { git --git-dir="${R}/remote.git" "$@"; }
 tip_of() { remote rev-parse -q --verify "refs/heads/$1" || true; }
 pr_field() { cat "${R}/gh/prs/$1/$2" 2>/dev/null; }
-# The line of the last gh call logged whose arguments start with $1 (0: none).
-log_line() {
-  local n
-  n="$(grep -n -F -- "$1" "${R}/gh/log" | grep "^[0-9]*:$1" | tail -n 1)"
-  printf '%s\n' "${n%%:*}"
-}
+# The line of the last gh call logged whose arguments start with $1, a fixed
+# string (0: none).
+log_line() { awk -v p="$1" 'index($0, p) == 1 { n = NR } END { print n + 0 }' "${R}/gh/log"; }
 clone_on_main() {
   [[ "$(git -C "${R}/tap" symbolic-ref -q HEAD)" = refs/heads/main ]] &&
     [[ -z "$(git -C "${R}/tap" status --porcelain)" ]] &&
@@ -641,12 +642,12 @@ begin "no-ticket: the label follows the PR's final title"
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 bump demo v1.2.3
-check "a run without --ticket labels its unscoped PR once it is open, with the retitle hint" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(log_line "pr create")" -lt "$(log_line "pr edit 42 -R $TAP --add-label")" ] && stderr_has "drop the label, then retitle"'
+check "a run without --ticket labels its unscoped PR once it is open, with the retitle hint" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(log_line "pr create")" -gt 0 ] && [ "$(log_line "pr create")" -lt "$(log_line "pr edit 42 -R $TAP --add-label")" ] && stderr_has "--title '"'"'chore(STARK-<n>): bump demo to v1.2.3'"'"' --remove-label no-ticket"'
 add_release 21StarkCom/demo v1.2.3 601 demo_v1.2.3_darwin_arm64.zip
 bump demo v1.2.3
 check "a re-run without --ticket keeps the one label, with no label call" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 labels)" = no-ticket ] && [ "$(grep -c -- -label "$R/gh/log")" = 1 ]'
 bump demo v1.2.3 --ticket STARK-9
-check "--ticket drops the label, then retitles" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ -z "$(pr_field 42 labels)" ] && [ "$(log_line "pr edit 42 -R $TAP --remove-label")" -lt "$(log_line "pr edit 42 -R $TAP --title chore(STARK-9)")" ] && stderr_lacks "drop the label, then retitle"'
+check "--ticket retitles, then drops the label" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ -z "$(pr_field 42 labels)" ] && [ "$(log_line "pr edit 42 -R $TAP --title chore(STARK-9)")" -gt 0 ] && [ "$(log_line "pr edit 42 -R $TAP --title chore(STARK-9)")" -lt "$(log_line "pr edit 42 -R $TAP --remove-label")" ] && stderr_lacks "If a ticket covers this bump"'
 : >"${R}/gh/log"
 bump demo v1.2.3 --ticket STARK-9
 check "--ticket on an unlabeled PR makes no label call" eval 'is_code 0 && ! grep -q -- -label "$R/gh/log"'
@@ -672,26 +673,37 @@ printf 'No-Ticket\n' >"${R}/gh/prs/42/labels"
 : >"${R}/gh/log"
 bump demo v1.2.3
 check "a mark in another case counts, as idun counts it: no label call" eval 'is_code 0 && ! grep -q -- -label "$R/gh/log"'
+bump demo v1.2.3 --ticket STARK-9
+check "--ticket drops a mark in another case" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ] && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ]'
 
 begin "no-ticket: a failed label step"
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 : >"${R}/gh/label.fail"
 bump demo v1.2.3
-check "a failed add is a warning: the PR is open and the run succeeds" eval 'is_code 0 && stdout_is "42$NL" && [ -z "$(pr_field 42 labels)" ] && stderr_has "could not label PR #42 no-ticket" && stderr_lacks "drop the label, then retitle"'
+check "a failed add is a warning naming the command: the PR is open and the run succeeds" eval 'is_code 0 && stdout_is "42$NL" && [ -z "$(pr_field 42 labels)" ] && stderr_has "could not label PR #42 no-ticket" && stderr_has "run: gh pr edit 42 -R $TAP --add-label no-ticket"'
 rm "${R}/gh/label.fail"
 bump demo v1.2.3
 check "the next identical run labels it" eval 'is_code 0 && [ "$(pr_field 42 labels)" = no-ticket ]'
 : >"${R}/gh/label.fail"
 bump demo v1.2.3 --ticket STARK-9
-check "a failed drop under --ticket stops the run with nothing retitled" eval 'is_code 1 && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(pr_field 42 labels)" = no-ticket ] && stderr_has "nothing was retitled"'
+check "a failed drop under --ticket still retitles, and warns with the command" eval 'is_code 0 && [ "$(pr_field 42 title)" = "chore(STARK-9): bump demo to v1.2.3" ] && [ "$(pr_field 42 labels)" = no-ticket ] && stderr_has "whose title names a ticket" && stderr_has "run: gh pr edit 42 -R $TAP --remove-label no-ticket"'
 rm "${R}/gh/label.fail"
+bump demo v1.2.3
+check "the next run without --ticket drops it" eval 'is_code 0 && [ -z "$(pr_field 42 labels)" ]'
+new_rig
+add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
+bump demo v1.2.3
+: >"${R}/gh/title.fail"
+bump demo v1.2.3 --ticket STARK-9
+check "a failed retitle under --ticket stops the run, the PR still unscoped AND marked" eval 'is_code 1 && stderr_has "could not retitle PR #42" && [ "$(pr_field 42 title)" = "chore: bump demo to v1.2.3" ] && [ "$(pr_field 42 labels)" = no-ticket ]'
+rm "${R}/gh/title.fail"
 new_rig
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
 set_runs "${ALL_GREEN[@]}"
 : >"${R}/gh/label.fail"
 bump demo v1.2.3 --merge
-check "--merge still merges when the label step fails" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 state)" = MERGED ] && stderr_has "could not label PR #42"'
+check "--merge still merges when the label step fails, with no retitle hint" eval 'is_code 0 && stdout_is "42$NL" && [ "$(pr_field 42 state)" = MERGED ] && stderr_has "could not label PR #42" && stderr_lacks "If a ticket covers this bump"'
 
 begin "main already carries the release: nothing to merge"
 new_rig
