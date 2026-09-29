@@ -27,9 +27,11 @@ brew install 21StarkCom/tap/idun
 brew style Formula/idun.rb
 brew audit --strict 21StarkCom/tap/idun       # add --online to check the URL/homepage
 
-# Same for the cask (a GUI app)
+# Same for the cask (a GUI app). A cask's asset-id URL fails the unversioned-URL
+# audit by design, and atlas also needs `,token_conflicts` (homebrew/core's atlas)
 brew style Casks/mimir.rb
-brew audit --cask 21StarkCom/tap/mimir
+brew fetch --cask 21StarkCom/tap/mimir        # downloads and checks the pinned sha256
+brew audit --cask --strict --except=sha256_no_check_if_unversioned 21StarkCom/tap/mimir
 
 # Exercise the real install + the formula's `test do` block (needs the token)
 brew reinstall 21StarkCom/tap/idun
@@ -61,4 +63,4 @@ Use `idun gh pr-open` and `idun gh pr-merge` for the PR gates. A PR under a tick
 
 `.github/workflows/bump.yml` runs `scripts/test-bump.sh` on ubuntu and macOS (macOS under `/bin/bash` 3.2) for every PR, and `bump.sh --merge` waits for it along with the other two. Its test fails if the bumper's `GATE_WORKFLOWS` differs from the workflows here that trigger on `pull_request`, or if any of them filters that trigger: keep every such trigger unfiltered, and add a new one to `GATE_WORKFLOWS` in the same PR. `brew style … scripts` lints `scripts/*.sh` too, with every optional shellcheck check and Homebrew's `shfmt` layout (`brew style --fix scripts/bump.sh` applies it). Its layout pass misreads a line inside a string or heredoc that starts with `if`, so keep embedded jq, Ruby and stub code free of those.
 
-`.github/workflows/formulae.yml` styles all entries, checks missing/blank token errors, and audits, installs, and tests every formula on macOS arm64. It uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, which must have contents-read access to the release repositories. Mimir remains the source of the credential; GitHub stores its encrypted CI copy. It fails if access is unavailable. The workflow also checks hermod preflight metadata and a seeded partial download against the pinned checksum. `scripts/verify-download.rb` must run with a dedicated `HOMEBREW_CACHE`, because it replaces its cached hermod archive with a partial to verify resume. `scripts/verify-auth.rb` uses only synthetic/missing credentials.
+`.github/workflows/formulae.yml` styles all entries, checks missing/blank token errors, audits, installs, and tests every formula on macOS arm64, and fetches every cask with the token (Homebrew checks the download against its pinned `sha256`) and runs `brew audit --cask --strict` on it. The cask audit skips `sha256_no_check_if_unversioned` for every cask, since an asset-id URL reads as unversioned, and `token_conflicts` for atlas alone, which shares its token with a homebrew/core formula. It catches a gone or unreadable asset and a hand-edited asset id or `sha256` that no longer match; an id and checksum that agree but belong to another release pass. It uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, which must have contents-read access to the release repositories. Mimir remains the source of the credential; GitHub stores its encrypted CI copy. It fails if access is unavailable. The workflow also checks hermod preflight metadata and a seeded partial download against the pinned checksum. `scripts/verify-download.rb` must run with a dedicated `HOMEBREW_CACHE`, because it replaces its cached hermod archive with a partial to verify resume. `scripts/verify-auth.rb` uses only synthetic/missing credentials.
