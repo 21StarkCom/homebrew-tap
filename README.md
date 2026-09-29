@@ -25,11 +25,12 @@ brew upgrade 21StarkCom/tap/<name>
 ```
 
 The token authenticates the release downloads only. It must be set for every `brew`
-command that reads a formula, `brew info` included, and an entry refuses to evaluate
-without it. A formula's files are installed without the quarantine xattr, so an
-ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you unzip the release by
-hand. Casks install their apps quarantined. Every entry is **macOS arm64 only**; on Linux,
-build from source in the tool's own repo.
+command that reads a formula, `brew info` included: a formula refuses to evaluate without
+it. A cask needs it only to download. A formula's files are installed without the
+quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
+unzip the release by hand. Casks install their apps quarantined. Every entry is
+**macOS arm64 only**; for another platform, build from the tool's own repo where it
+supports one (the frigg, lumiere and plume sections say how).
 
 ## Entries
 
@@ -75,7 +76,7 @@ vault, and run the review/housekeep surfaces.
 brew install 21StarkCom/tap/brain
 ```
 
-Unlike the bun-compiled CLIs, `brain` is **node ESM** inside a pnpm monorepo, so the
+Unlike the single-binary CLIs, `brain` is **node ESM** inside a pnpm monorepo, so the
 release zip is a **`pnpm deploy` tree** — `dist/`, a vendored `node_modules` (workspace
 `@atlas/*` deps plus the two used native modules, `better-sqlite3` and
 `@lancedb/lancedb-darwin-arm64`; LanceDB's optional ML embedding stack is pruned), and the
@@ -83,7 +84,8 @@ runtime command registry at `docs/specs/cli-contract/`. The formula installs tha
 `libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so the
 registry always resolves. The natives are **Developer-ID signed + notarized** (submission
 recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline-**stapled**,
-so it's online-notarized — moot under Homebrew, which strips the quarantine xattr anyway.
+so it's online-notarized — moot under Homebrew, which installs a formula's files without the
+quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
 
 ## frigg
@@ -260,8 +262,8 @@ goldfinger setup      # once: grant Accessibility and Screen Recording
 ```
 
 The cask drops `Goldfinger.app` into `/Applications` and symlinks its executable, which is
-both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) arm64
-only.** The release zip is the Developer-ID-signed, notarized and **stapled**
+both the daemon and the CLI, onto your `PATH` as `goldfinger`. **macOS 26 (Tahoe) or
+newer.** The release zip is the Developer-ID-signed, notarized and **stapled**
 `Goldfinger.app`. Homebrew installs it quarantined, so macOS may first ask whether to open
 Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for the daemon.
 
@@ -291,7 +293,7 @@ brew install --cask 21StarkCom/tap/mimir
 ```
 
 The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
-your `PATH`. **macOS 26 (Tahoe) arm64 only.** The release zip is the Developer-ID-signed,
+your `PATH`. **macOS 26 (Tahoe) or newer.** The release zip is the Developer-ID-signed,
 notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `brew uninstall
 --cask mimir` removes the app; `--zap` also trashes its local data (but never the
 login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
@@ -360,4 +362,4 @@ Pull requests run `brew style`, missing-token checks, and `brew audit --strict`,
 
 ## In the saga
 
-Pens and pictures reach the operator's hands through [homebrew-tap](https://github.com/21StarkCom/homebrew-tap), the private Homebrew tap of the house and home of the one bumper script that source repos' releases run to re-pin their entries by pull request. It appears in [plume](https://github.com/21StarkCom/plume)'s chapter of [The Saga of House Stark](https://github.com/21StarkCom/.github/blob/main/fleet/saga.md).
+Pens and pictures reach the operator's hands through [homebrew-tap](https://github.com/21StarkCom/homebrew-tap), the house's private Homebrew tap and home of the one bumper script that source repos' releases run to re-pin their entries by pull request. It appears in [plume](https://github.com/21StarkCom/plume)'s chapter of [The Saga of House Stark](https://github.com/21StarkCom/.github/blob/main/fleet/saga.md).
