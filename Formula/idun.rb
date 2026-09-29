@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Ad-hoc-signed macOS build of the idun personal-ops maintenance CLI.
+# Signed (Developer ID) + notarized macOS build of the idun personal-ops maintenance CLI.
 class Idun < Formula
   desc "Personal-ops CLI for GitHub identities, seat rotation, and housekeeping"
   homepage "https://github.com/21StarkCom/idun"

@@ -24,8 +24,8 @@ end
 # the cask exposes NO `binary`: `brain` is its own formula and must not be shadowed.
 #
 # Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`); the app
-# is notarized (spctl: "Notarized Developer ID"). It is not offline-stapled, which is harmless
-# here — `brew install --cask` strips the quarantine xattr, so Gatekeeper never gates it.
+# is notarized (spctl: "Notarized Developer ID") but not stapled: `brew install --cask` installs
+# it quarantined, so its first launch checks the notarization online.
 cask "atlas" do
   # version / asset id / sha256 are release-specific. No release step bumps this cask (the
   # README's caller table): re-point it with the bumper — do not hand-edit them.
