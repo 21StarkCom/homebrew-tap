@@ -50,15 +50,20 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
-      After `brew upgrade 21StarkCom/tap/sleipnir`, re-run `slp huginn install`,
-      reload the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0)
-      in each Chrome profile, and restart MCP clients: a running sleipnir-mcp starts each
-      tool call from the keg the upgrade removed. After `brew upgrade bun` (or a `brew upgrade`
-      that upgrades it), restart an MCP client still running a sleipnir-mcp from sleipnir 0.12.2
-      or earlier (later versions run tool calls through #{formula_opt_bin("bun")}/bun), and
-      re-run `slp huginn install` if you last ran it with sleipnir 0.12.2 or earlier: that
-      version's native-host launcher names the versioned bun keg, where a later version's
-      launcher names #{formula_opt_bin("bun")}/bun.
+      From 0.13.0 on, Huginn, Huginn Scan and Huginn Secrets update themselves. Upgrading
+      to 0.13.0 from an earlier version, run `slp huginn install` once and reload the
+      Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0) once in each
+      Chrome profile (`slp huginn reload <uuid> --yes`, or a browser restart): the hosts
+      already running predate auto-update, and a launcher from sleipnir 0.12.2 or earlier
+      names the versioned bun keg. After that, each `brew upgrade 21StarkCom/tap/sleipnir`
+      reaches every browser whose Huginn is 0.30.0 or newer with no command, about six
+      minutes later when nothing is using Huginn there (`slp huginn auto-update off` stops it).
+
+      Restart MCP clients after every `brew upgrade 21StarkCom/tap/sleipnir`: a running
+      sleipnir-mcp starts each tool call from the keg the upgrade removed. After
+      `brew upgrade bun` (or a `brew upgrade` that upgrades it), restart an MCP client still
+      running a sleipnir-mcp from sleipnir 0.12.2 or earlier (later versions run tool calls
+      through #{formula_opt_bin("bun")}/bun).
 
       A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
       or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
@@ -75,8 +80,13 @@ class Sleipnir < Formula
       and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
       (`run_cap` takes `huginn`, not `companion`).
 
-      The Huginn Authenticator tab additionally needs Mimir 0.27.0 or newer
-      (`brew upgrade --cask 21StarkCom/tap/mimir`) plus a per-installation grant.
+      0.13.0 adds two extensions beside Huginn, each loaded once with Load unpacked from the
+      folder `slp huginn install` prints: Huginn Scan (accessibility scans), and Huginn
+      Secrets, which now shows the one-time codes Huginn used to and fills and saves Mimir
+      sign-ins. Load Secrets only in a browser you sign in to by hand. Huginn Secrets needs
+      Mimir 0.27.0 or newer for codes and fill, and Mimir 0.28.0 or newer for collect
+      (`brew upgrade --cask 21StarkCom/tap/mimir`); its `huginn secrets` command line also
+      needs the grants you tick in its popup.
     EOS
   end
 
@@ -92,6 +102,10 @@ class Sleipnir < Formula
     # whole module graph from the installed tree without starting a host.
     host = "#{libexec}/apps/huginn/bin/huginn-host.mjs"
     assert_equal true, JSON.parse(shell_output("#{formula_opt_bin("bun")}/bun #{host} --probe")).fetch("ok")
+    # Huginn Secrets' own native host (`com.21stark.huginn.secrets`), probed the same way.
+    secrets_host = "#{libexec}/apps/huginn/bin/huginn-secrets-host.mjs"
+    assert_equal true,
+                 JSON.parse(shell_output("#{formula_opt_bin("bun")}/bun #{secrets_host} --probe")).fetch("ok")
     # A bunfig.toml preload or .env in the working directory must not reach the wrappers.
     (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
