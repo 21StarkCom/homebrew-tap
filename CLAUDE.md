@@ -30,7 +30,7 @@ brew audit --strict 21StarkCom/tap/idun       # add --online to check the URL/ho
 # Same for the cask (a GUI app). A cask's asset-id URL fails the unversioned-URL
 # audit by design, and atlas also needs `,token_conflicts` (homebrew/core's atlas)
 brew style Casks/mimir.rb
-brew fetch --cask 21StarkCom/tap/mimir        # downloads and checks the pinned sha256
+brew fetch --cask 21StarkCom/tap/mimir        # checks the registered clone's pinned sha256
 brew audit --cask --strict --except=sha256_no_check_if_unversioned 21StarkCom/tap/mimir
 
 # Exercise the real install + the formula's `test do` block (needs the token)
@@ -43,7 +43,7 @@ scripts/bump.sh <entry> <tag> --dry-run
 scripts/test-bump.sh
 ```
 
-The tap is already registered locally, but the registration is a **separate git clone** at `/opt/homebrew/Library/Taps/21starkcom/homebrew-tap`, not a symlink to this checkout. `brew style Formula/idun.rb` accepts an explicit path and checks this working tree. Modern `brew audit` rejects path arguments; `brew audit --strict 21StarkCom/tap/<name>` reads the registered clone instead. Check syntax and style before merging, then verify that clone is clean, fast-forward it to the merged formula, and run the named audit. Confirm the registered formula matches the reviewed version, asset ID, and checksum before trusting the result. Never discard another process's changes in that shared clone. `brew test` runs only the `test do` block, so keep those assertions **version-agnostic**: assert `version.to_s` against the tool's `version` output rather than a hardcoded string (see `STARK-908`, commit `590f38a`).
+The tap is already registered locally, but the registration is a **separate git clone** at `/opt/homebrew/Library/Taps/21starkcom/homebrew-tap`, not a symlink to this checkout. `brew style Formula/idun.rb` accepts an explicit path and checks this working tree. Modern `brew audit` rejects path arguments; `brew audit --strict 21StarkCom/tap/<name>` reads the registered clone instead, and so does `brew fetch --cask 21StarkCom/tap/<name>`. `brew fetch --cask` takes a cask path only under `HOMEBREW_DEVELOPER=1`, which is how to check an edited cask's download against its `sha256`. Check syntax and style before merging, then verify that clone is clean, fast-forward it to the merged formula, and run the named audit. Confirm the registered formula matches the reviewed version, asset ID, and checksum before trusting the result. Never discard another process's changes in that shared clone. `brew test` runs only the `test do` block, so keep those assertions **version-agnostic**: assert `version.to_s` against the tool's `version` output rather than a hardcoded string (see `STARK-908`, commit `590f38a`).
 
 **The bumper is `scripts/bump.sh`, and its `--help` is the reference** (21stark ADR-0008). A release clones this tap's `main` and runs the script from that clone; to re-point an entry by hand, run it from a clean checkout of this repo at `origin/main` (`--dry-run` previews, `--no-pr` edits the checkout without committing). Callers run `main` unpinned, so the interface only grows, and a bumper change lands with its tests (`scripts/test-bump.sh`) in the same PR.
 
