@@ -6,10 +6,10 @@ class Idun < Formula
   homepage "https://github.com/21StarkCom/idun"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/600758289",
+  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/601603911",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.89.0"
-  sha256 "549bc32439d393b65927ea96c562a9e2cf913f7cf0b9160a9908abf5a7e94559"
+  version "0.90.0"
+  sha256 "061ae0e6aedea915fea7c58c829c097f0f26913d9f2bce005ed5b4d996cc86fb"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
