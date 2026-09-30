@@ -7,10 +7,10 @@ class Hermod < Formula
   homepage "https://github.com/21StarkCom/hermod"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/598954868",
+  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/601212077",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.27.0"
-  sha256 "16c4936aeb038adee4e50f5a405fbed100d3266b10194f201237c0d719bc5fd4"
+  version "0.27.1"
+  sha256 "7892738e1f376559351fb56e4056d2462b071e70a55a5609442b6984f26d8ba2"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
