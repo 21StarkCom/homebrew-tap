@@ -2,12 +2,12 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 11 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 12 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release. The tap builds nothing. It only
 pins each entry to a published release, and each source repo's release re-pins its own
 entry by pull request.
 
-**Status:** active. Every entry installs today; 12 of the 14 are re-pinned on each release
+**Status:** active. Every entry installs today; 13 of the 15 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -43,6 +43,7 @@ supports one (the frigg, lumiere and plume sections say how).
 | Entry | Kind | Source repo | Installs | Build | Signing | macOS |
 |---|---|---|---|---|---|---|
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
+| `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
@@ -71,6 +72,23 @@ alfredd install      # once: write the daemon's LaunchAgent plist and load it
 
 The plist pins Homebrew's stable `opt` path, so an upgrade never orphans the daemon. Both
 binaries are Developer-ID signed + notarized Go builds.
+
+## bragi
+
+The [`bragi`](https://github.com/21StarkCom/bragi) streaming-voice toolkit: speech-to-text
+and text-to-speech as streams, driven by a JSON-lines session protocol, for agents that
+listen and speak. `bragi` is the Go CLI, and `bragi-audio` the Swift helper that owns the
+microphone and the speaker.
+
+```sh
+brew install 21StarkCom/tap/bragi
+bragi doctor         # the helper, the microphone, the providers' credentials
+```
+
+**macOS 15 (Sequoia) or newer.** Both binaries are Developer-ID signed + notarized, and
+`bragi-audio` carries the microphone entitlement. bragi starts the helper from beside its
+own resolved path, so the formula installs the two side by side. The first capture asks
+macOS for the microphone in your terminal's name.
 
 ## brain
 
@@ -339,6 +357,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | Entry | Source repo | Release step that calls the bumper | Runs on |
 |---|---|---|---|
 | `alfred` | alfred | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
+| `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
 | `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
