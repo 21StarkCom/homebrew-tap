@@ -28,8 +28,11 @@ class Bragi < Formula
 
   test do
     assert_match version.to_s, shell_output("#{bin}/bragi --version")
+    # Launching the helper fails if it was built for a newer macOS than this one, or its
+    # signature is broken; `--version` exits before it touches any audio.
+    assert_match "bragi-audio protocol", shell_output("#{bin}/bragi-audio --version")
     # The helper records under the hardened runtime, which wants the microphone entitlement.
-    assert_match "com.apple.security.device.audio-input",
+    assert_match %r{<key>com\.apple\.security\.device\.audio-input</key>\s*<true/>},
                  shell_output("codesign -d --entitlements - --xml #{bin}/bragi-audio 2>&1")
   end
 end

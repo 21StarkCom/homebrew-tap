@@ -43,8 +43,8 @@ supports one (the frigg, lumiere and plume sections say how).
 | Entry | Kind | Source repo | Installs | Build | Signing | macOS |
 |---|---|---|---|---|---|---|
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
-| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
+| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 26 (Tahoe) |
@@ -73,6 +73,23 @@ alfredd install      # once: write the daemon's LaunchAgent plist and load it
 The plist pins Homebrew's stable `opt` path, so an upgrade never orphans the daemon. Both
 binaries are Developer-ID signed + notarized Go builds.
 
+## bragi
+
+The [`bragi`](https://github.com/21StarkCom/bragi) streaming-voice toolkit: speech-to-text
+and text-to-speech as streams, driven by a JSON-lines session protocol, for agents that
+listen and speak. `bragi` is the Go CLI, and `bragi-audio` the Swift helper that owns the
+microphone and the speaker.
+
+```sh
+brew install 21StarkCom/tap/bragi
+bragi doctor         # the helper, the microphone, the providers' credentials
+```
+
+**macOS 15 (Sequoia) or newer.** Both binaries are Developer-ID signed + notarized, and
+`bragi-audio` carries the microphone entitlement. bragi starts the helper from beside its
+own resolved path, so the formula installs the two side by side. The first capture asks
+macOS for the microphone in your terminal's name.
+
 ## brain
 
 The [`brain`](https://github.com/21StarkCom/atlas) CLI — the **Atlas** engine
@@ -94,23 +111,6 @@ recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline
 so it's online-notarized — moot under Homebrew, which installs a formula's files without the
 quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
-
-## bragi
-
-The [`bragi`](https://github.com/21StarkCom/bragi) streaming-voice toolkit: speech-to-text
-and text-to-speech as streams, driven by a JSON-lines session protocol, for agents that
-listen and speak. `bragi` is the Go CLI, and `bragi-audio` the Swift helper that owns the
-microphone and the speaker.
-
-```sh
-brew install 21StarkCom/tap/bragi
-bragi doctor         # the helper, the microphone, the providers' credentials
-```
-
-**macOS 15 (Sequoia) or newer.** Both binaries are Developer-ID signed + notarized, and
-`bragi-audio` carries the microphone entitlement. bragi starts the helper from beside its
-own resolved path, so the formula installs the two side by side. The first capture asks
-macOS for the microphone in your terminal's name.
 
 ## frigg
 
@@ -357,8 +357,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | Entry | Source repo | Release step that calls the bumper | Runs on |
 |---|---|---|---|
 | `alfred` | alfred | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
-| `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
 | `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
+| `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
 | `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
