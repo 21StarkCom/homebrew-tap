@@ -9,10 +9,10 @@ class Sleipnir < Formula
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/598142469",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/608188542",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.13.0"
-  sha256 "0670f438c22afe65ca39d60612a1ea1b99cf8058816a2c7fb075194571280143"
+  version "0.14.0"
+  sha256 "f29c36a68b8816036b416230b72269a13ed5c06fb2b7963c3460ecc0d8d46754"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -50,17 +50,34 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
-      From 0.13.0 on, Huginn, Huginn Scan and Huginn Secrets update themselves. Upgrading
-      from sleipnir 0.12.3 or earlier, run `#{opt_bin}/slp huginn install` once and reload
-      the Sleipnir Huginn extension (named Sleipnir Companion before Huginn 0.39.0) once in
-      each Chrome profile: press Reload on it in chrome://extensions, or, for Huginn 0.30.0
-      or newer, run `slp huginn reload <uuid> --yes`, which needs that installation's
-      `reload` grant. The hosts already running predate auto-update, and a launcher from
-      sleipnir 0.12.2 or earlier names the versioned bun keg. After that, each
-      `brew upgrade 21StarkCom/tap/sleipnir` reaches every browser whose Huginn is 0.30.0 or
-      newer with no command, once nothing is using the extension there: Huginn and Huginn
-      Secrets about six minutes later, Huginn Scan within 30 minutes
-      (`slp huginn auto-update off` stops it).
+      sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir
+      0.13.0 was the first release to ship one). Each `brew upgrade 21StarkCom/tap/sleipnir`
+      reaches every browser running one with no command, once nothing is using the extension
+      there: Huginn and Huginn Secrets about six minutes later, Huginn Scan within 30 minutes
+      (`slp huginn auto-update off` stops it). A Huginn older than 0.41.0 (any Chrome profile
+      not reloaded since sleipnir 0.12.3 or earlier) runs nothing: the host and the CLI refuse
+      every request to it, `slp huginn reload` included, and `slp huginn list` marks it
+      stale. Run `#{opt_bin}/slp huginn install` once, then press Reload once on Sleipnir
+      Huginn (named Sleipnir Companion before Huginn 0.39.0) in each such profile's
+      chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
+      earlier, which names the versioned bun and sleipnir kegs.
+
+      0.14.0 renames 23 caps to <service>-<what> (`slp caps` lists the new names:
+      `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
+      flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
+      and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
+      The old names work until 0.15.0, with one stderr line each. 0.14.0 rewrites grants
+      stored under old cap names in profiles.json the first time it reads them (a cap,
+      `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
+      older `slp` on the same SLEIPNIR_HOME (a checkout not yet pulled) then refuses those
+      caps until it is upgraded. Under `--json`, the six vendor `*-receipts` caps now print
+      `{ok, invoices}` and `gmail-scan` prints `{ok, messages}`, no longer a bare array.
+
+      Once a browser runs the builds 0.14.0 ships (Huginn 0.49.5, Huginn Scan 0.2.2, Huginn
+      Secrets 0.5.4: the update above), each of the three works in incognito windows after
+      you turn on Allow in Incognito in its Details in chrome://extensions. Flipping that
+      switch reloads the extension, ending whatever it was running. `slp huginn list`,
+      `huginn secrets list` and Huginn Scan's popup say when it is off.
 
       Restart MCP clients after every `brew upgrade 21StarkCom/tap/sleipnir`: a running
       sleipnir-mcp starts each tool call from the keg the upgrade removed. After
@@ -70,10 +87,10 @@ class Sleipnir < Formula
 
       A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
       or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
-      cleans up: after upgrading past 0.12.2, export it again, once, or keep your edits by
-      pointing its import at #{opt_libexec}/apps/huginn-bridge/src/journey-script.ts.
-      A later version's export imports through #{opt_prefix}, which each upgrade points at
-      the new keg.
+      cleans up: after upgrading past 0.12.2, export it again, once (`slp cap journey-export`
+      from 0.14.0), or keep your edits by pointing its import at
+      #{opt_libexec}/apps/huginn-bridge/src/journey-script.ts. A later version's export
+      imports through #{opt_prefix}, which each upgrade points at the new keg.
 
       Point MCP clients at #{opt_bin}/sleipnir-mcp. A client that runs bun on a
       sleipnir-mcp.mjs in a sleipnir keg's libexec loads its working directory's .env
