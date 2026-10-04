@@ -6,14 +6,19 @@ class Plume < Formula
   desc "Document toolkit CLIs: xlsx, docx, pdf and pptx read/write drivers"
   homepage "https://github.com/21StarkCom/plume"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  token = GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/plume/releases/assets/593320290",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.5.1"
   sha256 "21de3997e76908ba67c16f6f24ea32b83a843fc5bdf8a3ec1b96c50d7a5f1bfc"
-  if token.empty?
+  # Homebrew's sandboxed workers reload this file where gh cannot read its config. They never
+  # download (the brew process fetched first), so only that process must find a token.
+  if token.empty? && %w[build.rb test.rb postinstall.rb].exclude?(File.basename($PROGRAM_NAME))
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login`, or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 

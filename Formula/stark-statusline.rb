@@ -11,14 +11,19 @@ class StarkStatusline < Formula
   homepage "https://github.com/21StarkCom/idavoll"
   # version / asset id / sha256 are release-specific and rewritten when idavoll's
   # statusline release calls the bumper (the README's caller table) — do not hand-edit them.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  token = GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/609417903",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.1.2"
   sha256 "80e1f009e2ff3393ab65d9083a149ccacf6f03ab2f28bff80db634c0d50b2e5f"
-  if token.empty?
+  # Homebrew's sandboxed workers reload this file where gh cannot read its config. They never
+  # download (the brew process fetched first), so only that process must find a token.
+  if token.empty? && %w[build.rb test.rb postinstall.rb].exclude?(File.basename($PROGRAM_NAME))
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login`, or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 

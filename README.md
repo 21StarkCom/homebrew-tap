@@ -21,8 +21,9 @@ Pens and pictures reach the operator's hands through [homebrew-tap](https://gith
 ## Install
 
 ```sh
-# A GitHub token with contents:read on the private 21StarkCom release repos.
-export HOMEBREW_GITHUB_API_TOKEN=<token>
+# A GitHub token with contents:read on the private 21StarkCom release repos: a
+# Homebrew-installed gh signed in to an account that can read them is enough.
+gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
 # Once. The tap repo is private too, so clone it over SSH with your own GitHub key.
 brew tap 21StarkCom/tap git@github.com:21StarkCom/homebrew-tap.git
 brew install 21StarkCom/tap/<formula>
@@ -30,9 +31,12 @@ brew install --cask 21StarkCom/tap/<cask>
 brew upgrade 21StarkCom/tap/<name>
 ```
 
-The token authenticates the release downloads only. It must be set for every `brew`
-command that reads a formula, `brew info` included: a formula refuses to evaluate without
-it. A cask needs it only to download. A formula's files are installed without the
+The token authenticates the release downloads only. Each entry takes it from Homebrew's
+own lookup: `HOMEBREW_GITHUB_API_TOKEN` if set, else `gh auth token`, else a GitHub token
+in the macOS keychain. Every `brew` command that reads a formula needs one, `brew info`
+included: a formula refuses to evaluate without it. A cask needs it only to download.
+Homebrew's sandboxed build and test workers cannot read gh's config, and never download,
+so they skip that check. A formula's files are installed without the
 quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
 unzip the release by hand. Casks install their apps quarantined. Every entry is
 **macOS arm64 only**; for another platform, build from the tool's own repo where it
@@ -350,9 +354,9 @@ login-Keychain vault key — that is the app's own Danger Zone → Erase Everyth
 | `Casks/` | One cask per GUI app, each with an initialization-only download adapter. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
-| `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors, with synthetic credentials only. |
+| `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors, with synthetic credentials only and gh's login hidden. |
 | `scripts/verify-download.rb` | Checks hermod's authenticated preflight and a partial-download resume against the pinned checksum. |
-| `.github/workflows/formulae.yml` | Styles every entry, runs both verify scripts, and audits, installs and tests every formula on macOS arm64. |
+| `.github/workflows/formulae.yml` | Styles every entry, runs both verify scripts, audits, installs and tests every formula on macOS arm64, and installs one with only a gh login. |
 | `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu and macOS. |
 | `.github/workflows/secret-scan.yml` | The fleet's shared secret scan. |
 

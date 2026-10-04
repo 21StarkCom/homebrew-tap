@@ -85,6 +85,20 @@ jobs:
             brew audit --cask --strict --except="$except" "$cask"
             echo "${cask}: fetched and audited"
           done
+      - name: Install with a gh login alone
+        # No HOMEBREW_GITHUB_API_TOKEN here: entries fall back to `gh auth token`
+        # (STARK-10632). Homebrew's sandboxed build and test workers cannot read gh's
+        # config, so the reinstall and test also prove they never need a token.
+        env:
+          RELEASE_READ_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
+        run: |
+          brew install gh
+          gh auth login --with-token --insecure-storage <<<"$RELEASE_READ_TOKEN"
+          unset RELEASE_READ_TOKEN
+          brew fetch --force 21StarkCom/tap/stark-statusline
+          brew reinstall 21StarkCom/tap/stark-statusline
+          brew test 21StarkCom/tap/stark-statusline
+          brew fetch --force --cask 21StarkCom/tap/mimir
       - name: Verify authenticated preflight and partial resume
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
