@@ -8,14 +8,20 @@ class Lucius < Formula
   desc "Brainstorming partner with the capabilities of a second brain"
   homepage "https://github.com/21StarkCom/lucius"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
+  # config. They never download (the brew process fetched first), so they skip the lookup.
+  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
+  token = worker ? "" : GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/603666751",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.7.0"
   sha256 "7a0db8c4553ef98309902a8331ac34fb12ce4bce4762d85dc8e8f6949a11baa8"
-  if token.empty?
+  if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 

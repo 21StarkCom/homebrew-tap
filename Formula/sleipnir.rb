@@ -8,14 +8,20 @@ class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/sleipnir"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
+  # config. They never download (the brew process fetched first), so they skip the lookup.
+  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
+  token = worker ? "" : GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/608188542",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.14.0"
   sha256 "f29c36a68b8816036b416230b72269a13ed5c06fb2b7963c3460ecc0d8d46754"
-  if token.empty?
+  if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 

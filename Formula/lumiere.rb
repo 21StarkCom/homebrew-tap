@@ -6,14 +6,20 @@ class Lumiere < Formula
   desc "Visual-media CLI toolkit: image gen/edit, SVG, video, brand icons"
   homepage "https://github.com/21StarkCom/lumiere"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
+  # config. They never download (the brew process fetched first), so they skip the lookup.
+  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
+  token = worker ? "" : GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/592292376",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.4.2"
   sha256 "5db903a769d4d877a1295900bc06a734082df19c9a630a54dc7c4527924dfd30"
-  if token.empty?
+  if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 

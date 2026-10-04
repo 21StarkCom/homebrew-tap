@@ -7,10 +7,13 @@ require "download_strategy"
 class AtlasPrivateReleaseStrategy < CurlDownloadStrategy
   def initialize(url, name, version, **meta)
     super
-    token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+    # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+    token = GitHub::API.credentials.to_s.strip
     if token.empty?
       raise CurlDownloadStrategyError.new(
-        url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+        url,
+        "This private tap needs a GitHub token with contents:read access: " \
+        "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
       )
     end
     @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
@@ -60,7 +63,7 @@ cask "atlas" do
   ]
 
   caveats <<~EOS
-    Installing needs a GitHub PAT with read access to 21StarkCom private repos:
-      export HOMEBREW_GITHUB_API_TOKEN=<token>
+    Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed
+    in (`brew install gh && gh auth login`), or export HOMEBREW_GITHUB_API_TOKEN=<token>
   EOS
 end

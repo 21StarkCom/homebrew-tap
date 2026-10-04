@@ -7,14 +7,20 @@ class Tyr < Formula
   homepage "https://github.com/21StarkCom/tyr"
   # API asset URL (private repo). asset id is release-specific, but no release bumps this
   # formula: tyr ships no binary now.
-  token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
+  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
+  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
+  # config. They never download (the brew process fetched first), so they skip the lookup.
+  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
+  token = worker ? "" : GitHub::API.credentials.to_s.strip
   url "https://api.github.com/repos/21StarkCom/tyr/releases/assets/532798162",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
   version "0.109.0"
   sha256 "a8982839520c23c9ff563c45b535465cffe52763048fa803acc24b6d8cb81926"
-  if token.empty?
+  if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
-      stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
+      stable.url,
+      "This private tap needs a GitHub token with contents:read access: " \
+      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
     )
   end
 
