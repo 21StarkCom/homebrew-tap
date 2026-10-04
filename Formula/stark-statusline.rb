@@ -23,10 +23,18 @@ class StarkStatusline < Formula
   end
 
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :ventura # Go's linker builds it for macOS 13.0; bare symbol == ">="
 
   def install
     bin.install "stark-statusline"
+  end
+
+  def caveats
+    <<~EOS
+      Run `stark-statusline install` to make it Claude Code's statusline: it points
+      statusLine in ~/.claude/settings.json at `stark-statusline render`, replacing any
+      statusLine command already there.
+    EOS
   end
 
   test do

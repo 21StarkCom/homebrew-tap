@@ -36,7 +36,7 @@ it. A cask needs it only to download. A formula's files are installed without th
 quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
 unzip the release by hand. Casks install their apps quarantined. Every entry is
 **macOS arm64 only**; for another platform, build from the tool's own repo where it
-supports one (the frigg, lumiere and plume sections say how).
+supports one (the frigg, lumiere, plume and stark-statusline sections say how).
 
 ## Entries
 
@@ -53,7 +53,7 @@ supports one (the frigg, lumiere and plume sections say how).
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized `mac-helper` | any |
-| `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | any |
+| `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app`, `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
@@ -261,8 +261,9 @@ brew install 21StarkCom/tap/stark-statusline
 stark-statusline install
 ```
 
-The binary carries Go's linker **ad-hoc** signature, not a Developer ID. Off the
-tap: `go build ./cmd/stark-statusline` in an `idavoll` checkout.
+The binary carries Go's linker **ad-hoc** signature, not a Developer ID. It runs on macOS
+only. On an Intel Mac, run `go install ./cmd/stark-statusline` in an `idavoll` checkout,
+with Go's bin directory on `PATH`: `install` wires the bare command name.
 
 ## tyr
 

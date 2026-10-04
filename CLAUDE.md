@@ -14,7 +14,7 @@ Two facts drive everything here:
 
 **Keep release fields compatible with the bumper.** Preserve standalone `url "…",`, `version "…"`, and `sha256 "…"` stanzas, each exactly once; the bumper refuses an entry with more or fewer. Auth headers are continuation arguments to the URL. Never move the asset pin into a helper or interpolate the version into it.
 
-Platform: `depends_on :macos` + `depends_on arch: :arm64`. Apple Silicon only; a tool that also runs on Linux builds there from source in its own repo (sleipnir, mimir and goldfinger have no Linux build, and tyr no longer ships a CLI).
+Platform: `depends_on :macos` + `depends_on arch: :arm64`. Apple Silicon only; a tool that also runs on Linux builds there from source in its own repo (sleipnir, stark-statusline, mimir and goldfinger have no Linux build, and tyr no longer ships a CLI).
 
 ## Commands
 
