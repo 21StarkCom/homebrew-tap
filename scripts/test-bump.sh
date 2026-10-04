@@ -2,8 +2,9 @@
 # scripts/test-bump.sh: tests for scripts/bump.sh (ADR-0008). bump.sh runs from
 # a depth-1 clone of a local bare "tap" remote with real git; gh is a stub that
 # answers from fixtures and from that remote. Never the real tap. Also the
-# Decision 4 workflow-set test. .github/workflows/bump.yml runs it on ubuntu and
-# macOS. BUMP_TEST_BASH is the bash that runs bump.sh (macOS CI: /bin/bash 3.2).
+# Decision 4 workflow-set test. .github/workflows/bump.yml runs it on ubuntu, and
+# in the bash:3.2 image, where 3.2 is the only bash. BUMP_TEST_BASH is the bash
+# that runs bump.sh (on a Mac, /bin/bash is 3.2).
 #
 # brew style (formulae.yml) lints this with every optional shellcheck check. Off:
 # each check is an eval'd string, read at eval time (SC2016, SC2034); a case with

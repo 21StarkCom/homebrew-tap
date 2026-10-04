@@ -15,7 +15,16 @@ concurrency:
 
 jobs:
   homebrew:
-    runs-on: macos-26
+    # Homebrew on Linux, not a macOS runner. Every entry is macOS-only (`depends_on
+    # :macos` or `macos:`), and Linux Homebrew styles, audits and fetches them (a
+    # fetch checks the download against the pinned sha256) but cannot install them.
+    # What left CI with the macOS runner: `brew install` and `brew test` of every
+    # formula, and the gh-login step's reinstall and test of stark-statusline, which
+    # proved that Homebrew's sandboxed build and test workers never look a token up.
+    # CLAUDE.md's Commands run those on a Mac. Arm, not x86: every cask is
+    # `depends_on arch: :arm64`, and on another arch `brew fetch --cask` skips it with
+    # a warning and exits 0, downloading nothing.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
@@ -25,27 +34,33 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           persist-credentials: false
+      - name: Put the runner's Homebrew on PATH
+        # The ubuntu image installs Homebrew in /home/linuxbrew/.linuxbrew, off PATH.
+        run: echo /home/linuxbrew/.linuxbrew/bin >>"$GITHUB_PATH"
       - name: Update Homebrew
-        # The runner image's core snapshot can be behind, and HOMEBREW_NO_AUTO_UPDATE
-        # keeps it there. `lucius` needs bun >= 1.4.2; the stale snapshot poured 1.4.0
-        # and its `test do` refused to run (STARK-8070). This must run BEFORE the tap
-        # is registered below: `brew update` git-fetches every registered tap, and the
-        # symlinked PR checkout points at a private repo with no credentials
-        # (persist-credentials: false), so that fetch fails the whole step even though
-        # homebrew/core updated. Don't "fix" it by persisting the checkout token.
-        # HOMEBREW_NO_AUTO_UPDATE keeps the later steps from re-triggering the fetch.
+        # The runner image's Homebrew can be behind, and HOMEBREW_NO_AUTO_UPDATE keeps
+        # it there, so style and audit would check against old rules. This must run
+        # BEFORE the tap is registered below: `brew update` git-fetches every
+        # registered tap, and the symlinked PR checkout points at a private repo with
+        # no credentials (persist-credentials: false), so that fetch fails the whole
+        # step even though Homebrew updated. Don't "fix" it by persisting the checkout
+        # token. HOMEBREW_NO_AUTO_UPDATE keeps the later steps from re-triggering it.
         run: brew update
       - name: Register the PR checkout as the tap
+        # And trust it: Homebrew loads an untrusted tap's formula or cask only for a
+        # command line that names it in full, and a `brew ruby` script names none.
+        # CI runs this checkout's code either way.
         run: |
           mkdir -p "$(brew --repository)/Library/Taps/21starkcom"
           ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/21starkcom/homebrew-tap"
+          brew trust --tap 21StarkCom/tap
       - name: Style
         env:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
         run: brew style Formula Casks scripts
       - name: Missing and whitespace-only token diagnostics
         run: brew ruby scripts/verify-auth.rb
-      - name: Audit, install, and test every formula
+      - name: Audit and fetch every formula
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
@@ -53,13 +68,17 @@ jobs:
             echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
             exit 1
           fi
+          formulae=()
           for path in Formula/*.rb; do
             name="${path##*/}"
-            formula="21StarkCom/tap/${name%.rb}"
-            brew audit --strict "$formula"
-            brew install "$formula"
-            brew test "$formula"
+            formulae+=("21StarkCom/tap/${name%.rb}")
           done
+          # Audit as the platform users install on: some checks run only for the
+          # OS and arch being audited.
+          brew audit --strict --os=tahoe --arch=arm "${formulae[@]}"
+          # The download check `brew install` used to make: each asset is readable
+          # and matches its pinned sha256. One call downloads them concurrently.
+          brew fetch "${formulae[@]}"
       - name: Fetch and audit every cask
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
@@ -77,33 +96,36 @@ jobs:
             # only check on the asset, and the fetch below verifies it.
             except=sha256_no_check_if_unversioned
             case "$name" in
-              # homebrew/core has an unrelated `atlas` formula, and the runner taps
-              # core. The cask is only ever installed as 21StarkCom/tap/atlas.
+              # homebrew/core has an unrelated `atlas` formula. The cask is only
+              # ever installed as 21StarkCom/tap/atlas.
               atlas) except+=,token_conflicts ;;
             esac
             brew fetch --cask "$cask"
-            brew audit --cask --strict --except="$except" "$cask"
+            # A cask whose `depends_on arch:` excludes this runner is skipped with a
+            # warning, exit 0: require the download. Ask `brew --cache` as macOS arm64,
+            # since it prints nothing for a macOS-only cask on Linux.
+            if [[ ! -s "$(brew --cache --cask --os=tahoe --arch=arm "$cask")" ]]; then
+              echo "${cask}: brew fetch --cask downloaded nothing" >&2
+              exit 1
+            fi
+            brew audit --cask --strict --os=tahoe --arch=arm --except="$except" "$cask"
             echo "${cask}: fetched and audited"
           done
-      - name: Install with a gh login alone
+      - name: Fetch with a gh login alone
         # No HOMEBREW_GITHUB_API_TOKEN here: entries fall back to `gh auth token`
-        # (STARK-10632). Homebrew's sandboxed build and test workers cannot read gh's
-        # config, so the reinstall and test also prove they never need a token.
+        # (STARK-10632). Homebrew's lookup runs its own gh first, so install it as a
+        # user would; the runner's gh shares its config and would answer too.
         env:
           RELEASE_READ_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
-          # The runner's Homebrew gh only needs to exist, not be the newest.
-          HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
           unset HOMEBREW_GITHUB_API_TOKEN
           brew install gh
-          gh auth login --with-token --insecure-storage <<<"$RELEASE_READ_TOKEN"
+          "$(brew --prefix)/bin/gh" auth login --with-token --insecure-storage <<<"$RELEASE_READ_TOKEN"
           unset RELEASE_READ_TOKEN
           # Prove the token comes from gh, not a stray env var or keychain entry.
           brew ruby -e 'source = GitHub::API.credentials_type
             abort "token source is #{source}, not the gh login" unless source == :github_cli_token'
           brew fetch --force 21StarkCom/tap/stark-statusline
-          brew reinstall 21StarkCom/tap/stark-statusline
-          brew test 21StarkCom/tap/stark-statusline
           brew fetch --force --cask 21StarkCom/tap/mimir
       - name: Verify authenticated preflight and partial resume
         env:
