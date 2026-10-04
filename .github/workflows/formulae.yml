@@ -21,8 +21,10 @@ jobs:
     # What left CI with the macOS runner: `brew install` and `brew test` of every
     # formula, and the gh-login step's reinstall and test of stark-statusline, which
     # proved that Homebrew's sandboxed build and test workers never look a token up.
-    # CLAUDE.md's Commands run those on a Mac.
-    runs-on: ubuntu-24.04
+    # CLAUDE.md's Commands run those on a Mac. Arm, not x86: every cask is
+    # `depends_on arch: :arm64`, and on another arch `brew fetch --cask` skips it with
+    # a warning and exits 0, downloading nothing.
+    runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
     env:
       HOMEBREW_NO_AUTO_UPDATE: 1
