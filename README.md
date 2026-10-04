@@ -2,12 +2,12 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 12 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 13 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release. The tap builds nothing. It only
 pins each entry to a published release, and each source repo's release re-pins its own
 entry by pull request.
 
-**Status:** active. Every entry installs today; 13 of the 15 are re-pinned on each release
+**Status:** active. Every entry installs today; 14 of the 16 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -36,7 +36,7 @@ it. A cask needs it only to download. A formula's files are installed without th
 quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
 unzip the release by hand. Casks install their apps quarantined. Every entry is
 **macOS arm64 only**; for another platform, build from the tool's own repo where it
-supports one (the frigg, lumiere and plume sections say how).
+supports one (the frigg, lumiere, plume and stark-statusline sections say how).
 
 ## Entries
 
@@ -53,6 +53,7 @@ supports one (the frigg, lumiere and plume sections say how).
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized `mac-helper` | any |
+| `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app`, `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
@@ -247,6 +248,23 @@ notarized Swift `mac-helper`. The formula installs the tree into `libexec` and w
 `brew upgrade 21StarkCom/tap/sleipnir` — since a bare `sleipnir` is homebrew/cask's
 browser of the same name.
 
+## stark-statusline
+
+The Claude Code statusline from [`idavoll`](https://github.com/21StarkCom/idavoll):
+`stark-statusline render` is the `statusLine` command, reading Claude Code's JSON on stdin,
+and the bare command opens a terminal editor that turns segments on and off and moves them
+between the three lines. `stark-statusline install` points `~/.claude/settings.json` at it,
+replacing any `statusLine` command already there and keeping the file's other keys.
+
+```sh
+brew install 21StarkCom/tap/stark-statusline
+stark-statusline install
+```
+
+The binary carries Go's linker **ad-hoc** signature, not a Developer ID. It runs on macOS
+only. On an Intel Mac, run `go install ./cmd/stark-statusline` in an `idavoll` checkout,
+with Go's bin directory on `PATH`: `install` wires the bare command name.
+
 ## tyr
 
 ```sh
@@ -367,6 +385,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
+| `stark-statusline` | idavoll | `.github/workflows/statusline-release.yml`, for a `statusline-v*` tag | GitHub Actions |
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
