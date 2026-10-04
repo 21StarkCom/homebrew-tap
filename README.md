@@ -23,7 +23,7 @@ Pens and pictures reach the operator's hands through [homebrew-tap](https://gith
 ```sh
 # A GitHub token with contents:read on the private 21StarkCom release repos: a
 # Homebrew-installed gh signed in to an account that can read them is enough.
-gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
+brew install gh && gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
 # Once. The tap repo is private too, so clone it over SSH with your own GitHub key.
 brew tap 21StarkCom/tap git@github.com:21StarkCom/homebrew-tap.git
 brew install 21StarkCom/tap/<formula>
@@ -32,7 +32,8 @@ brew upgrade 21StarkCom/tap/<name>
 ```
 
 The token authenticates the release downloads only. Each entry takes it from Homebrew's
-own lookup: `HOMEBREW_GITHUB_API_TOKEN` if set, else `gh auth token`, else a GitHub token
+own lookup: `HOMEBREW_GITHUB_API_TOKEN` if set, else `gh auth token` (Homebrew's own gh
+only: a gh installed another way is not on the path it searches), else a GitHub token
 in the macOS keychain. Every `brew` command that reads a formula needs one, `brew info`
 included: a formula refuses to evaluate without it. A cask needs it only to download.
 Homebrew's sandboxed build and test workers cannot read gh's config, and never download,
@@ -405,6 +406,6 @@ labeled `no-ticket` (by `bump.sh`) while its title names no ticket.
 
 ## Download authentication and CI
 
-All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Tokens are stripped before use; absent or whitespace-only tokens report the asset URL and setup guidance. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
+All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Each entry takes its token from Homebrew's own lookup (`HOMEBREW_GITHUB_API_TOKEN`, else Homebrew's gh login, else a keychain token), stripped before use; a whitespace-only env var counts as unset, and when the lookup finds nothing the entry reports the asset URL and setup guidance. Homebrew redacts only environment secrets from its output, so with a gh-only login, `--verbose --debug` or `HOMEBREW_CURL_VERBOSE` output shows the gh token: don't paste it anywhere. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
 Pull requests run `brew style`, missing-token checks, and `brew audit --strict`, `brew install`, and `brew test` for every formula on macOS arm64. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu and macOS. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.

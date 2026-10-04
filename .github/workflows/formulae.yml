@@ -91,10 +91,16 @@ jobs:
         # config, so the reinstall and test also prove they never need a token.
         env:
           RELEASE_READ_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
+          # The runner's Homebrew gh only needs to exist, not be the newest.
+          HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
+          unset HOMEBREW_GITHUB_API_TOKEN
           brew install gh
           gh auth login --with-token --insecure-storage <<<"$RELEASE_READ_TOKEN"
           unset RELEASE_READ_TOKEN
+          # Prove the token comes from gh, not a stray env var or keychain entry.
+          brew ruby -e 'source = GitHub::API.credentials_type
+            abort "token source is #{source}, not the gh login" unless source == :github_cli_token'
           brew fetch --force 21StarkCom/tap/stark-statusline
           brew reinstall 21StarkCom/tap/stark-statusline
           brew test 21StarkCom/tap/stark-statusline
