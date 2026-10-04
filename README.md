@@ -253,8 +253,11 @@ browser of the same name.
 The Claude Code statusline from [`idavoll`](https://github.com/21StarkCom/idavoll):
 `stark-statusline render` is the `statusLine` command, reading Claude Code's JSON on stdin,
 and the bare command opens a terminal editor that turns segments on and off and moves them
-between the three lines. `stark-statusline install` points `~/.claude/settings.json` at it,
-replacing any `statusLine` command already there and keeping the file's other keys.
+between the three lines. `stark-statusline install` points `~/.claude/settings.json` at it
+by absolute path (the `stark-statusline` first on `PATH`, `/opt/homebrew/bin`'s link under
+Homebrew), since Claude Code may run the command without Homebrew's bin on `PATH`. It
+replaces any `statusLine` command already there and keeps the file's other keys. Run it
+again over the bare `stark-statusline render` that 0.1.0's `install` wrote.
 
 ```sh
 brew install 21StarkCom/tap/stark-statusline
@@ -263,7 +266,7 @@ stark-statusline install
 
 The binary carries Go's linker **ad-hoc** signature, not a Developer ID. It runs on macOS
 only. On an Intel Mac, run `go install ./cmd/stark-statusline` in an `idavoll` checkout,
-with Go's bin directory on `PATH`: `install` wires the bare command name.
+with Go's bin directory on `PATH`: `install` wires that binary by its absolute path.
 
 ## tyr
 

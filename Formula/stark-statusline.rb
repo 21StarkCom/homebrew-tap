@@ -12,10 +12,10 @@ class StarkStatusline < Formula
   # version / asset id / sha256 are release-specific and rewritten when idavoll's
   # statusline release calls the bumper (the README's caller table) — do not hand-edit them.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/609267169",
+  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/609332715",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.1.0"
-  sha256 "62df2fccf883ff65e615b26ebdec877c5bef27cc5e44fdaef10e7715eac0d2b7"
+  version "0.1.1"
+  sha256 "a01702272a6a2e0534b804ea669fa6a8f2341046983b8873945158276b09f752"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
@@ -32,8 +32,10 @@ class StarkStatusline < Formula
   def caveats
     <<~EOS
       Run `stark-statusline install` to make it Claude Code's statusline: it points
-      statusLine in ~/.claude/settings.json at `stark-statusline render`, replacing any
-      statusLine command already there.
+      statusLine in ~/.claude/settings.json at `#{HOMEBREW_PREFIX}/bin/stark-statusline render`
+      (the absolute path of the stark-statusline first on PATH), replacing any statusLine
+      command already there. Run it again if an earlier install left the bare
+      `stark-statusline render`, which Claude Code may run without Homebrew's bin on PATH.
     EOS
   end
 
