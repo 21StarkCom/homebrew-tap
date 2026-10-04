@@ -47,9 +47,13 @@ jobs:
         # token. HOMEBREW_NO_AUTO_UPDATE keeps the later steps from re-triggering it.
         run: brew update
       - name: Register the PR checkout as the tap
+        # And trust it: Homebrew loads an untrusted tap's formula or cask only for a
+        # command line that names it in full, and a `brew ruby` script names none.
+        # CI runs this checkout's code either way.
         run: |
           mkdir -p "$(brew --repository)/Library/Taps/21starkcom"
           ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/21starkcom/homebrew-tap"
+          brew trust --tap 21StarkCom/tap
       - name: Style
         env:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
@@ -64,14 +68,17 @@ jobs:
             echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
             exit 1
           fi
+          formulae=()
           for path in Formula/*.rb; do
             name="${path##*/}"
-            formula="21StarkCom/tap/${name%.rb}"
-            brew audit --strict "$formula"
-            # The download check `brew install` used to make: the asset is readable
-            # and matches the pinned sha256.
-            brew fetch "$formula"
+            formulae+=("21StarkCom/tap/${name%.rb}")
           done
+          # Audit as the platform users install on: some checks run only for the
+          # OS and arch being audited.
+          brew audit --strict --os=tahoe --arch=arm "${formulae[@]}"
+          # The download check `brew install` used to make: each asset is readable
+          # and matches its pinned sha256. One call downloads them concurrently.
+          brew fetch "${formulae[@]}"
       - name: Fetch and audit every cask
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
@@ -94,16 +101,21 @@ jobs:
               atlas) except+=,token_conflicts ;;
             esac
             brew fetch --cask "$cask"
-            brew audit --cask --strict --except="$except" "$cask"
+            # A cask this platform can't install is skipped with a warning, exit 0,
+            # and `brew --cache` prints nothing for it: require the download.
+            if [[ ! -s "$(brew --cache --cask "$cask")" ]]; then
+              echo "${cask}: brew fetch --cask downloaded nothing" >&2
+              exit 1
+            fi
+            brew audit --cask --strict --os=tahoe --arch=arm --except="$except" "$cask"
             echo "${cask}: fetched and audited"
           done
       - name: Fetch with a gh login alone
         # No HOMEBREW_GITHUB_API_TOKEN here: entries fall back to `gh auth token`
-        # (STARK-10632), from Homebrew's own gh, not the runner's.
+        # (STARK-10632). Homebrew's lookup runs its own gh first, so install it as a
+        # user would; the runner's gh shares its config and would answer too.
         env:
           RELEASE_READ_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
-          # The runner's Homebrew gh only needs to exist, not be the newest.
-          HOMEBREW_NO_INSTALL_UPGRADE: 1
         run: |
           unset HOMEBREW_GITHUB_API_TOKEN
           brew install gh
@@ -118,9 +130,4 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
           HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check
-        # Tap trust lets a command load a tap's formula only when the command line
-        # names it in full; `brew ruby` names none, so trust hermod first. (On macOS,
-        # `brew install 21StarkCom/tap/hermod` used to trust it as a side effect.)
-        run: |
-          brew trust --formula 21StarkCom/tap/hermod
-          brew ruby scripts/verify-download.rb
+        run: brew ruby scripts/verify-download.rb
