@@ -12,10 +12,10 @@ class StarkStatusline < Formula
   # version / asset id / sha256 are release-specific and rewritten when idavoll's
   # statusline release calls the bumper (the README's caller table) — do not hand-edit them.
   token = ENV.fetch("HOMEBREW_GITHUB_API_TOKEN", "").strip
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/609332715",
+  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/609417903",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.1.1"
-  sha256 "a01702272a6a2e0534b804ea669fa6a8f2341046983b8873945158276b09f752"
+  version "0.1.2"
+  sha256 "80e1f009e2ff3393ab65d9083a149ccacf6f03ab2f28bff80db634c0d50b2e5f"
   if token.empty?
     raise CurlDownloadStrategyError.new(
       stable.url, "HOMEBREW_GITHUB_API_TOKEN is required for this private tap (GitHub contents:read access)."
