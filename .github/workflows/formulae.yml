@@ -101,9 +101,10 @@ jobs:
               atlas) except+=,token_conflicts ;;
             esac
             brew fetch --cask "$cask"
-            # A cask this platform can't install is skipped with a warning, exit 0,
-            # and `brew --cache` prints nothing for it: require the download.
-            if [[ ! -s "$(brew --cache --cask "$cask")" ]]; then
+            # A cask whose `depends_on arch:` excludes this runner is skipped with a
+            # warning, exit 0: require the download. Ask `brew --cache` as macOS arm64,
+            # since it prints nothing for a macOS-only cask on Linux.
+            if [[ ! -s "$(brew --cache --cask --os=tahoe --arch=arm "$cask")" ]]; then
               echo "${cask}: brew fetch --cask downloaded nothing" >&2
               exit 1
             fi
