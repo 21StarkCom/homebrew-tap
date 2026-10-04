@@ -1,7 +1,9 @@
 # typed: strict
 # frozen_string_literal: true
 
-# Run with brew ruby in an isolated HOMEBREW_CACHE and a read-only release token.
+# Run with brew ruby in an isolated HOMEBREW_CACHE and a read-only release token,
+# with hermod trusted (`brew trust --formula 21StarkCom/tap/hermod`): brew ruby
+# names no formula, so tap trust refuses the load below otherwise.
 # Never enable curl verbose/debug output: only report non-secret evidence.
 require "formulary"
 require "digest"

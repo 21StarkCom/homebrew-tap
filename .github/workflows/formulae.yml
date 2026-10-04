@@ -118,4 +118,9 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
           HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check
-        run: brew ruby scripts/verify-download.rb
+        # Tap trust lets a command load a tap's formula only when the command line
+        # names it in full; `brew ruby` names none, so trust hermod first. (On macOS,
+        # `brew install 21StarkCom/tap/hermod` used to trust it as a side effect.)
+        run: |
+          brew trust --formula 21StarkCom/tap/hermod
+          brew ruby scripts/verify-download.rb
