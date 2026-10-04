@@ -253,15 +253,16 @@ browser of the same name.
 The Claude Code statusline from [`idavoll`](https://github.com/21StarkCom/idavoll):
 `stark-statusline render` is the `statusLine` command, reading Claude Code's JSON on stdin,
 and the bare command opens a terminal editor that turns segments on and off and moves them
-between the three lines. `stark-statusline install` points `~/.claude/settings.json` at it.
+between the three lines. `stark-statusline install` points `~/.claude/settings.json` at it,
+replacing any `statusLine` command already there and keeping the file's other keys.
 
 ```sh
 brew install 21StarkCom/tap/stark-statusline
 stark-statusline install
 ```
 
-The binary carries Go's linker **ad-hoc** signature, not a Developer ID. Repo-less or
-off-tap: `go build ./cmd/stark-statusline` in an `idavoll` checkout.
+The binary carries Go's linker **ad-hoc** signature, not a Developer ID. Off the
+tap: `go build ./cmd/stark-statusline` in an `idavoll` checkout.
 
 ## tyr
 
