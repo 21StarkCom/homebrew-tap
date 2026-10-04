@@ -32,8 +32,10 @@ class StarkStatusline < Formula
   def caveats
     <<~EOS
       Run `stark-statusline install` to make it Claude Code's statusline: it points
-      statusLine in ~/.claude/settings.json at `stark-statusline render`, replacing any
-      statusLine command already there.
+      statusLine in ~/.claude/settings.json at `#{HOMEBREW_PREFIX}/bin/stark-statusline render`
+      (the absolute path of the stark-statusline first on PATH), replacing any statusLine
+      command already there. Run it again if an earlier install left the bare
+      `stark-statusline render`, which Claude Code may run without Homebrew's bin on PATH.
     EOS
   end
 
