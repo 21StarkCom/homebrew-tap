@@ -68,11 +68,26 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.15.0 ships Huginn 0.55.1 and Huginn Secrets 0.7.0 (the update above), which refuse
+      nothing you could do by hand. Huginn redacts nothing: observe, find and set-value read
+      password, one-time-code and card fields like any other, and recordings, demonstrations
+      and journeys keep the values you entered, passwords included, which `journey-replay`
+      and exported scripts replay: treat journey files and scripts as secrets. Huginn Secrets
+      now reads and writes the vault in a browser with remote debugging (`slp cdp`, `open`,
+      `run`), and sleipnir registers its native host in every Sleipnir profile it launches
+      Chrome on while Secrets is installed: keep loading Secrets only in a browser you sign
+      in to by hand. Through the MCP server, `gamma-receipts` now needs `confirm`; a Mimir
+      vault that is locked or doesn't answer now exits 3 for every cap that reads it, not 4;
+      and a `mesh-receipts-collect --yes` run whose worklist holds a Perplexity (`ENT PRO`)
+      charge sends nothing without a live Perplexity session on its profile (`--vendor`
+      collects the others).
+
       0.14.0 renames 23 caps to <service>-<what> (`slp caps` lists the new names:
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names work until 0.15.0, with one stderr line each. 0.14.0 rewrites grants
+      The old names still work in 0.15.0, with one stderr line each (it says `removed in
+      0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
       older `slp` on the same SLEIPNIR_HOME (a checkout not yet pulled) then refuses those
