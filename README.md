@@ -393,7 +393,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
-| `stark-statusline` | idavoll | `.github/workflows/statusline-release.yml`, for a `statusline-v*` tag | GitHub Actions |
+| `stark-statusline` | idavoll | `scripts/statusline-release.sh` (`make statusline-release`), for a `statusline-v*` tag | the operator's Mac |
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
