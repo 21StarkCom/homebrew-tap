@@ -2,10 +2,10 @@
 
 # Ad-hoc-signed macOS build of stark-statusline, the Claude Code statusline:
 # `stark-statusline render` draws it, and the bare command opens its layout
-# editor. Cross-compiled darwin/arm64 (Go linker ad-hoc signature, NOT
+# editor. A CGO-free darwin/arm64 build (Go linker ad-hoc signature, NOT
 # Developer-ID/notarized: a formula's files install without the quarantine
-# xattr, so Gatekeeper is not in the path). Built + published by idavoll's
-# statusline-release workflow (STARK-10552).
+# xattr, so Gatekeeper is not in the path). Built + published on the operator's
+# Mac by idavoll's scripts/statusline-release.sh (STARK-10552).
 class StarkStatusline < Formula
   desc "Claude Code statusline: compiled renderer and terminal layout editor"
   homepage "https://github.com/21StarkCom/idavoll"
