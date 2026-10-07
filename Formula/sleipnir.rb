@@ -68,6 +68,16 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.17.1 renames a Huginn or Huginn Secrets installation in your everyday Chrome that
+      0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS keeps
+      Chrome's own profile folder from the native host, so there the label set in its popup is
+      what names it. It takes that label when its browser next connects, keeping its 6 hex,
+      grants, update state and recordings (`slp-huginn-chrome-c17187` labelled "Work Profile"
+      becomes `slp-huginn-work-profile-c17187`), and the old ID exits 2 naming the new one:
+      update scripts and MCP client configs again from `slp huginn list` and
+      `huginn secrets list`. One still named `chrome` or `chrome-canary` takes its label the
+      first time it connects with one.
+
       0.17.0 ships Huginn 0.58.2 (the update above), whose popup records again: press Record,
       work in the tab, then Stop. Each recording, an incomplete one too, is saved as a journey
       file in SLEIPNIR_HOME's huginn/journeys/<installation id>/ and keeps the text you typed,
@@ -77,13 +87,12 @@ class Sleipnir < Formula
       need both.
 
       0.16.1 names a Huginn or Huginn Secrets installation in a plain Chrome profile after the
-      label set in its popup, ahead of Chrome's profile name. An ID 0.16.0 named otherwise than
-      that label, or after the browser, is renamed once when its browser next connects, keeping
-      its 6 hex and grants (`slp-huginn-chrome-c17187` labelled "Work Profile" becomes
-      `slp-huginn-work-profile-c17187`), and the old ID exits 2 naming the new one (still in
-      0.17.0; a later release drops that): update scripts and MCP client configs again from
-      `slp huginn list` and `huginn secrets list`. An old UUID still answers in 0.17.0 as it
-      did in 0.16.0.
+      label set in its popup, ahead of Chrome's profile name (in your everyday Chrome on macOS,
+      only from 0.17.1, above). An ID 0.16.0 named otherwise than that label, or after the
+      browser, is renamed once when its browser next connects, keeping its 6 hex and grants,
+      and the old ID exits 2 naming the new one (still in 0.17.1; a later release drops that):
+      update scripts and MCP client configs again from `slp huginn list` and
+      `huginn secrets list`. An old UUID still answers in 0.17.1 as it did in 0.16.0.
 
       0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
       installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
@@ -116,7 +125,7 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.17.0, with one stderr line each (it says `removed in
+      The old names still work in 0.17.1, with one stderr line each (it says `removed in
       0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
