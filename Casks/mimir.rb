@@ -50,17 +50,18 @@ cask "mimir" do
   app "Mimir.app"
   # The CLI lives INSIDE the bundle and must be reached by a symlink, never a copy: it resolves
   # its own path to find the Mímir Service executable it pins (MimirBundleLayout.servicePin). A
-  # copy has no bundle above it, so no pin, and never dials the service's socket.
+  # copy has no bundle above it, so no pin: it never dials the service's socket, only the opt-in
+  # TCP port, unverified.
   binary "#{appdir}/Mimir.app/Contents/Resources/bin/mimir"
 
   # The app and its menu bar item (Mimir Menu, a login item nested in the bundle); `brew upgrade`
   # reopens both by bundle id (`open -b`). On a Mac holding other copies with these ids (dev
-  # builds), LaunchServices may reopen one of those instead: quit it and open the installed Mímir,
-  # which opens the menu inside its own bundle by path. Mímir Service needs no directive: it seals
-  # when its bundle is replaced and exits once the new one verifies, and launchd relaunches it.
-  # Never `launchctl` here: Homebrew runs every `uninstall` directive but `signal` on `brew
-  # upgrade` too, so it would boot the service out on every upgrade (mimir's spec
-  # 2026-09-25-background-service §5.5).
+  # builds), LaunchServices may reopen one of those instead: quit both and open the installed
+  # Mímir, whose launch opens the menu inside its own bundle by path. Mímir Service needs no
+  # directive: it seals when its bundle is replaced and exits once the new one verifies, and
+  # launchd relaunches it. Never `launchctl` here: Homebrew runs every `uninstall` directive but
+  # `signal` on `brew upgrade` too, so it would boot the service out on every upgrade (mimir's
+  # spec 2026-09-25-background-service §5.5).
   uninstall quit: [
     "com.21stark.mimir",
     "com.21stark.mimir.menu",
@@ -94,7 +95,7 @@ cask "mimir" do
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
     with launchd; stop the service with
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
-    `brew uninstall --zap --cask mimir` removes both AND moves Mímir's local data, the vault
-    included, to the Trash (add `--force` once a plain uninstall has run).
+    `brew uninstall --zap --cask 21StarkCom/tap/mimir` removes both AND moves Mímir's local
+    data, the vault included, to the Trash (add `--force` once a plain uninstall has run).
   EOS
 end

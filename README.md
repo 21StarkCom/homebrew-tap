@@ -344,14 +344,18 @@ brew install --cask 21StarkCom/tap/mimir
 The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
 your `PATH`. **macOS 26 (Tahoe) or newer.** The release zip is the Developer-ID-signed,
 notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. The app registers
-**Mímir Service**, the launchd agent the CLI and MCP talk to. `brew upgrade` quits the app and its
-menu bar item (`uninstall quit:`) and reopens both by bundle id. On a Mac that also holds dev
-builds (same bundle ids), LaunchServices may reopen one of those instead: quit it and open the
-installed Mímir, which opens its own menu by path. The service restarts itself on the new bundle,
-so the cask never boots it out on upgrade. `brew uninstall --cask mimir` removes the app but leaves
-the service and the menu's login item registered with launchd; `--zap` also removes both
-(`zap launchctl:`; add `--force` once a plain uninstall has run) and trashes its local data (but
-never the login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+**Mímir Service**, the launchd agent the CLI and MCP talk to, only from `/Applications` or
+`~/Applications`, so keep the cask's `--appdir` at one of those. `brew upgrade` quits the app and
+its menu bar item (`uninstall quit:`) and reopens both by bundle id. On a Mac that also holds dev
+builds (same bundle ids), LaunchServices may reopen one of those instead: quit both and open the
+installed Mímir, whose launch opens its own menu by path. The service restarts itself on the new
+bundle, so the cask never boots it out on upgrade. `brew uninstall --cask mimir` removes the app
+but leaves the service and the menu's login item registered with launchd;
+`brew uninstall --zap --cask 21StarkCom/tap/mimir` also removes both (`zap launchctl:`) and
+trashes its local data (but never the login-Keychain vault key — that is the app's own Danger
+Zone → Erase Everything). Once a plain uninstall has run, add `--force`, and keep the full name:
+that uninstall drops Homebrew's trust in the cask, and an untrusted tap's cask loads only when
+named in full.
 
 ## Repo layout
 
