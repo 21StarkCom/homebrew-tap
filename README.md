@@ -345,10 +345,13 @@ The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir`
 your `PATH`. **macOS 26 (Tahoe) or newer.** The release zip is the Developer-ID-signed,
 notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. The app registers
 **Mímir Service**, the launchd agent the CLI and MCP talk to. `brew upgrade` quits the app and its
-menu bar item (`uninstall quit:`) and reopens both; the service restarts itself on the new bundle,
+menu bar item (`uninstall quit:`) and reopens both by bundle id. On a Mac that also holds dev
+builds (same bundle ids), LaunchServices may reopen one of those instead: quit it and open the
+installed Mímir, which opens its own menu by path. The service restarts itself on the new bundle,
 so the cask never boots it out on upgrade. `brew uninstall --cask mimir` removes the app but leaves
-the service registered; `--zap` also boots it out (`zap launchctl:`) and trashes its local data
-(but never the login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+the service and the menu's login item registered with launchd; `--zap` also removes both
+(`zap launchctl:`; add `--force` once a plain uninstall has run) and trashes its local data (but
+never the login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
 
 ## Repo layout
 

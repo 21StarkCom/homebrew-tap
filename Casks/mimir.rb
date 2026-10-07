@@ -54,20 +54,26 @@ cask "mimir" do
   binary "#{appdir}/Mimir.app/Contents/Resources/bin/mimir"
 
   # The app and its menu bar item (Mimir Menu, a login item nested in the bundle); `brew upgrade`
-  # reopens both. Mímir Service needs no directive: it seals when its bundle is replaced and exits
-  # once the new one verifies, and launchd relaunches it. Never `launchctl` here: Homebrew runs
-  # every `uninstall` directive but `signal` on `brew upgrade` too, so it would boot the service
-  # out on every upgrade (mimir's spec 2026-09-25-background-service §5.5).
+  # reopens both by bundle id (`open -b`). On a Mac holding other copies with these ids (dev
+  # builds), LaunchServices may reopen one of those instead: quit it and open the installed Mímir,
+  # which opens the menu inside its own bundle by path. Mímir Service needs no directive: it seals
+  # when its bundle is replaced and exits once the new one verifies, and launchd relaunches it.
+  # Never `launchctl` here: Homebrew runs every `uninstall` directive but `signal` on `brew
+  # upgrade` too, so it would boot the service out on every upgrade (mimir's spec
+  # 2026-09-25-background-service §5.5).
   uninstall quit: [
     "com.21stark.mimir",
     "com.21stark.mimir.menu",
   ]
 
-  # `brew uninstall --zap` only. Boots out Mímir Service's launchd job, which a plain uninstall
-  # leaves registered against the deleted bundle. Leaves the login-Keychain vault key alone — that
-  # crypto-erases the vault and is the app's own Danger Zone → Erase Everything, never a package
-  # manager's job.
-  zap launchctl: "com.21stark.mimir.service",
+  # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
+  # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
+  # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
+  # Danger Zone → Erase Everything, never a package manager's job.
+  zap launchctl: [
+        "com.21stark.mimir.menu",
+        "com.21stark.mimir.service",
+      ],
       trash:     [
         "~/Library/Application Support/.mimir-*",
         "~/Library/Application Support/Mimir",
@@ -85,8 +91,9 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    A plain `brew uninstall` leaves Mímir Service registered with launchd. Remove it
-    completely with `brew uninstall --zap --cask mimir`, or stop it with
+    A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
+    with launchd. Uninstall with `brew uninstall --zap --cask mimir` to remove them too
+    (add `--force` once a plain uninstall has run), or stop the service with
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
   EOS
 end
