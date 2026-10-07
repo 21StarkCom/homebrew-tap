@@ -92,8 +92,9 @@ cask "mimir" do
     `mimir pair`); `mimir status` reports the state.
 
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
-    with launchd. Uninstall with `brew uninstall --zap --cask mimir` to remove them too
-    (add `--force` once a plain uninstall has run), or stop the service with
+    with launchd; stop the service with
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
+    `brew uninstall --zap --cask mimir` removes both AND moves Mímir's local data, the vault
+    included, to the Trash (add `--force` once a plain uninstall has run).
   EOS
 end
