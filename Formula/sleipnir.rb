@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/611911501",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/618210552",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.15.0"
-  sha256 "84c139731c3a66f2e16cab2d44bb01673b49cdc2d3668930c0b0ed80b603d7bb"
+  version "0.16.0"
+  sha256 "2cb0b9cf28ed4bbce6299a81099b66dd4ac40722329be6322e2d62a3f437d98e"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -68,6 +68,18 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
+      installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
+      `slp-secrets-<profile>-<6 hex>`, in place of its UUID; it keeps its grants when its
+      browser first connects after the update. 0.16.0 refuses an old UUID (exit 2) wherever an
+      installation is named (`--huginn`, `huginn secrets`, journey scripts, the MCP tools) and
+      names the new ID once that browser has connected; a later release drops even that. Update
+      scripts and MCP client configs from `slp huginn list` and `huginn secrets list`; `forget`
+      and `deny` still take the UUID of a browser that never reconnects. Huginn's popup no
+      longer records a demonstration: run `slp cap journey-record --huginn <id> --tab <id>
+      --out <file>`. Its new `evaluate` action runs your JavaScript in a tab through the page's
+      signed-in session, once you grant `evaluate` and pass `--yes` (MCP `confirm:true`).
+
       0.15.0 ships Huginn 0.55.1 and Huginn Secrets 0.7.0 (the update above), which refuse
       nothing you could do by hand. Huginn redacts nothing: observe, find and set-value read
       password, one-time-code and card fields like any other, and recordings, demonstrations
@@ -86,7 +98,7 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.15.0, with one stderr line each (it says `removed in
+      The old names still work in 0.16.0, with one stderr line each (it says `removed in
       0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
@@ -117,7 +129,7 @@ class Sleipnir < Formula
       sleipnir-mcp.mjs in a sleipnir keg's libexec loads its working directory's .env
       (which can set SLEIPNIR_MCP_ALLOW_MUTATE=1) and bunfig.toml preloads: rewire it.
 
-      0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <uuid>`,
+      0.12.0 removed the `companion` aliases: use `slp huginn` or `huginn`, `--huginn <id>`,
       and the MCP tools list_huginns, list_huginn_native_caps, huginn and huginn_batch
       (`run_cap` takes `huginn`, not `companion`).
 
