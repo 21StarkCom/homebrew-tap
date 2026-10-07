@@ -305,8 +305,8 @@ Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*
 
 [`goldfinger`](https://github.com/21StarkCom/goldfinger) — background computer use for
 agents: `Goldfinger.app` runs the daemon that holds the macOS grants, and the `goldfinger`
-CLI observes and operates native apps without taking the user's focus or moving the cursor.
-The daemon is a GUI app, so it ships as a **cask** (`Casks/goldfinger.rb`):
+CLI observes and operates native apps without taking the user's focus. The daemon is a GUI
+app, so it ships as a **cask** (`Casks/goldfinger.rb`):
 
 ```sh
 brew install --cask 21StarkCom/tap/goldfinger
