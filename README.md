@@ -343,9 +343,12 @@ brew install --cask 21StarkCom/tap/mimir
 
 The cask drops `Mimir.app` into `/Applications` and symlinks the bundled `mimir` CLI onto
 your `PATH`. **macOS 26 (Tahoe) or newer.** The release zip is the Developer-ID-signed,
-notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. `brew uninstall
---cask mimir` removes the app; `--zap` also trashes its local data (but never the
-login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
+notarized, and **stapled** `Mimir.app`, so Gatekeeper validates it offline. The app registers
+**Mímir Service**, the launchd agent the CLI and MCP talk to. `brew upgrade` quits the app and its
+menu bar item (`uninstall quit:`) and reopens both; the service restarts itself on the new bundle,
+so the cask never boots it out on upgrade. `brew uninstall --cask mimir` removes the app but leaves
+the service registered; `--zap` also boots it out (`zap launchctl:`) and trashes its local data
+(but never the login-Keychain vault key — that is the app's own Danger Zone → Erase Everything).
 
 ## Repo layout
 

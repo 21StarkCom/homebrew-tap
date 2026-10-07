@@ -49,27 +49,44 @@ cask "mimir" do
 
   app "Mimir.app"
   # The CLI lives INSIDE the bundle and must be reached by a symlink, never a copy: it resolves
-  # its own path to find the app executable it pins connections against (CLIServerPin). A copy has
-  # no bundle above it and silently downgrades to unverified TCP.
+  # its own path to find the Mímir Service executable it pins (MimirBundleLayout.servicePin). A
+  # copy has no bundle above it, so no pin, and never dials the service's socket.
   binary "#{appdir}/Mimir.app/Contents/Resources/bin/mimir"
 
-  uninstall quit: "com.21stark.mimir"
-
-  # `brew uninstall --zap` only. Leaves the login-Keychain vault key alone — that crypto-erases the
-  # vault and is the app's own Danger Zone → Erase Everything, never a package manager's job.
-  zap trash: [
-    "~/Library/Application Support/.mimir-*",
-    "~/Library/Application Support/Mimir",
-    "~/Library/Caches/com.21stark.mimir",
-    "~/Library/Preferences/com.21stark.mimir.plist",
-    "~/Library/Saved Application State/com.21stark.mimir.savedState",
+  # The app and its menu bar item (Mimir Menu, a login item nested in the bundle); `brew upgrade`
+  # reopens both. Mímir Service needs no directive: it seals when its bundle is replaced and exits
+  # once the new one verifies, and launchd relaunches it. Never `launchctl` here: Homebrew runs
+  # every `uninstall` directive but `signal` on `brew upgrade` too, so it would boot the service
+  # out on every upgrade (mimir's spec 2026-09-25-background-service §5.5).
+  uninstall quit: [
+    "com.21stark.mimir",
+    "com.21stark.mimir.menu",
   ]
+
+  # `brew uninstall --zap` only. Boots out Mímir Service's launchd job, which a plain uninstall
+  # leaves registered against the deleted bundle. Leaves the login-Keychain vault key alone — that
+  # crypto-erases the vault and is the app's own Danger Zone → Erase Everything, never a package
+  # manager's job.
+  zap launchctl: "com.21stark.mimir.service",
+      trash:     [
+        "~/Library/Application Support/.mimir-*",
+        "~/Library/Application Support/Mimir",
+        "~/Library/Caches/com.21stark.mimir",
+        "~/Library/HTTPStorages/com.21stark.mimir",
+        "~/Library/Preferences/com.21stark.mimir.plist",
+        "~/Library/Saved Application State/com.21stark.mimir.savedState",
+      ]
 
   caveats <<~EOS
     Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed
     in (`brew install gh && gh auth login`), or export HOMEBREW_GITHUB_API_TOKEN=<token>
 
-    The `mimir` CLI talks to the running app over a local socket — open Mímir and pair
-    the CLI from Settings → CLI before using it (`mimir status` reports the state).
+    Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
+    talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
+    `mimir pair`); `mimir status` reports the state.
+
+    A plain `brew uninstall` leaves Mímir Service registered with launchd. Remove it
+    completely with `brew uninstall --zap --cask mimir`, or stop it with
+    `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
   EOS
 end
