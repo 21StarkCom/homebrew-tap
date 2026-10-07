@@ -68,13 +68,22 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.17.0 ships Huginn 0.58.2 (the update above), whose popup records again: press Record,
+      work in the tab, then Stop. Each recording, an incomplete one too, is saved as a journey
+      file in SLEIPNIR_HOME's huginn/journeys/<installation id>/ and keeps the text you typed,
+      passwords included: treat that folder as secret. The popup's new Recordings page lists,
+      loads, deletes and replays them; a Replay pressed there runs live in a new tab with no
+      grant and no `--yes`, while `slp cap journey-replay --huginn` and the MCP tools still
+      need both.
+
       0.16.1 names a Huginn or Huginn Secrets installation in a plain Chrome profile after the
       label set in its popup, ahead of Chrome's profile name. An ID 0.16.0 named otherwise than
       that label, or after the browser, is renamed once when its browser next connects, keeping
       its 6 hex and grants (`slp-huginn-chrome-c17187` labelled "Work Profile" becomes
-      `slp-huginn-work-profile-c17187`), and for one release the old ID exits 2 naming the new
-      one: update scripts and MCP client configs again from `slp huginn list` and
-      `huginn secrets list`. An old UUID still answers in 0.16.1 as it did in 0.16.0.
+      `slp-huginn-work-profile-c17187`), and the old ID exits 2 naming the new one (still in
+      0.17.0; a later release drops that): update scripts and MCP client configs again from
+      `slp huginn list` and `huginn secrets list`. An old UUID still answers in 0.17.0 as it
+      did in 0.16.0.
 
       0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
       installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
@@ -83,10 +92,11 @@ class Sleipnir < Formula
       installation is named (`--huginn`, `huginn secrets`, journey scripts, the MCP tools) and
       names the new ID once that browser has connected; a later release drops even that. Update
       scripts and MCP client configs from `slp huginn list` and `huginn secrets list`; `forget`
-      and `deny` still take the UUID of a browser that never reconnects. Huginn's popup no
-      longer records a demonstration: run `slp cap journey-record --huginn <id> --tab <id>
-      --out <file>`. Its new `evaluate` action runs your JavaScript in a tab through the page's
-      signed-in session, once you grant `evaluate` and pass `--yes` (MCP `confirm:true`).
+      and `deny` still take the UUID of a browser that never reconnects. Huginn 0.57.1's popup
+      recorded no demonstration (0.17.0's records again, above); `slp cap journey-record
+      --huginn <id> --tab <id> --out <file>` still records one. Its new `evaluate` action runs
+      your JavaScript in a tab through the page's signed-in session, once you grant `evaluate`
+      and pass `--yes` (MCP `confirm:true`).
 
       0.15.0 ships Huginn 0.55.1 and Huginn Secrets 0.7.0 (the update above), which refuse
       nothing you could do by hand. Huginn redacts nothing: observe, find and set-value read
@@ -106,7 +116,7 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.16.1, with one stderr line each (it says `removed in
+      The old names still work in 0.17.0, with one stderr line each (it says `removed in
       0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
