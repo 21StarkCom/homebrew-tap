@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/619687735",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/621907260",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.17.1"
-  sha256 "ac7ab526112cc24f51ce481f52db261974db90743b9693229ba9d8872f73af18"
+  version "0.17.2"
+  sha256 "80da087bb02208bed81d646a4ef525de81341a44997436f23d645ed481833e0c"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -90,9 +90,9 @@ class Sleipnir < Formula
       label set in its popup, ahead of Chrome's profile name (in your everyday Chrome on macOS,
       only from 0.17.1, above). An ID 0.16.0 named otherwise than that label, or after the
       browser, is renamed once when its browser next connects, keeping its 6 hex and grants,
-      and the old ID exits 2 naming the new one (still in 0.17.1; a later release drops that):
+      and the old ID exits 2 naming the new one (still in 0.17.2; a later release drops that):
       update scripts and MCP client configs again from `slp huginn list` and
-      `huginn secrets list`. An old UUID still answers in 0.17.1 as it did in 0.16.0.
+      `huginn secrets list`. An old UUID still answers in 0.17.2 as it did in 0.16.0.
 
       0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
       installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
@@ -125,7 +125,7 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.17.1, with one stderr line each (it says `removed in
+      The old names still work in 0.17.2, with one stderr line each (it says `removed in
       0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
@@ -167,7 +167,8 @@ class Sleipnir < Formula
       `mimir.authenticator` native capability is gone: use `huginn secrets codes`.
       Huginn Secrets needs Mimir 0.27.0 or newer for codes and fill (`brew upgrade --cask
       21StarkCom/tap/mimir`), and Mimir 0.28.x, with Allow vault writes on, to save: Mimir
-      0.29.0's service refuses every CLI write, so a save there fails as if Mimir were too old.
+      0.29.0's service is read-only, so a save there says "Mímir Service can't save yet: save
+      it in the Mímir app." and `huginn secrets collect --yes` exits 3 (4 before 0.17.2).
       Its `huginn secrets` command line also needs the grants you tick in its popup.
     EOS
   end
