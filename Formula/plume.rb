@@ -11,10 +11,10 @@ class Plume < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/593320290",
+  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/622650137",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.5.1"
-  sha256 "21de3997e76908ba67c16f6f24ea32b83a843fc5bdf8a3ec1b96c50d7a5f1bfc"
+  version "0.6.0"
+  sha256 "021d4cb0028c72c223fefc03082f71ac6f16bf64dbe78dac831e4bb7420dc50f"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
