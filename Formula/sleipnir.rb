@@ -165,9 +165,10 @@ class Sleipnir < Formula
       and Huginn Secrets, which fills and saves Mimir sign-ins and now shows the one-time
       codes Huginn used to. Load Secrets only in a browser you sign in to by hand. Huginn's
       `mimir.authenticator` native capability is gone: use `huginn secrets codes`.
-      Huginn Secrets needs Mimir 0.27.0 or newer for codes and fill, and Mimir 0.28.0 or newer,
-      with Allow vault writes on, to save (`brew upgrade --cask 21StarkCom/tap/mimir`); its
-      `huginn secrets` command line also needs the grants you tick in its popup.
+      Huginn Secrets needs Mimir 0.27.0 or newer for codes and fill (`brew upgrade --cask
+      21StarkCom/tap/mimir`), and Mimir 0.28.x, with Allow vault writes on, to save: Mimir
+      0.29.0's service refuses every CLI write, so a save there fails as if Mimir were too old.
+      Its `huginn secrets` command line also needs the grants you tick in its popup.
     EOS
   end
 

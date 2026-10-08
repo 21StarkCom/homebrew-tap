@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.28.0"
-  sha256 "7fa3ee326af1d2336ead6688f45512d3d5c0437eab86657bb3f9815c765edf70"
+  version "0.29.0"
+  sha256 "53fce453f8ebdd6218762801d7171cd6c6dcf84c16d9b627906d344ed87c9105"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/597337333",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/621035651",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -91,6 +91,12 @@ cask "mimir" do
     Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
+
+    0.29.0 moves the CLI, MCP and the drop box into Mímir Service, which is read-only in this
+    release: CLI writes, `import`, `backup verify` and `export` are refused (exit 2), so make
+    those changes in the app. After upgrading from 0.28.0 or older, allow Mímir Service in
+    Login Items if macOS asks, choose Always Allow on its Keychain dialogs, and pair the CLI
+    again (above).
 
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
     with launchd; stop the service with
