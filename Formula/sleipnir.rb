@@ -168,7 +168,7 @@ class Sleipnir < Formula
       Huginn Secrets needs Mimir 0.27.0 or newer for codes and fill (`brew upgrade --cask
       21StarkCom/tap/mimir`), and Mimir 0.28.x, with Allow vault writes on, to save: Mimir
       0.29.0's service is read-only, so a save there says "Mímir Service can't save yet: save
-      it in the Mímir app." and `huginn secrets collect --yes` exits 3.
+      it in the Mímir app." and `huginn secrets collect --yes` exits 3 (4 before 0.17.2).
       Its `huginn secrets` command line also needs the grants you tick in its popup.
     EOS
   end
