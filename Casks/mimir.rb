@@ -92,6 +92,12 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.29.0 moves the CLI, MCP and the drop box into Mímir Service, which is read-only in this
+    release: CLI writes, `import`, `backup verify` and `export` are refused (exit 2), so make
+    those changes in the app. After upgrading from 0.28.0 or older, allow Mímir Service in
+    Login Items if macOS asks, choose Always Allow on its Keychain dialogs, and pair the CLI
+    again (above).
+
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
     with launchd; stop the service with
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
