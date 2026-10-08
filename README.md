@@ -392,13 +392,13 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 
 | Entry | Source repo | Release step that calls the bumper | Runs on |
 |---|---|---|---|
-| `alfred` | alfred | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
+| `alfred` | alfred | `scripts/release-darwin.sh` | the signing Mac |
 | `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
 | `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
 | `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
-| `idun` | idun | `.github/workflows/release.yml`; `scripts/release-darwin.sh` | GitHub Actions; the signing Mac |
+| `idun` | idun | `scripts/release-darwin.sh` | the signing Mac |
 | `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
@@ -410,9 +410,10 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
 idun's and alfred's releases and plume's and frigg's `release.yml` merge their own bump PR
-unattended: `bump.sh --merge` waits for every check here first. Every other bump PR stays open for a
-hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and
-labeled `no-ticket` (by `bump.sh`) while its title names no ticket.
+unattended: `bump.sh --merge` waits for every check here first. frigg's run leaves its PR
+open, under a warning, while its token lacks Actions: read on this tap. Every other bump PR
+stays open for a hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a
+ticket covers it and labeled `no-ticket` (by `bump.sh`) while its title names no ticket.
 
 ## Download authentication and CI
 
