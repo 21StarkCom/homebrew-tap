@@ -68,6 +68,20 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.18.0 removes the old names 0.14.0 deprecated (below), each now refused as unknown
+      (exit 2): the 23 old cap names, whose refusal names the new one (`slp cap login-google`
+      names `google-login`), though `slp deny <profile> <old name>` still revokes the new one;
+      `--force` everywhere but `slp allow` (use `--yes`, `--overwrite` or `--reharvest`);
+      `--csv` (use `--worklist`); a `--duration` number with no unit (write `20s` or `500ms`);
+      an exported journey script's `--instance` (use `--huginn`); and the MCP arguments
+      `instance` on huginn and huginn_batch (`huginn` is now required) and `force` on run_cap.
+      Nor does it print the old JSON keys 0.14.0 kept beside the new ones: read `grants`, not
+      `allow`, from `huginn list --json`, MCP list_huginns and `huginn allow|deny`; `steps` and
+      `requires.grants`, not `actions` and `requires.capabilities`, from a `journey-replay` dry
+      run; and `stepCount`, not a count named `steps`, from `journey-export`. Journeys are now
+      written as version 3, which sleipnir 0.14.0 and later read. The twelve `gl-*` caps are
+      gone too: a grant naming one matches nothing, and `slp deny` removes it.
+
       0.17.3 ships Huginn 0.60.0 (the update above), whose popup's new Chat button opens a
       side panel where a local Claude Code session reads and acts on the tab beside it. It
       runs `idun bob --agent claude` (`brew install 21StarkCom/tap/idun`, and Claude Code
@@ -103,9 +117,9 @@ class Sleipnir < Formula
       label set in its popup, ahead of Chrome's profile name (in your everyday Chrome on macOS,
       only from 0.17.1, above). An ID 0.16.0 named otherwise than that label, or after the
       browser, is renamed once when its browser next connects, keeping its 6 hex and grants,
-      and the old ID exits 2 naming the new one (still in 0.17.3; a later release drops that):
+      and the old ID exits 2 naming the new one (still in 0.18.0; a later release drops that):
       update scripts and MCP client configs again from `slp huginn list` and
-      `huginn secrets list`. An old UUID still answers in 0.17.3 as it did in 0.16.0.
+      `huginn secrets list`. An old UUID still answers in 0.18.0 as it did in 0.16.0.
 
       0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
       installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
@@ -138,12 +152,11 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.17.3, with one stderr line each (it says `removed in
-      0.15.0`); a later release removes them. 0.14.0 rewrites grants
-      stored under old cap names in profiles.json the first time it reads them (a cap,
-      `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
-      older `slp` on the same SLEIPNIR_HOME (a checkout not yet pulled) then refuses those
-      caps until it is upgraded. Under `--json`, the six vendor `*-receipts` caps now print
+      0.18.0 removes the old names (above). Grants stored under old cap names in profiles.json
+      are still rewritten the first time sleipnir reads them (a cap, `cdp`, `open`, `run`,
+      `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an `slp` older than 0.14.0 on
+      the same SLEIPNIR_HOME (a checkout not yet pulled) then refuses those caps until it is
+      upgraded. Since 0.14.0, under `--json`, the six vendor `*-receipts` caps print
       `{ok, invoices}` and `gmail-scan` prints `{ok, messages}`, no longer a bare array.
 
       Once a browser runs the builds 0.14.0 ships (Huginn 0.49.5, Huginn Scan 0.2.2, Huginn
@@ -158,10 +171,10 @@ class Sleipnir < Formula
       running a sleipnir-mcp from sleipnir 0.12.2 or earlier (later versions run tool calls
       through #{formula_opt_bin("bun")}/bun).
 
-      A journey script exported by `slp cap export-journey` from a Homebrew sleipnir 0.12.2
-      or earlier imports that version's keg, which `brew upgrade 21StarkCom/tap/sleipnir`
-      cleans up: after upgrading past 0.12.2, export it again, once (`slp cap journey-export`
-      from 0.14.0), or keep your edits by pointing its import at
+      A journey script exported from a Homebrew sleipnir 0.12.2 or earlier imports that
+      version's keg, which `brew upgrade 21StarkCom/tap/sleipnir` cleans up: after upgrading
+      past 0.12.2, export it again, once, with `slp cap journey-export`, or keep your edits
+      by pointing its import at
       #{opt_libexec}/apps/huginn-bridge/src/journey-script.ts. A later version's export
       imports through #{opt_prefix}, which each upgrade points at the new keg.
 
