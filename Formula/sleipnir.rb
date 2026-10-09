@@ -68,19 +68,37 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
-      0.18.0 removes the old names 0.14.0 deprecated (below), each now refused as unknown
-      (exit 2): the 23 old cap names, whose refusal names the new one (`slp cap login-google`
-      names `google-login`), though `slp deny <profile> <old name>` still revokes the new one;
+      0.18.0 removes the old names 0.14.0 deprecated (below), each now refused (exit 2; the
+      MCP server returns an error): the 23 old cap names, whose refusal names the new one
+      (`slp cap login-google` names `google-login`), though `slp deny <profile> <old name>`
+      still revokes the new one, and `slp caps --json` and MCP list_caps drop `aliases`;
       `--force` everywhere but `slp allow` (use `--yes`, `--overwrite` or `--reharvest`);
       `--csv` (use `--worklist`); a `--duration` number with no unit (write `20s` or `500ms`);
       an exported journey script's `--instance` (use `--huginn`); and the MCP arguments
       `instance` on huginn and huginn_batch (`huginn` is now required) and `force` on run_cap.
       Nor does it print the old JSON keys 0.14.0 kept beside the new ones: read `grants`, not
-      `allow`, from `huginn list --json`, MCP list_huginns and `huginn allow|deny`; `steps` and
-      `requires.grants`, not `actions` and `requires.capabilities`, from a `journey-replay` dry
-      run; and `stepCount`, not a count named `steps`, from `journey-export`. Journeys are now
-      written as version 3, which sleipnir 0.14.0 and later read. The twelve `gl-*` caps are
-      gone too: a grant naming one matches nothing, and `slp deny` removes it.
+      `allow`, from `huginn list --json`, MCP list_huginns and `huginn allow|deny`; `steps`,
+      not `actions`, from a `journey-replay` dry run; and `stepCount`, not a count named
+      `steps`, from `huginn record … journey` and `journey-export`. Journeys are now written
+      as version 3, which sleipnir 0.14.0 and later read, and replay dry runs and reports give
+      a journey's `version` as 3, not 2. The twelve `gl-*` caps are gone too: a grant naming
+      one matches nothing, and `slp deny` removes it.
+
+      0.18.0 ships huginn-bridge 0.6.0, the bridge at
+      #{opt_libexec}/apps/huginn-bridge/bin/huginn-bridge.mjs.
+      It drops `--instance` (use `--huginn`), a `run` request's `"instance"`, `--capabilities`
+      (use `--grants`) and `uninstall --dry-run`: its `uninstall` now only shows what it would
+      remove unless you pass `--yes`. Its JSON drops the old names too: read `id`, not
+      `instance`, from `companions` and `choices`; `huginn` and `grants`, not `instance` and
+      `capabilities`, from a session; and `steps` and `requires.grants`, not `actions` and
+      `requires.capabilities`, from a `replay` dry run.
+
+      0.18.0's `anthropic-receipts`, and `mesh-receipts-collect` for `anthropic`, read invoices
+      only once the claude.ai Team account is confirmed active. A switch that failed or went
+      unconfirmed used to read whichever account was active and exit 0; now a login with no
+      Team account exits 3, and a switch it cannot confirm exits 4 (3 when the page bounced to
+      `claude.ai/login`). `mesh-receipts-collect` lists either in `enumFailures`, which blocks
+      `--yes`.
 
       0.17.3 ships Huginn 0.60.0 (the update above), whose popup's new Chat button opens a
       side panel where a local Claude Code session reads and acts on the tab beside it. It
@@ -156,7 +174,7 @@ class Sleipnir < Formula
       are still rewritten the first time sleipnir reads them (a cap, `cdp`, `open`, `run`,
       `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an `slp` older than 0.14.0 on
       the same SLEIPNIR_HOME (a checkout not yet pulled) then refuses those caps until it is
-      upgraded. Since 0.14.0, under `--json`, the six vendor `*-receipts` caps print
+      upgraded. Since 0.14.0, under `--json`, the vendor `*-receipts` caps print
       `{ok, invoices}` and `gmail-scan` prints `{ok, messages}`, no longer a bare array.
 
       Once a browser runs the builds 0.14.0 ships (Huginn 0.49.5, Huginn Scan 0.2.2, Huginn
