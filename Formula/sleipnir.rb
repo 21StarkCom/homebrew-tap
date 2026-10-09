@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/621907260",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/624465893",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.17.2"
-  sha256 "80da087bb02208bed81d646a4ef525de81341a44997436f23d645ed481833e0c"
+  version "0.17.3"
+  sha256 "ed3bb0f47c8a08ea022f4284f3f97d45dd67ab40fc63845601284da3c97fc403"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -68,6 +68,19 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.17.3 ships Huginn 0.60.0 (the update above), whose popup's new Chat button opens a
+      side panel where a local Claude Code session reads and acts on the tab beside it. It
+      runs `idun bob --agent claude` (`brew install 21StarkCom/tap/idun`, and Claude Code
+      signed in): no permission prompts, with your settings, hooks and MCP servers, so text on
+      a page it reads reaches a session that runs any command without asking. It acts through
+      sleipnir-mcp's huginn tools: register #{opt_bin}/sleipnir-mcp with Claude Code at user
+      scope (below), and close a chat left open across an upgrade, as you restart MCP clients.
+      Its Record session saves a zip through Chrome's downloads (kept in SLEIPNIR_HOME's
+      huginn/chat-recordings/ when it cannot reach the panel) holding the replayable journey,
+      a screenshot before and after each action, the conversation and the session's context,
+      which keeps every page and command output it saw, secrets included: treat those zips,
+      and the panel's two downloads, as secret.
+
       0.17.1 renames a Huginn or Huginn Secrets installation in your everyday Chrome that
       0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS keeps
       Chrome's own profile folder from the native host, so there the label set in its popup is
@@ -90,9 +103,9 @@ class Sleipnir < Formula
       label set in its popup, ahead of Chrome's profile name (in your everyday Chrome on macOS,
       only from 0.17.1, above). An ID 0.16.0 named otherwise than that label, or after the
       browser, is renamed once when its browser next connects, keeping its 6 hex and grants,
-      and the old ID exits 2 naming the new one (still in 0.17.2; a later release drops that):
+      and the old ID exits 2 naming the new one (still in 0.17.3; a later release drops that):
       update scripts and MCP client configs again from `slp huginn list` and
-      `huginn secrets list`. An old UUID still answers in 0.17.2 as it did in 0.16.0.
+      `huginn secrets list`. An old UUID still answers in 0.17.3 as it did in 0.16.0.
 
       0.16.0 ships Huginn 0.57.1 and Huginn Secrets 0.8.0 (the update above), which name each
       installation after its browser profile, `slp-huginn-<profile>-<6 hex>` and
@@ -125,7 +138,7 @@ class Sleipnir < Formula
       `login-google` is now `google-login`, `export-journey` is `journey-export`) and some
       flags: `--yes` deletes and `--overwrite` replaces an `--out` file where `--force` did,
       and the MCP tools huginn and huginn_batch take `huginn` where they took `instance`.
-      The old names still work in 0.17.2, with one stderr line each (it says `removed in
+      The old names still work in 0.17.3, with one stderr line each (it says `removed in
       0.15.0`); a later release removes them. 0.14.0 rewrites grants
       stored under old cap names in profiles.json the first time it reads them (a cap,
       `cdp`, `open`, `run`, `smoke`, `slp caps`, `profiles`, `allow` or `deny`), and an
