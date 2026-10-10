@@ -85,8 +85,9 @@ jobs:
           # Never add --os or --arch: with either, brew fetch looks only for a bottle,
           # which no entry has, and exits 0 having downloaded nothing.
           brew fetch "${formulae[@]}"
-          # hermod-linux is the one formula not built for this runner: require that
-          # its asset really downloaded.
+          # A formula fetch checks no platform requirement today, so the x86_64-only
+          # hermod-linux downloads on this arm runner like the macOS entries do. Fail
+          # if a later Homebrew skips it with exit 0, as it skips an excluded cask.
           if [[ ! -s "$(brew --cache 21StarkCom/tap/hermod-linux)" ]]; then
             echo '21StarkCom/tap/hermod-linux: brew fetch downloaded nothing' >&2
             exit 1
