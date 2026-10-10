@@ -3,11 +3,12 @@
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
 `brew install`: 13 formulae for the CLIs and 3 casks for the GUI apps, each a signed
-macOS arm64 build pulled from a private GitHub Release. The tap builds nothing. It only
+macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux`, hermod's
+Linux x86_64 build for the devbox. The tap builds nothing. It only
 pins each entry to a published release, and each source repo's release re-pins its own
 entry by pull request.
 
-**Status:** active. Every entry installs today; 14 of the 16 are re-pinned on each release
+**Status:** active. Every entry installs today; 15 of the 17 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -39,9 +40,10 @@ included: a formula refuses to evaluate without it. A cask needs it only to down
 Homebrew's sandboxed build and test workers cannot read gh's config, and never download,
 so they skip that check. A formula's files are installed without the
 quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
-unzip the release by hand. Casks install their apps quarantined. Every entry is
-**macOS arm64 only**; for another platform, build from the tool's own repo where it
-supports one (the frigg, lumiere, plume and stark-statusline sections say how).
+unzip the release by hand. Casks install their apps quarantined. Every entry but
+`hermod-linux` is **macOS arm64 only**; for another platform, build from the tool's own
+repo where it supports one (the frigg, lumiere, plume and stark-statusline sections say
+how).
 
 ## Entries
 
@@ -53,6 +55,7 @@ supports one (the frigg, lumiere, plume and stark-statusline sections say how).
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 26 (Tahoe) |
+| `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
@@ -164,6 +167,17 @@ signature, not a Developer ID. It is compiled with the release Mac's Homebrew `b
 build targets macOS 26.0, so the formula requires macOS 26 (Tahoe). `hermod` reaches its
 cmux app over the inherited `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or
 set the socket env yourself).
+
+On Linux x86_64 (the devbox), where hermod drives tmux instead:
+
+```sh
+brew install 21StarkCom/tap/hermod-linux
+```
+
+`hermod-linux` installs the same `hermod`, cross-compiled by the release Mac with
+`bun build --compile --target=bun-linux-x64`. It is a formula of its own because a
+formula cannot pin a url inside `on_macos`/`on_linux` blocks (`brew style` refuses it),
+as hermod's ADR 0013 records. The binary is unsigned; Linux has no Gatekeeper.
 
 ## idun
 
@@ -398,6 +412,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
 | `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
+| `hermod-linux` | hermod | `ts/scripts/release-darwin.sh` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `idun` | idun | `scripts/release-darwin.sh` | the signing Mac |
 | `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
@@ -419,4 +434,4 @@ ticket covers it and labeled `no-ticket` (by `bump.sh`) while its title names no
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Each entry takes its token from Homebrew's own lookup (`HOMEBREW_GITHUB_API_TOKEN`, else Homebrew's gh login, else a keychain token), stripped before use; a whitespace-only env var counts as unset, and when the lookup finds nothing the entry reports the asset URL and setup guidance. Homebrew redacts only environment secrets from its output, so with a gh-only login, `--verbose --debug` or `HOMEBREW_CURL_VERBOSE` output shows the gh token: don't paste it anywhere. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
-Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, missing-token checks, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. Every entry is macOS-only, so CI installs and tests none of them; `brew reinstall` and `brew test` on a Mac do. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
+Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, missing-token checks, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; `hermod-linux` is audited as Linux x86_64, and CI requires its fetch to have downloaded the asset. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. Every entry but `hermod-linux` is macOS-only, and `hermod-linux` is x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` on a Mac do. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
