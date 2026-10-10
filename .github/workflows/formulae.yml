@@ -88,8 +88,18 @@ jobs:
           # A formula fetch checks no platform requirement today, so the x86_64-only
           # hermod-linux downloads on this arm runner like the macOS entries do. Fail
           # if a later Homebrew skips it with exit 0, as it skips an excluded cask.
-          if [[ ! -s "$(brew --cache 21StarkCom/tap/hermod-linux)" ]]; then
+          cache="$(brew --cache 21StarkCom/tap/hermod-linux)"
+          if [[ ! -s "$cache" ]]; then
             echo '21StarkCom/tap/hermod-linux: brew fetch downloaded nothing' >&2
+            exit 1
+          fi
+          # The bumper's default asset is the macOS zip, so a bump run without
+          # --asset-suffix linux_x64.zip pins a Mach-O whose id and sha256 agree,
+          # and the fetch above passes it. Require the Linux x86-64 executable.
+          unzip -q -o "$cache" hermod -d "$RUNNER_TEMP/hermod-linux"
+          format="$(file -b "$RUNNER_TEMP/hermod-linux/hermod")"
+          if [[ "$format" != *"ELF 64-bit LSB "*"executable, x86-64,"* ]]; then
+            echo "21StarkCom/tap/hermod-linux: the pinned asset's hermod is not a Linux x86-64 executable: $format" >&2
             exit 1
           fi
       - name: Fetch and audit every cask
