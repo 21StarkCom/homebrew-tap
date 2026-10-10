@@ -15,7 +15,8 @@ concurrency:
 
 jobs:
   homebrew:
-    # Homebrew on Linux, not a macOS runner. Every entry is macOS-only (`depends_on
+    # Homebrew on Linux, not a macOS runner. Every entry but hermod-linux (Linux
+    # x86_64, audited as that below) is macOS-only (`depends_on
     # :macos` or `macos:`), and Linux Homebrew styles, audits and fetches them (a
     # fetch checks the download against the pinned sha256) but cannot install them.
     # What left CI with the macOS runner: `brew install` and `brew test` of every
@@ -69,16 +70,38 @@ jobs:
             exit 1
           fi
           formulae=()
+          macos=()
           for path in Formula/*.rb; do
             name="${path##*/}"
             formulae+=("21StarkCom/tap/${name%.rb}")
+            [[ "$name" = hermod-linux.rb ]] || macos+=("21StarkCom/tap/${name%.rb}")
           done
           # Audit as the platform users install on: some checks run only for the
           # OS and arch being audited.
-          brew audit --strict --os=tahoe --arch=arm "${formulae[@]}"
+          brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
+          brew audit --strict --os=linux --arch=intel 21StarkCom/tap/hermod-linux
           # The download check `brew install` used to make: each asset is readable
           # and matches its pinned sha256. One call downloads them concurrently.
+          # Never add --os or --arch: with either, brew fetch looks only for a bottle,
+          # which no entry has, and exits 0 having downloaded nothing.
           brew fetch "${formulae[@]}"
+          # A formula fetch checks no platform requirement today, so the x86_64-only
+          # hermod-linux downloads on this arm runner like the macOS entries do. Fail
+          # if a later Homebrew skips it with exit 0, as it skips an excluded cask.
+          cache="$(brew --cache 21StarkCom/tap/hermod-linux)"
+          if [[ ! -s "$cache" ]]; then
+            echo '21StarkCom/tap/hermod-linux: brew fetch downloaded nothing' >&2
+            exit 1
+          fi
+          # The bumper's default asset is the macOS zip, so a bump run without
+          # --asset-suffix linux_x64.zip pins a Mach-O whose id and sha256 agree,
+          # and the fetch above passes it. Require the Linux x86-64 executable.
+          unzip -q -o "$cache" hermod -d "$RUNNER_TEMP/hermod-linux"
+          format="$(file -b "$RUNNER_TEMP/hermod-linux/hermod")"
+          if [[ "$format" != *"ELF 64-bit LSB "*"executable, x86-64,"* ]]; then
+            echo "21StarkCom/tap/hermod-linux: the pinned asset's hermod is not a Linux x86-64 executable: $format" >&2
+            exit 1
+          fi
       - name: Fetch and audit every cask
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
