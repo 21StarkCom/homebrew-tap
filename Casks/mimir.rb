@@ -69,6 +69,8 @@ cask "mimir" do
 
   # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
   # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
+  # Trashes ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
+  # 0.30.0's schema 2 conversion writes and Mímir never deletes (PlaintextV1Export.defaultRoot).
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job.
   zap launchctl: [
@@ -76,6 +78,7 @@ cask "mimir" do
         "com.21stark.mimir.service",
       ],
       trash:     [
+        "~/Code/Temp/Mimir",
         "~/Library/Application Support/.mimir-*",
         "~/Library/Application Support/Mimir",
         "~/Library/Caches/com.21stark.mimir",
@@ -92,16 +95,23 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    0.29.0 moves the CLI, MCP and the drop box into Mímir Service, which is read-only in this
-    release: CLI writes, `import`, `backup verify` and `export` are refused (exit 2), so make
-    those changes in the app. After upgrading from 0.28.0 or older, allow Mímir Service in
-    Login Items if macOS asks, choose Always Allow on its Keychain dialogs, and pair the CLI
-    again (above).
+    0.30.0 converts the vault to schema 2 at its first unlock. Before it changes anything, it
+    writes the whole vault, secrets included and unencrypted, to a folder under
+    ~/Code/Temp/Mimir that Mímir never deletes (Settings › General › Plaintext export shows
+    it): delete it once you have checked your items. `mimir label` replaces `mimir folder`,
+    `folders` and `tag`.
+
+    0.29.0 moved the CLI, MCP and the drop box into Mímir Service, which is still read-only:
+    CLI writes, `import`, `backup verify` and `export` are refused (exit 2), so make those
+    changes in the app. After upgrading from 0.28.0 or older, allow Mímir Service in Login
+    Items if macOS asks, choose Always Allow on its Keychain dialogs, and pair the CLI again
+    (above).
 
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
     with launchd; stop the service with
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
     `brew uninstall --zap --cask 21StarkCom/tap/mimir` removes both AND moves Mímir's local
-    data, the vault included, to the Trash (add `--force` once a plain uninstall has run).
+    data, the vault and its plaintext export included, to the Trash (add `--force` once a
+    plain uninstall has run).
   EOS
 end
