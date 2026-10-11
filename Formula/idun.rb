@@ -10,10 +10,10 @@ class Idun < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/630400306",
+  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/631303284",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.132.0"
-  sha256 "8ad546e23418558c487d042cb53a5f37bbb9bfb105cc7af0851766bb38b61105"
+  version "0.133.0"
+  sha256 "e4c3b0e9ee97ae33ed51fb2343491dc2ae99be26ae8d5bd26c75a09ef7099834"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
