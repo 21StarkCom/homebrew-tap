@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.30.0"
-  sha256 "4c4b799c965ccae8d03eeef5e9c0f9a0a0c43638e8b0f06fd80718c2ad36dd54"
+  version "0.30.1"
+  sha256 "79d2a4d3383051eb6b27394f8f9d522e519d07f799bf74adf175b2cd62a9bae8"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/631626844",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/631787186",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -94,6 +94,10 @@ cask "mimir" do
     Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
+
+    0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
+    silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
+    it lists a snapshot dated today; reconnect Google Drive if it asks.
 
     0.30.0 converts the vault to schema 2 at its first unlock. Before it changes anything, it
     writes the whole vault, secrets included and unencrypted, to a folder under
