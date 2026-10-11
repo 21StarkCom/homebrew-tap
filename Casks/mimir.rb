@@ -95,6 +95,10 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
+    silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
+    it lists a snapshot dated today; reconnect Google Drive if it asks.
+
     0.30.0 converts the vault to schema 2 at its first unlock. Before it changes anything, it
     writes the whole vault, secrets included and unencrypted, to a folder under
     ~/Code/Temp/Mimir that Mímir never deletes (Settings › General › Plaintext export shows
