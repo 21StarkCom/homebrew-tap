@@ -68,6 +68,15 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.23.0 ships Huginn 0.61.2 (the update above), whose popup's new Screenshot button
+      captures the whole page, whatever it shows of a signed-in account, into
+      ~/Documents/Huginn/screenshots/, where its editor saves the JPG or PDF crops beside it.
+      Since 0.19.0 Huginn saves everything it makes for you (journeys, recordings, downloads,
+      uploads, and now screenshots) in ~/Documents/Huginn/, not SLEIPNIR_HOME's huginn/; macOS
+      asks once whether bun may use your Documents folder, and until you allow it Huginn keeps
+      saving in SLEIPNIR_HOME's huginn/. Treat ~/Documents/Huginn/ as secret, and turn off
+      iCloud Drive's Desktop & Documents Folders to keep it on this Mac.
+
       0.18.0 removes the old names 0.14.0 deprecated (below), each now refused (exit 2; the
       MCP server returns an error): the 23 old cap names, whose refusal names the new one
       (`slp cap login-google` names `google-login`), though `slp deny <profile> <old name>`
@@ -107,11 +116,11 @@ class Sleipnir < Formula
       a page it reads reaches a session that runs any command without asking. It acts through
       sleipnir-mcp's huginn tools: register #{opt_bin}/sleipnir-mcp with Claude Code at user
       scope (below), and close a chat left open across an upgrade, as you restart MCP clients.
-      Its Record session saves a zip through Chrome's downloads (kept in SLEIPNIR_HOME's
-      huginn/chat-recordings/ when it cannot reach the panel) holding the replayable journey,
-      a screenshot before and after each action, the conversation and the session's context,
-      which keeps every page and command output it saw, secrets included: treat those zips,
-      and the panel's two downloads, as secret.
+      Its Record session saves a zip through Chrome's downloads (kept in
+      ~/Documents/Huginn/chat-recordings/ when it cannot reach the panel) holding the
+      replayable journey, a screenshot before and after each action, the conversation and the
+      session's context, which keeps every page and command output it saw, secrets included:
+      treat those zips, and the panel's two downloads, as secret.
 
       0.17.1 renames a Huginn or Huginn Secrets installation in your everyday Chrome that
       0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS keeps
@@ -125,7 +134,7 @@ class Sleipnir < Formula
 
       0.17.0 ships Huginn 0.58.2 (the update above), whose popup records again: press Record,
       work in the tab, then Stop. Each recording, an incomplete one too, is saved as a journey
-      file in SLEIPNIR_HOME's huginn/journeys/<installation id>/ and keeps the text you typed,
+      file in ~/Documents/Huginn/journeys/<installation id>/ and keeps the text you typed,
       passwords included: treat that folder as secret. The popup's new Recordings page lists,
       loads, deletes and replays them; a Replay pressed there runs live in a new tab with no
       grant and no `--yes`, while `slp cap journey-replay --huginn` and the MCP tools still
