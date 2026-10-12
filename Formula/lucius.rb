@@ -60,12 +60,15 @@ class Lucius < Formula
     assert_equal version.to_s, help.fetch("version")
     assert_match "Usage: lucius", help.fetch("reply")
     # Session startup's own gates, with no session: the Bun floor and the pinned
-    # SDK (assertRuntime), and the C shim compiling from the installed tree.
+    # SDK (assertRuntime), and both C shims compiling from the installed tree: the
+    # vault publisher, and the fleet listing that an OpenAI or Gemini Lucius or
+    # roundtable seat compiles against the macOS SDK headers.
     (testpath/"runtime.ts").write <<~TS
       import { assertRuntime } from "#{libexec}/src/session/runtime.ts"
-      import { assertPublicationSupport } from "#{libexec}/src/vault/publication.ts"
+      import { assertFleetListingSupport, assertPublicationSupport } from "#{libexec}/src/vault/publication.ts"
       await assertRuntime()
       assertPublicationSupport()
+      assertFleetListingSupport()
       console.log("runtime ok")
     TS
     # Same isolation flags as the wrapper, so this gate cannot be swayed by a
