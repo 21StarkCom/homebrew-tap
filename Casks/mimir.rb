@@ -83,6 +83,7 @@ cask "mimir" do
         "~/Library/Application Support/Mimir",
         "~/Library/Caches/com.21stark.mimir",
         "~/Library/HTTPStorages/com.21stark.mimir",
+        "~/Library/Preferences/com.21stark.mimir.menu.plist",
         "~/Library/Preferences/com.21stark.mimir.plist",
         "~/Library/Saved Application State/com.21stark.mimir.savedState",
       ]
@@ -97,7 +98,9 @@ cask "mimir" do
 
     0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
     silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
-    it lists a snapshot dated today; reconnect Google Drive if it asks.
+    it lists a snapshot dated today; reconnect Google Drive if it asks. From 0.30.3 the menu
+    bar item notifies you when a backup fails or falls a day behind: allow its notifications
+    when macOS asks, or the alert shows only in the menu and the app.
 
     0.30.0 converts the vault to schema 2 at its first unlock. Before it changes anything, it
     writes the whole vault, secrets included and unencrypted, to a folder under
