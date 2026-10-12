@@ -70,9 +70,11 @@ cask "mimir" do
   # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
   # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
   # Trashes ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
-  # every schema 2 conversion writes (0.30's first unlock, or a schema 1 backup's restore) and Mímir
-  # never deletes (PlaintextV1Export.defaultRoot). From 0.31.0 Mímir Service makes its own Drive
-  # and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own bundle id.
+  # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
+  # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
+  # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
+  # own Drive and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own
+  # bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job.
   zap launchctl: [
@@ -100,19 +102,21 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    0.31.0 opens only a schema 2 vault: one that no Mímir 0.30 has unlocked stays on the lock
-    screen, and CLI writes are refused. Upgrading from 0.29.x or older, replace Mimir.app with
-    0.30.3's (`gh release download v0.30.3 -R 21StarkCom/mimir -p '*.zip'`), unlock the vault
-    once, then `brew reinstall --cask 21StarkCom/tap/mimir`.
+    A vault no Mímir 0.30 has unlocked is still at schema 1. From 0.31.1 Mímir Service converts
+    it at its first unlock, so upgrading from 0.29.x or older no longer needs a pass through
+    0.30.3; if the conversion can't run, the vault stays locked and the lock screen says why.
 
     0.31.0 makes Mímir Service the vault's one writer. After upgrading, choose Settings ›
     Backup › Connect Google Drive once: the service keeps its own Drive sign-in, so no Drive
     backup runs until you do. Choose Always Allow if macOS asks for the drop-box Keychain item
     at the service's first unlock. CLI writes and `import` work again once Settings › CLI ›
-    Allow vault writes is on (off by default); `mimir export`, `mimir backup verify` and the
-    app's archive Export… stay off. Lock after inactivity now only hides the window behind a
-    Touch ID curtain, and CLI and MCP agents keep working; Lock Now, the screen lock and sleep
-    still seal the vault.
+    Allow vault writes is on (off by default); `mimir export` and `mimir backup verify` stay
+    off. Lock after inactivity now only hides the window behind a Touch ID curtain, and CLI
+    and MCP agents keep working; Lock Now, the screen lock and sleep still seal the vault.
+
+    0.31.1 brings back the app's archive Export…, which Mímir Service now builds. Its
+    passphrase needs at least 12 characters with some variety (or 16), so a shorter one that
+    0.30 accepted is refused.
 
     0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
     silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
@@ -120,11 +124,11 @@ cask "mimir" do
     bar item notifies you when a backup fails or falls a day behind: allow its notifications
     when macOS asks, or the alert shows only in the menu and the app.
 
-    Converting a schema 1 vault (0.30's first unlock, or restoring a schema 1 backup) first
-    writes the whole vault, secrets included and unencrypted, to a folder under
-    ~/Code/Temp/Mimir that Mímir never deletes (Settings › General › Plaintext export shows
-    it): delete it once you have checked your items. `mimir label` replaces `mimir folder`,
-    `folders` and `tag`.
+    Converting a schema 1 vault (its first unlock under 0.30 or 0.31.1 and later, or restoring
+    a schema 1 backup) first writes the whole vault, secrets included and unencrypted, to a
+    folder under ~/Code/Temp/Mimir that Mímir never deletes (Settings › General › Plaintext
+    export shows it): delete it once you have checked your items. `mimir label` replaces
+    `mimir folder`, `folders` and `tag`.
 
     0.29.0 moved the CLI, MCP and the drop box into Mímir Service. After upgrading from 0.28.0
     or older, allow Mímir Service in Login Items if macOS asks, choose Always Allow on its
