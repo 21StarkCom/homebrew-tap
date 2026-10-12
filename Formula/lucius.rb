@@ -13,10 +13,10 @@ class Lucius < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/633729445",
+  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/634216146",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.8.0"
-  sha256 "a5d8074174217498719f823a556e40c50211dcf34dc246d4eb2bff52d795944a"
+  version "0.9.0"
+  sha256 "5951daa06f62340da5db6eb6a0fd107a2abef7c530e737d3d3bfb0bd69d5d3f7"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -60,12 +60,15 @@ class Lucius < Formula
     assert_equal version.to_s, help.fetch("version")
     assert_match "Usage: lucius", help.fetch("reply")
     # Session startup's own gates, with no session: the Bun floor and the pinned
-    # SDK (assertRuntime), and the C shim compiling from the installed tree.
+    # SDK (assertRuntime), and both C shims compiling from the installed tree: the
+    # vault publisher, and the fleet listing that an OpenAI or Gemini Lucius or
+    # roundtable seat compiles against the macOS SDK headers.
     (testpath/"runtime.ts").write <<~TS
       import { assertRuntime } from "#{libexec}/src/session/runtime.ts"
-      import { assertPublicationSupport } from "#{libexec}/src/vault/publication.ts"
+      import { assertFleetListingSupport, assertPublicationSupport } from "#{libexec}/src/vault/publication.ts"
       await assertRuntime()
       assertPublicationSupport()
+      assertFleetListingSupport()
       console.log("runtime ok")
     TS
     # Same isolation flags as the wrapper, so this gate cannot be swayed by a
