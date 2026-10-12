@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.30.3"
-  sha256 "40825439940fea3369377b69f58469453ba21b58f76c2a68e6f454f32c41d7c4"
+  version "0.31.0"
+  sha256 "fdbc6586f9d96f2d4da90de733cb1909a7a548abbf8c0b8bc2ae95e3730a3f36"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/633213683",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/634554550",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -70,7 +70,9 @@ cask "mimir" do
   # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
   # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
   # Trashes ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
-  # 0.30.0's schema 2 conversion writes and Mímir never deletes (PlaintextV1Export.defaultRoot).
+  # every schema 2 conversion writes (0.30's first unlock, or a schema 1 backup's restore) and Mímir
+  # never deletes (PlaintextV1Export.defaultRoot). From 0.31.0 Mímir Service makes its own Drive
+  # and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job.
   zap launchctl: [
@@ -82,7 +84,9 @@ cask "mimir" do
         "~/Library/Application Support/.mimir-*",
         "~/Library/Application Support/Mimir",
         "~/Library/Caches/com.21stark.mimir",
+        "~/Library/Caches/com.21stark.mimir.service",
         "~/Library/HTTPStorages/com.21stark.mimir",
+        "~/Library/HTTPStorages/com.21stark.mimir.service",
         "~/Library/Preferences/com.21stark.mimir.menu.plist",
         "~/Library/Preferences/com.21stark.mimir.plist",
         "~/Library/Saved Application State/com.21stark.mimir.savedState",
@@ -96,23 +100,35 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.31.0 opens only a schema 2 vault: one that no Mímir 0.30 has unlocked stays on the lock
+    screen, and CLI writes are refused. Upgrading from 0.29.x or older, replace Mimir.app with
+    0.30.3's (`gh release download v0.30.3 -R 21StarkCom/mimir -p '*.zip'`), unlock the vault
+    once, then `brew reinstall --cask 21StarkCom/tap/mimir`.
+
+    0.31.0 makes Mímir Service the vault's one writer. After upgrading, choose Settings ›
+    Backup › Connect Google Drive once: the service keeps its own Drive sign-in, so no Drive
+    backup runs until you do. Choose Always Allow if macOS asks for the drop-box Keychain item
+    at the service's first unlock. CLI writes and `import` work again once Settings › CLI ›
+    Allow vault writes is on (off by default); `mimir export`, `mimir backup verify` and the
+    app's archive Export… stay off. Lock after inactivity now only hides the window behind a
+    Touch ID curtain, and CLI and MCP agents keep working; Lock Now, the screen lock and sleep
+    still seal the vault.
+
     0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
     silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
     it lists a snapshot dated today; reconnect Google Drive if it asks. From 0.30.3 the menu
     bar item notifies you when a backup fails or falls a day behind: allow its notifications
     when macOS asks, or the alert shows only in the menu and the app.
 
-    0.30.0 converts the vault to schema 2 at its first unlock. Before it changes anything, it
+    Converting a schema 1 vault (0.30's first unlock, or restoring a schema 1 backup) first
     writes the whole vault, secrets included and unencrypted, to a folder under
     ~/Code/Temp/Mimir that Mímir never deletes (Settings › General › Plaintext export shows
     it): delete it once you have checked your items. `mimir label` replaces `mimir folder`,
     `folders` and `tag`.
 
-    0.29.0 moved the CLI, MCP and the drop box into Mímir Service, which is still read-only:
-    CLI writes, `import`, `backup verify` and `export` are refused (exit 2), so make those
-    changes in the app. After upgrading from 0.28.0 or older, allow Mímir Service in Login
-    Items if macOS asks, choose Always Allow on its Keychain dialogs, and pair the CLI again
-    (above).
+    0.29.0 moved the CLI, MCP and the drop box into Mímir Service. After upgrading from 0.28.0
+    or older, allow Mímir Service in Login Items if macOS asks, choose Always Allow on its
+    Keychain dialogs, and pair the CLI again (above).
 
     A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
     with launchd; stop the service with
