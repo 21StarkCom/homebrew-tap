@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.32.1"
-  sha256 "f135212392ce4a882da4469eed063d530d6bd453566412413a83ecc9d1003ebd"
+  version "0.32.2"
+  sha256 "8e09916f0fc5606b1887b539efc91e5f3315f883eaf34b29531ff4a980950be8"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/636137283",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/636434355",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -116,13 +116,18 @@ cask "mimir" do
     Backup › Connect Google Drive once: the service keeps its own Drive sign-in, so no Drive
     backup runs until you do. Choose Always Allow if macOS asks for the drop-box Keychain item
     at the service's first unlock. CLI writes and `import` work again once Settings › CLI ›
-    Allow vault writes is on (off by default); `mimir export` and `mimir backup verify` stay
-    off. Lock after inactivity now only hides the window behind a Touch ID curtain, and CLI
-    and MCP agents keep working; Lock Now, the screen lock and sleep still seal the vault.
+    Allow vault writes is on (off by default); `mimir backup verify` stays off. Lock after
+    inactivity now only hides the window behind a Touch ID curtain, and CLI and MCP agents keep
+    working; Lock Now, the screen lock and sleep still seal the vault.
 
     0.31.1 brings back the app's archive Export…, which Mímir Service now builds. Its
     passphrase needs at least 12 characters with some variety (or 16), so a shorter one that
     0.30 accepted is refused.
+
+    0.32.2 brings back `mimir export --sealed` through Mímir Service, with vault writes off
+    too. Its archive is not a full backup, even with `--all`: it holds only the current values
+    the CLI's doors let it read, and leaves out every 2FA recipe and backup code and all
+    history. Use the app's Export… for a full archive.
 
     0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
     silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
