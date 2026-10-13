@@ -13,10 +13,10 @@ class Lucius < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/636792992",
+  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/637106825",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.10.0"
-  sha256 "f0540af9073c021c46a4be91665adeda3cbb6138f913e52d5ff0a54476c28699"
+  version "0.10.1"
+  sha256 "205c809409aa85881d712ad2730379287d7a1a751a6f4bbdf7895c1a09a97071"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
