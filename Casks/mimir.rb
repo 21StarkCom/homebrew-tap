@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.31.1"
-  sha256 "15737f1c696b85624baabc7ed332854d7c081a8e5c2759a64786f3d400728707"
+  version "0.32.0"
+  sha256 "629239f00ae545607f97c20eef91d8ae6e193374b34f63693314c89097af0fe2"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/634731639",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/636052946",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -101,6 +101,12 @@ cask "mimir" do
     Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
+
+    0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
+    after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
+    and is retried at the next unlock. The move is one-way: 0.31.x still opens the vault, but
+    a Mímir older than 0.31.0 finds no key item and needs a restore from a backup with your
+    recovery key, so keep a recent Drive backup and your recovery key before going back.
 
     A vault no Mímir 0.30 has unlocked is still at schema 1. From 0.31.1 Mímir Service converts
     it at its first unlock, so upgrading from 0.29.x or older no longer needs a pass through
