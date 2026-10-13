@@ -102,6 +102,12 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
+    after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
+    and is retried at the next unlock. The move is one-way: 0.31.x still opens the vault, but
+    a Mímir older than 0.31.0 finds no key item and needs a restore from a backup with your
+    recovery key, so keep a recent Drive backup and your recovery key before going back.
+
     A vault no Mímir 0.30 has unlocked is still at schema 1. From 0.31.1 Mímir Service converts
     it at its first unlock, so upgrading from 0.29.x or older no longer needs a pass through
     0.30.3; if the conversion can't run, the vault stays locked and the lock screen says why.
