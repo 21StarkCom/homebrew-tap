@@ -64,7 +64,7 @@ how).
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
-| `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app`, `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
+| `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, after 0.7.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
 "any" means the entry declares no macOS floor beyond Apple Silicon.
@@ -333,17 +333,37 @@ newer.** The release zip is the Developer-ID-signed, notarized and **stapled**
 `Goldfinger.app`. Homebrew installs it quarantined, so macOS may first ask whether to open
 Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for the daemon.
 
-`brew upgrade` quits the running daemon (`uninstall quit:`), then reopens the app by bundle id,
-which serves as the new daemon. On a Mac that also holds dev builds (same bundle id),
-LaunchServices may reopen one of those instead: run `goldfinger stop`, and the next `goldfinger`
-command starts the installed one. After `brew upgrade`, restart any agent running
-`goldfinger mcp`: until it restarts, the new daemon answers its calls with `version_mismatch`.
-`brew uninstall --cask goldfinger` quits the daemon and removes the app and its link; `--zap`
-also trashes `~/Library/Caches/goldfinger` (socket, lock, screenshots) and
+**Goldfinger Control** is the menu bar helper nested in the app at
+`Contents/Library/LoginItems/Goldfinger Control.app` (`com.21stark.goldfinger.control`): it
+shows the daemon's state and starts, stops or restarts it. It ships in the first release
+after 0.7.0 that includes it; 0.7.0 and older have none. Nothing starts it at install: run
+`goldfinger doctor --fix` once after installing such a release, which registers it as a login
+item (Open at Login) and launches it; once you turn Open at Login off, it stays off. If its
+icon is hidden (a crowded or notched menu bar, or System Settings → Menu Bar), open its panel
+with `env -i /usr/bin/open -g '/Applications/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'`.
+
+`brew upgrade` quits the running daemon and Goldfinger Control (`uninstall quit:` names both
+ids), then reopens each one it quit by bundle id; the app serves as the new daemon. Homebrew
+upgrades by the installed caskfile, so an upgrade from a release without Goldfinger Control
+quits only the daemon, and nothing registers or starts the helper: run
+`goldfinger doctor --fix` once after that upgrade. On a Mac that also holds dev builds (the
+daemon's bundle id; dev helpers carry `com.21stark.goldfinger.control.dev`), LaunchServices
+may reopen a dev daemon instead: run `goldfinger stop`, and the next `goldfinger` command
+starts the installed one. After `brew upgrade`, restart any agent running `goldfinger mcp`:
+until it restarts, the new daemon answers its calls with `version_mismatch`.
+
+`brew uninstall --cask goldfinger` quits both apps and removes the app and its link, but leaves
+Goldfinger Control's login item registered (System Settings → General → Login Items &
+Extensions). `--zap` also deletes that login item by name through System Events, so macOS asks
+your terminal for Automation access (`login_item:`; the helper's `SMAppService.mainApp`
+registration owns no launchd job, so there is no `launchctl:`), and trashes
+`~/Library/Caches/goldfinger` (socket, lock, screenshots),
 `~/Library/Application Support/goldfinger` (the snapshot epoch and every recording: the
-trajectories and videos under `recordings/`). Neither revokes the grants: remove Goldfinger in
-System Settings → Privacy & Security, or run `tccutil reset Accessibility com.21stark.goldfinger`
-and `tccutil reset ScreenCapture com.21stark.goldfinger`.
+trajectories and videos under `recordings/`) and the helper's
+`~/Library/Preferences/com.21stark.goldfinger.control.plist`. Neither revokes the grants:
+remove Goldfinger in System Settings → Privacy & Security, or run
+`tccutil reset Accessibility com.21stark.goldfinger` and
+`tccutil reset ScreenCapture com.21stark.goldfinger`.
 
 ## mimir (credential vault — cask)
 
