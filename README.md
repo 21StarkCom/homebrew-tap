@@ -64,7 +64,7 @@ how).
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
-| `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, after 0.7.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
+| `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, from 0.8.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
 "any" means the entry declares no macOS floor beyond Apple Silicon.
@@ -335,12 +335,11 @@ Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for th
 
 **Goldfinger Control** is the menu bar helper nested in the app at
 `Contents/Library/LoginItems/Goldfinger Control.app` (`com.21stark.goldfinger.control`): it
-shows the daemon's state and starts, stops or restarts it. It ships in the first release
-after 0.7.0 that includes it; 0.7.0 and older have none. Nothing starts it at install: run
-`goldfinger doctor --fix` once after installing such a release, which registers it as a login
-item (Open at Login) and launches it; once you turn Open at Login off, it stays off. If its
-icon is hidden (a crowded or notched menu bar, or System Settings → Menu Bar), open its panel
-with `env -i /usr/bin/open -g '/Applications/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'`.
+shows the daemon's state and starts, stops or restarts it. It ships from 0.8.0 on; 0.7.0 and
+older have none. Nothing starts it at install: run `goldfinger doctor --fix` once after
+installing, which registers it as a login item (Open at Login) and launches it; once you turn
+Open at Login off, it stays off. If its icon is hidden (a crowded or notched menu bar, or
+System Settings → Menu Bar), open its panel with `env -i /usr/bin/open -g '/Applications/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'`.
 
 `brew upgrade` quits the running daemon and Goldfinger Control (`uninstall quit:` names both
 ids), then reopens each one it quit by bundle id; the app serves as the new daemon. Homebrew
