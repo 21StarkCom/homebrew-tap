@@ -93,12 +93,12 @@ cask "goldfinger" do
 
     Goldfinger Control, the menu bar app, ships in the first release after 0.7.0 that
     includes it; 0.7.0 and older have none, and these notes apply once you run such a release.
-    After upgrading to it from a release without it, run once:
+    After installing it, or upgrading to it from a release without it, run once:
       goldfinger doctor --fix
-    The upgrade quits only the daemon, so nothing registers or starts Goldfinger Control
-    until this does. If its icon is hidden (a crowded or notched menu bar, or System
-    Settings › Menu Bar), open its panel with:
-      env -i /usr/bin/open -g '/Applications/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'
+    Neither the install nor that upgrade starts Goldfinger Control (the upgrade quits only
+    the daemon), so nothing registers or starts it until this does. If its icon is hidden
+    (a crowded or notched menu bar, or System Settings › Menu Bar), open its panel with:
+      env -i /usr/bin/open -g '#{appdir}/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'
 
     A plain `brew uninstall` leaves Goldfinger Control registered as a login item (System
     Settings › General › Login Items & Extensions, Open at Login). Remove it there, or with

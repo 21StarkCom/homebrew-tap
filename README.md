@@ -336,20 +336,21 @@ Goldfinger: allow it, and re-run `goldfinger setup` if it gave up waiting for th
 **Goldfinger Control** is the menu bar helper nested in the app at
 `Contents/Library/LoginItems/Goldfinger Control.app` (`com.21stark.goldfinger.control`): it
 shows the daemon's state and starts, stops or restarts it. It ships in the first release
-after 0.7.0 that includes it; 0.7.0 and older have none. A release copy registers itself as
-a login item (Open at Login) at its first launch, and stays off once you turn it off. If its
+after 0.7.0 that includes it; 0.7.0 and older have none. Nothing starts it at install: run
+`goldfinger doctor --fix` once after installing such a release, which registers it as a login
+item (Open at Login) and launches it; once you turn Open at Login off, it stays off. If its
 icon is hidden (a crowded or notched menu bar, or System Settings → Menu Bar), open its panel
 with `env -i /usr/bin/open -g '/Applications/Goldfinger.app/Contents/Library/LoginItems/Goldfinger Control.app'`.
 
 `brew upgrade` quits the running daemon and Goldfinger Control (`uninstall quit:` names both
-ids), then reopens each by bundle id; the app serves as the new daemon. Homebrew upgrades by
-the installed caskfile, so an upgrade from a release without Goldfinger Control quits only the
-daemon, and nothing registers or starts the helper: run `goldfinger doctor --fix` once after
-that upgrade. On a Mac that also holds dev builds (the daemon's bundle id; dev helpers carry
-`com.21stark.goldfinger.control.dev`), LaunchServices may reopen a dev daemon instead: run
-`goldfinger stop`, and the next `goldfinger` command starts the installed one. After
-`brew upgrade`, restart any agent running `goldfinger mcp`: until it restarts, the new daemon
-answers its calls with `version_mismatch`.
+ids), then reopens each one it quit by bundle id; the app serves as the new daemon. Homebrew
+upgrades by the installed caskfile, so an upgrade from a release without Goldfinger Control
+quits only the daemon, and nothing registers or starts the helper: run
+`goldfinger doctor --fix` once after that upgrade. On a Mac that also holds dev builds (the
+daemon's bundle id; dev helpers carry `com.21stark.goldfinger.control.dev`), LaunchServices
+may reopen a dev daemon instead: run `goldfinger stop`, and the next `goldfinger` command
+starts the installed one. After `brew upgrade`, restart any agent running `goldfinger mcp`:
+until it restarts, the new daemon answers its calls with `version_mismatch`.
 
 `brew uninstall --cask goldfinger` quits both apps and removes the app and its link, but leaves
 Goldfinger Control's login item registered (System Settings → General → Login Items &
