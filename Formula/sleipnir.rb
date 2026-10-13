@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/636327893",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/637541482",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.26.0"
-  sha256 "58c46331023360d5c81914c70353768437025d4135ef00059ddf6bb9d1575992"
+  version "0.27.0"
+  sha256 "8b31270947cafefd48792a87ff53736d834dc6c6923b094734a7f561b9ad1b89"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -68,6 +68,17 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.27.0 ships Huginn 0.62.2 (the update above), whose chat panel needs no idun: Huginn's
+      host starts Claude Code (`claude`) or Codex (`codex app-server`) itself, the first it
+      finds in /opt/homebrew/bin, /usr/local/bin, ~/.local/bin or its PATH, on your own Claude
+      sign-in or ~/.codex login, and gives each session its own sleipnir-mcp in place of the
+      one your config names. A Codex chat, new beside Claude's in the Model menu, runs as a
+      Claude chat does (below), with no permission prompts (approvals `never` and
+      `danger-full-access`) and your settings, hooks, MCP servers and AGENTS.md, so text on a
+      page it reads reaches a session that runs any command without asking. Each chat works
+      in a fresh folder under ~/.sleipnir/huginn/scratch/, removed at its end only when empty
+      and otherwise kept, unswept: treat a kept one as secret.
+
       0.23.0 ships Huginn 0.61.2 (the update above), whose popup's new Screenshot button
       captures the whole page, whatever it shows of a signed-in account, into
       ~/Documents/Huginn/screenshots/, where its editor saves the JPG or PDF crops beside it.
@@ -110,17 +121,17 @@ class Sleipnir < Formula
       `--yes`.
 
       0.17.3 ships Huginn 0.60.0 (the update above), whose popup's new Chat button opens a
-      side panel where a local Claude Code session reads and acts on the tab beside it. It
-      runs `idun bob --agent claude` (`brew install 21StarkCom/tap/idun`, and Claude Code
-      signed in): no permission prompts, with your settings, hooks and MCP servers, so text on
-      a page it reads reaches a session that runs any command without asking. It acts through
-      sleipnir-mcp's huginn tools: register #{opt_bin}/sleipnir-mcp with Claude Code at user
-      scope (below), and close a chat left open across an upgrade, as you restart MCP clients.
-      Its Record session saves a zip through Chrome's downloads (kept in
-      ~/Documents/Huginn/chat-recordings/ when it cannot reach the panel) holding the
-      replayable journey, a screenshot before and after each action, the conversation and the
-      session's context, which keeps every page and command output it saw, secrets included:
-      treat those zips, and the panel's two downloads, as secret.
+      side panel where a local Claude Code session reads and acts on the tab beside it, with
+      no permission prompts and your settings, hooks and MCP servers, so text on a page it
+      reads reaches a session that runs any command without asking. Until 0.27.0 (above) it
+      ran `idun bob --agent claude` and needed #{opt_bin}/sleipnir-mcp registered with Claude
+      Code at user scope. It acts through sleipnir-mcp's huginn tools, so close a chat left
+      open across an upgrade, as you restart MCP clients. Its Record session saves a zip
+      through Chrome's downloads (kept in ~/Documents/Huginn/chat-recordings/ when it cannot
+      reach the panel) holding the replayable journey, a screenshot before and after each
+      action, the conversation and the session's context, which keeps every page and command
+      output it saw, secrets included: treat those zips, and the panel's two downloads, as
+      secret.
 
       0.17.1 renames a Huginn or Huginn Secrets installation in your everyday Chrome that
       0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS keeps
