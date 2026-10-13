@@ -116,13 +116,18 @@ cask "mimir" do
     Backup › Connect Google Drive once: the service keeps its own Drive sign-in, so no Drive
     backup runs until you do. Choose Always Allow if macOS asks for the drop-box Keychain item
     at the service's first unlock. CLI writes and `import` work again once Settings › CLI ›
-    Allow vault writes is on (off by default); `mimir export` and `mimir backup verify` stay
-    off. Lock after inactivity now only hides the window behind a Touch ID curtain, and CLI
-    and MCP agents keep working; Lock Now, the screen lock and sleep still seal the vault.
+    Allow vault writes is on (off by default); `mimir backup verify` stays off. Lock after
+    inactivity now only hides the window behind a Touch ID curtain, and CLI and MCP agents keep
+    working; Lock Now, the screen lock and sleep still seal the vault.
 
     0.31.1 brings back the app's archive Export…, which Mímir Service now builds. Its
     passphrase needs at least 12 characters with some variety (or 16), so a shorter one that
     0.30 accepted is refused.
+
+    0.32.2 brings back `mimir export --sealed` through Mímir Service, with vault writes off
+    too. Its archive is not a full backup, even with `--all`: it holds only the current values
+    the CLI's doors let it read, and leaves out every 2FA recipe and backup code and all
+    history. Use the app's Export… for a full archive.
 
     0.29.0 and 0.30.0 shipped a stale Google sign-in secret, so every Drive backup failed
     silently (HTTP 401). After upgrading, run Back Up Now in Settings › Backup and check that
