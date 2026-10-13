@@ -22,9 +22,9 @@ end
 
 # Signed (Developer ID) + notarized + STAPLED macOS build of goldfinger — background computer use
 # for agents: Goldfinger.app runs the daemon that holds the Accessibility and Screen Recording
-# grants, and its own executable is also the `goldfinger` CLI that drives it. Releases after 0.7.0
-# that ship Goldfinger Control nest a second executable, the menu bar helper `goldfinger-control`,
-# at Contents/Library/LoginItems/Goldfinger Control.app; it is no CLI and stays off PATH. A GUI
+# grants, and its own executable is also the `goldfinger` CLI that drives it. From 0.8.0 on, the
+# app nests a second executable, Goldfinger Control's menu bar helper `goldfinger-control`, at
+# Contents/Library/LoginItems/Goldfinger Control.app; it is no CLI and stays off PATH. A GUI
 # app, so it ships as a cask: the .app lands in /Applications and its executable is symlinked onto
 # PATH. The zip is the notarized, stapled bundle (Goldfinger.app at the archive root).
 cask "goldfinger" do
@@ -91,9 +91,8 @@ cask "goldfinger" do
     After `brew upgrade`, restart any agent running `goldfinger mcp`: until it restarts, the
     new daemon answers its calls with `version_mismatch`.
 
-    Goldfinger Control, the menu bar app, ships in the first release after 0.7.0 that
-    includes it; 0.7.0 and older have none, and these notes apply once you run such a release.
-    After installing it, or upgrading to it from a release without it, run once:
+    Goldfinger Control, the menu bar app, ships from 0.8.0 on; 0.7.0 and older have none.
+    After installing, or upgrading from 0.7.0 or older, run once:
       goldfinger doctor --fix
     Neither the install nor that upgrade starts Goldfinger Control (the upgrade quits only
     the daemon), so nothing registers or starts it until this does. If its icon is hidden
