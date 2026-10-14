@@ -25,6 +25,9 @@ Pens and pictures reach the operator's hands through [homebrew-tap](https://gith
 # A GitHub token with contents:read on the private 21StarkCom release repos: a
 # Homebrew-installed gh signed in to an account that can read them is enough.
 brew install gh && gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
+# Once, in the foreground, so ssh can ask to trust github.com's host key: answer
+# yes only on GitHub's published key fingerprint (below). Exits 1 on success.
+ssh -T git@github.com
 # Once. The tap repo is private too, so clone it over SSH with your own GitHub key.
 brew tap 21StarkCom/tap git@github.com:21StarkCom/homebrew-tap.git
 brew install 21StarkCom/tap/<formula>
@@ -44,6 +47,15 @@ unzip the release by hand. Casks install their apps quarantined. Every entry but
 `hermod-linux` is **macOS arm64 only**; for another platform, build from the tool's own
 repo where it supports one (the frigg, lumiere, plume and stark-statusline sections say
 how).
+
+`ssh -T git@github.com` makes the Mac's first SSH connection to github.com in a terminal
+you watch. Where `~/.ssh/known_hosts` does not hold github.com yet, it asks whether to
+trust GitHub's host key: answer `yes` only when the fingerprint it prints matches one of
+[GitHub's published SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints).
+It then greets you by GitHub username and exits 1, which is expected. Skip it and
+`brew tap` hangs with nothing printed: Homebrew runs its clone in a process group of its
+own, which stops when ssh asks that question. `gh auth login` can upload your key, but it
+does not record GitHub's host key.
 
 ## Entries
 
