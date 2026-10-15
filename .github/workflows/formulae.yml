@@ -15,8 +15,8 @@ concurrency:
 
 jobs:
   homebrew:
-    # Homebrew on Linux, not a macOS runner. Every entry but hermod-linux (Linux
-    # x86_64, audited as that below) is macOS-only (`depends_on
+    # Homebrew on Linux, not a macOS runner. Every entry but the Formula/*-linux.rb
+    # ones (Linux x86_64, audited as that below) is macOS-only (`depends_on
     # :macos` or `macos:`), and Linux Homebrew styles, audits and fetches them (a
     # fetch checks the download against the pinned sha256) but cannot install them.
     # What left CI with the macOS runner: `brew install` and `brew test` of every
@@ -71,37 +71,50 @@ jobs:
           fi
           formulae=()
           macos=()
+          linux=()
+          # A <tool>-linux formula is <tool>'s Linux x86_64 build, for the devbox.
           for path in Formula/*.rb; do
             name="${path##*/}"
-            formulae+=("21StarkCom/tap/${name%.rb}")
-            [[ "$name" = hermod-linux.rb ]] || macos+=("21StarkCom/tap/${name%.rb}")
+            name="${name%.rb}"
+            formulae+=("21StarkCom/tap/${name}")
+            if [[ "$name" = *-linux ]]; then
+              linux+=("21StarkCom/tap/${name}")
+            else
+              macos+=("21StarkCom/tap/${name}")
+            fi
           done
           # Audit as the platform users install on: some checks run only for the
           # OS and arch being audited.
           brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
-          brew audit --strict --os=linux --arch=intel 21StarkCom/tap/hermod-linux
+          brew audit --strict --os=linux --arch=intel "${linux[@]}"
           # The download check `brew install` used to make: each asset is readable
           # and matches its pinned sha256. One call downloads them concurrently.
           # Never add --os or --arch: with either, brew fetch looks only for a bottle,
           # which no entry has, and exits 0 having downloaded nothing.
           brew fetch "${formulae[@]}"
-          # A formula fetch checks no platform requirement today, so the x86_64-only
-          # hermod-linux downloads on this arm runner like the macOS entries do. Fail
-          # if a later Homebrew skips it with exit 0, as it skips an excluded cask.
-          cache="$(brew --cache 21StarkCom/tap/hermod-linux)"
-          if [[ ! -s "$cache" ]]; then
-            echo '21StarkCom/tap/hermod-linux: brew fetch downloaded nothing' >&2
-            exit 1
-          fi
-          # The bumper's default asset is the macOS zip, so a bump run without
-          # --asset-suffix linux_x64.zip pins a Mach-O whose id and sha256 agree,
-          # and the fetch above passes it. Require the Linux x86-64 executable.
-          unzip -q -o "$cache" hermod -d "$RUNNER_TEMP/hermod-linux"
-          format="$(file -b "$RUNNER_TEMP/hermod-linux/hermod")"
-          if [[ "$format" != *"ELF 64-bit LSB "*"executable, x86-64,"* ]]; then
-            echo "21StarkCom/tap/hermod-linux: the pinned asset's hermod is not a Linux x86-64 executable: $format" >&2
-            exit 1
-          fi
+          for formula in "${linux[@]}"; do
+            name="${formula##*/}"
+            tool="${name%-linux}"
+            # A formula fetch checks no platform requirement today, so an x86_64-only
+            # formula downloads on this arm runner like the macOS entries do. Fail if
+            # a later Homebrew skips it with exit 0, as it skips an excluded cask.
+            cache="$(brew --cache "$formula")"
+            if [[ ! -s "$cache" ]]; then
+              echo "${formula}: brew fetch downloaded nothing" >&2
+              exit 1
+            fi
+            # The bumper's default asset is the macOS zip, so a bump run without the
+            # entry's --asset-suffix (the README's caller table) pins a Mach-O whose
+            # id and sha256 agree, and the fetch above passes it. Require the binary
+            # named by the formula without -linux to be a Linux x86-64 executable.
+            unzip -q -o "$cache" "$tool" -d "$RUNNER_TEMP/$name"
+            format="$(file -b "$RUNNER_TEMP/$name/$tool")"
+            if [[ "$format" != *"ELF 64-bit LSB "*"executable, x86-64,"* ]]; then
+              echo "${formula}: the pinned asset's ${tool} is not a Linux x86-64 executable: $format" >&2
+              exit 1
+            fi
+            echo "${formula}: ${tool} is a Linux x86-64 executable"
+          done
       - name: Fetch and audit every cask
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
