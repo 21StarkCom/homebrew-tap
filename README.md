@@ -473,10 +473,10 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 
 idun's and alfred's releases and plume's and frigg's `release.yml` merge their own bump PRs
 unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
-check here first. frigg's run leaves its PR
-open, under a warning, while its token lacks Actions: read on this tap. Every other bump PR
-stays open for a hand merge with `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a
-ticket covers it and labeled `no-ticket` (by `bump.sh`) while its title names no ticket.
+check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
+Actions: read on this tap. Every other bump PR stays open for a hand merge with
+`idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
+`no-ticket` (by `bump.sh`) while its title names no ticket.
 
 ## Download authentication and CI
 

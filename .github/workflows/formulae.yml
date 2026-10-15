@@ -86,7 +86,10 @@ jobs:
           # Audit as the platform users install on: some checks run only for the
           # OS and arch being audited.
           brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
-          brew audit --strict --os=linux --arch=intel "${linux[@]}"
+          # Named formulae only: a bare `brew audit` audits every formula it can find.
+          if ((${#linux[@]})); then
+            brew audit --strict --os=linux --arch=intel "${linux[@]}"
+          fi
           # The download check `brew install` used to make: each asset is readable
           # and matches its pinned sha256. One call downloads them concurrently.
           # Never add --os or --arch: with either, brew fetch looks only for a bottle,
