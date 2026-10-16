@@ -66,6 +66,8 @@ cask "goldfinger" do
 
   # `brew uninstall --zap` only: the socket, lock, screenshots, the snapshot epoch and every
   # recording (the trajectories and videos under Application Support/goldfinger/recordings), the
+  # usage files from 0.10.0 on (Application Support/goldfinger/usage/<UTC day>/<epoch>-<k>.json,
+  # the daemon's content-free counts, one file a generation and day, kept 30 days), the
   # Vision and Core ML model cache macOS compiles under the daemon's bundle id from 0.9.0 on
   # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), and
   # Goldfinger Control's login item and preferences. The helper registers itself with
