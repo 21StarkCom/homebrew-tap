@@ -380,6 +380,8 @@ Extensions). `--zap` also deletes that login item by name through System Events,
 your terminal for Automation access (`login_item:`; the helper's `SMAppService.mainApp`
 registration owns no launchd job, so there is no `launchctl:`), and trashes
 `~/Library/Caches/goldfinger` (socket, lock, screenshots),
+`~/Library/Caches/com.21stark.goldfinger` (from 0.9.0 on, the model cache macOS compiles for
+Vision text recognition and Core ML icon detection, which dev daemons share),
 `~/Library/Application Support/goldfinger` (the snapshot epoch and every recording: the
 trajectories and videos under `recordings/`) and the helper's
 `~/Library/Preferences/com.21stark.goldfinger.control.plist`. Neither revokes the grants:

@@ -65,7 +65,9 @@ cask "goldfinger" do
   ]
 
   # `brew uninstall --zap` only: the socket, lock, screenshots, the snapshot epoch and every
-  # recording (the trajectories and videos under Application Support/goldfinger/recordings), and
+  # recording (the trajectories and videos under Application Support/goldfinger/recordings), the
+  # Vision and Core ML model cache macOS compiles under the daemon's bundle id from 0.9.0 on
+  # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), and
   # Goldfinger Control's login item and preferences. The helper registers itself with
   # `SMAppService.mainApp`, which owns no launchd job while it is quit and outlives its bundle
   # (goldfinger PR 124, P1), so no `launchctl:`: the zap deletes the item by its display name
@@ -74,6 +76,7 @@ cask "goldfinger" do
   zap login_item: "Goldfinger Control",
       trash:      [
         "~/Library/Application Support/goldfinger",
+        "~/Library/Caches/com.21stark.goldfinger",
         "~/Library/Caches/goldfinger",
         "~/Library/Preferences/com.21stark.goldfinger.control.plist",
       ]
