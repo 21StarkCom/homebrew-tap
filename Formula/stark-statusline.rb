@@ -5,7 +5,7 @@
 # editor. A CGO-free darwin/arm64 build (Go linker ad-hoc signature, NOT
 # Developer-ID/notarized: a formula's files install without the quarantine
 # xattr, so Gatekeeper is not in the path). Built + published on the operator's
-# Mac by idavoll's scripts/statusline-release.sh (STARK-10552).
+# Mac by idavoll's statusline/release.sh (STARK-10552).
 class StarkStatusline < Formula
   desc "Claude Code statusline: compiled renderer and terminal layout editor"
   homepage "https://github.com/21StarkCom/idavoll"
