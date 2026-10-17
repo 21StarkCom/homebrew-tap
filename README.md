@@ -76,7 +76,7 @@ does not record GitHub's host key.
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized `mac-helper` | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
-| `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 12 (Monterey) |
+| `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized, not stapled | 13 (Ventura); its bundled Node needs 13.5 |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, from 0.8.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
@@ -335,9 +335,11 @@ brew install --cask 21StarkCom/tap/atlas
 `Atlas.app` lands in `/Applications`. The bundle carries its own internal CLI
 closure (a standalone Node + `brain` bin it spawns for status checks), so — unlike
 `mimir` — the cask exposes **no `binary`**: `brain` is its own formula and must not
-be shadowed. **macOS 12+ arm64.** The build is Developer-ID **signed + notarized**
-(`spctl` reports "Notarized Developer ID") but not stapled: every install or upgrade
-lands it quarantined, so the first launch after each checks the notarization online.
+be shadowed. **macOS 13.5+ arm64:** the cask's floor is Ventura, but the bundled
+Node needs 13.5, so on 13.0–13.4 the app starts and its CLI does not. The build
+is Developer-ID **signed + notarized** (`spctl` reports "Notarized Developer ID")
+but not stapled: every install or upgrade lands it quarantined, so the first
+launch after each checks the notarization online.
 Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`).
 
 ## goldfinger (background computer use — cask)

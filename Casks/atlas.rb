@@ -47,20 +47,31 @@ cask "atlas" do
   desc "Second-brain desktop app (companion GUI to the brain CLI)"
   homepage "https://github.com/21StarkCom/atlas"
 
-  depends_on arch: :arm64          # the shipped bundle is a signed arm64 Mach-O
-  depends_on macos: :monterey      # bare symbol == ">="; Electron deployment target is macOS 12
+  depends_on arch: :arm64 # the shipped bundle is a signed arm64 Mach-O
+  # The bundled official Node (Contents/Resources/node, which runs the app's brain CLI) is built
+  # for macOS 13.5, above Electron's 12.0. Homebrew floors take only a major version, so 13.0–13.4
+  # still install: the app starts there, but its brain CLI does not.
+  depends_on macos: :ventura # bare symbol == ">="
 
   app "Atlas.app"
 
   uninstall quit: "com.21stark.atlas.desktop"
 
-  zap trash: [
-    "~/Library/Application Support/Atlas",
-    "~/Library/Caches/com.21stark.atlas.desktop",
-    "~/Library/HTTPStorages/com.21stark.atlas.desktop",
-    "~/Library/Preferences/com.21stark.atlas.desktop.plist",
-    "~/Library/Saved Application State/com.21stark.atlas.desktop.savedState",
-  ]
+  # `brew uninstall --zap` only. Electron names the userData folder after the bundled
+  # package.json's `name`, `@atlas/desktop` (it sets no `productName`), so the app log, the pastes,
+  # Chromium's storage and Crashpad live under Application Support/@atlas/desktop; no release ever
+  # wrote Application Support/Atlas. The Config tab's Launch at login registers the app with
+  # `SMAppService.mainApp`, which outlives the bundle, so the zap deletes that login item by its
+  # display name through System Events (macOS asks for the terminal's Automation access).
+  zap login_item: "Atlas",
+      trash:      [
+        "~/Library/Application Support/@atlas/desktop",
+        "~/Library/Caches/com.21stark.atlas.desktop",
+        "~/Library/HTTPStorages/com.21stark.atlas.desktop",
+        "~/Library/Preferences/com.21stark.atlas.desktop.plist",
+        "~/Library/Saved Application State/com.21stark.atlas.desktop.savedState",
+      ],
+      rmdir:      "~/Library/Application Support/@atlas"
 
   caveats <<~EOS
     Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed
