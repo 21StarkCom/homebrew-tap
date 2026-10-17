@@ -68,6 +68,12 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.28.0 ships Huginn 0.64.0 (the update above), whose chat panel takes files. Huginn
+      copies each file a message carries (attached, pasted or dropped) into that chat's
+      folder under ~/.sleipnir/huginn/scratch/, owner-only, for the chat's agent to read.
+      A folder with a file in it stays when the chat ends, and nothing removes it later:
+      treat it as secret, and remove it yourself.
+
       0.27.0 ships Huginn 0.62.2 (the update above), whose chat panel needs no idun: Huginn's
       host starts Claude Code (`claude`) or Codex (`codex app-server`) itself, the first it
       finds in /opt/homebrew/bin, /usr/local/bin, ~/.local/bin or its PATH, on your own Claude
