@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/637541482",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/650657098",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.27.0"
-  sha256 "8b31270947cafefd48792a87ff53736d834dc6c6923b094734a7f561b9ad1b89"
+  version "0.28.0"
+  sha256 "e0af571fd700cce20c859e93ab055f8b5be0bedbd0d1baba3c2e26791a96c9af"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -67,6 +67,12 @@ class Sleipnir < Formula
       Huginn (named Sleipnir Companion before Huginn 0.39.0) in each such profile's
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
+
+      0.28.0 ships Huginn 0.64.0 (the update above), whose chat panel takes files. Huginn
+      copies each file a message carries (attached, pasted or dropped) into that chat's
+      folder under ~/.sleipnir/huginn/scratch/, owner-only, for the chat's agent to read.
+      A folder with a file in it stays when the chat ends, and nothing removes it later:
+      treat it as secret, and remove it yourself.
 
       0.27.0 ships Huginn 0.62.2 (the update above), whose chat panel needs no idun: Huginn's
       host starts Claude Code (`claude`) or Codex (`codex app-server`) itself, the first it
