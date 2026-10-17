@@ -67,7 +67,7 @@ does not record GitHub's host key.
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
-| `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 26 (Tahoe) |
+| `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
@@ -187,7 +187,7 @@ brew install 21StarkCom/tap/hermod
 
 The release zip is a `bun build --compile` binary carrying bun's linker-signed **ad-hoc**
 signature, not a Developer ID. It is compiled with the release Mac's Homebrew `bun`, whose
-build targets macOS 26.0, so the formula requires macOS 26 (Tahoe). `hermod` reaches its
+build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). `hermod` reaches its
 cmux app over the inherited `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or
 set the socket env yourself).
 
