@@ -69,7 +69,7 @@ does not record GitHub's host key.
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
-| `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | any |
+| `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
@@ -212,9 +212,11 @@ rotation, cleanup, housekeeping, updates).
 brew install 21StarkCom/tap/idun
 ```
 
-The release zip is a `bun build --compile` binary, Developer-ID signed + notarized. A
-checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
-`./setup.sh`, which steps aside when this formula is installed.
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized. It is
+compiled with the release Mac's Homebrew `bun`, whose build targets macOS 27.0, so the
+formula requires macOS 27 (Golden Gate). A checkout of the `idun` repo can instead
+install a live, repo-tracking wrapper with `./setup.sh`, which steps aside when this
+formula is installed.
 
 ## lucius
 

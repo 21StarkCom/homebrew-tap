@@ -23,7 +23,7 @@ class Idun < Formula
   end
 
   depends_on arch: :arm64
-  depends_on :macos
+  depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
 
   def install
     bin.install "idun"
