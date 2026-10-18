@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.38.0"
-  sha256 "044d83f1c6a5bf3ef1f604cbcf5be8aaf3f9b40167e482c032ee340ca3b7abb6"
+  version "0.39.0"
+  sha256 "10273807c56f72251bad8e90ab83f3595d8df57c976e9c9f070269f22d2441a0"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/650255278",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/653895871",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -70,14 +70,15 @@ cask "mimir" do
 
   # `brew uninstall --zap` only. Removes the three launchd jobs the app registers, Mímir Service's,
   # the menu bar's login item and Mímir Sync's (the sync helper, registered only while sync is on,
-  # in a release after 0.38.0; zap skips a label launchd does not hold), which a plain uninstall
+  # from 0.39.0; zap skips a label launchd does not hold), which a plain uninstall
   # leaves registered against the deleted bundle. Trashes
   # ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
   # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
   # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
   # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
   # own Drive and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own
-  # bundle id.
+  # bundle id. From 0.39.0 Mímir Sync talks to iCloud through CloudKit, which caches its
+  # container's records for the helper's bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job.
   zap launchctl: [
@@ -89,6 +90,7 @@ cask "mimir" do
         "~/Code/Temp/Mimir",
         "~/Library/Application Support/.mimir-*",
         "~/Library/Application Support/Mimir",
+        "~/Library/Caches/CloudKit/com.21stark.mimir.sync",
         "~/Library/Caches/com.21stark.mimir",
         "~/Library/Caches/com.21stark.mimir.service",
         "~/Library/HTTPStorages/com.21stark.mimir",
