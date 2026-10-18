@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 13 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 14 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux` and
 `frigg-linux`, hermod's and frigg's Linux x86_64 builds for the devbox. The tap builds
 nothing. It only pins each entry to a published release, and each source repo's release
 re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 16 of the 18 are re-pinned on each release
+**Status:** active. Every entry installs today; 17 of the 19 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -45,8 +45,8 @@ so they skip that check. A formula's files are installed without the
 quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
 unzip the release by hand. Casks install their apps quarantined. Every entry but
 `hermod-linux` and `frigg-linux` is **macOS arm64 only**; for another platform, build from
-the tool's own repo where it supports one (the frigg, lumiere, plume and stark-statusline
-sections say how).
+the tool's own repo where it supports one (the agent-seats, frigg, lumiere, plume and
+stark-statusline sections say how).
 
 `ssh -T git@github.com` makes the Mac's first SSH connection to github.com in a terminal
 you watch. Where `~/.ssh/known_hosts` does not hold github.com yet, it asks whether to
@@ -61,6 +61,7 @@ does not record GitHub's host key.
 
 | Entry | Kind | Source repo | Installs | Build | Signing | macOS |
 |---|---|---|---|---|---|---|
+| `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login` | `bun build --compile` | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
@@ -81,6 +82,27 @@ does not record GitHub's host key.
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
 "any" means the entry declares no macOS floor beyond Apple Silicon.
+
+## agent-seats
+
+The [`agent-seats`](https://github.com/21StarkCom/agent-seats) seat manager: several
+Claude Code and Codex logins on one Mac, the daemon that rotates them by live usage, and
+`seat-login`, the CLI that drives the Seat login browser extension.
+
+```sh
+brew install 21StarkCom/tap/agent-seats
+agent-seats daemon install    # once: register the daemon on the brew binary's link
+agent-seats daemon restart    # after each upgrade: the running daemon is the old binary
+```
+
+The release zip holds two `bun build --compile` binaries, Developer-ID signed (team
+`MG9J2XF9Q3`) but **not notarized**: Homebrew installs a formula's files without the
+quarantine xattr, so Gatekeeper never checks them. The Developer ID keeps the daemon's
+Keychain grants for its Codex logins across upgrades, which an ad-hoc signature, new on
+every build, would not. They are compiled with the release Mac's Homebrew `bun`, whose
+build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). On Linux
+x86_64, install `agent-seats` from the release's `linux_x64` tarball or build it from
+source, as the `agent-seats` repo's `apps/agent-seats/README.md` says.
 
 ## alfred
 
@@ -458,6 +480,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 
 | Entry | Source repo | Release step that calls the bumper | Runs on |
 |---|---|---|---|
+| `agent-seats` | agent-seats | `scripts/release-darwin.sh` | the signing Mac |
 | `alfred` | alfred | `scripts/release-darwin.sh` | the signing Mac |
 | `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
 | `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
@@ -477,8 +500,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-idun's and alfred's releases and plume's and frigg's `release.yml` merge their own bump PRs
-unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
+agent-seats', idun's and alfred's releases and plume's and frigg's `release.yml` merge their
+own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
 `idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
