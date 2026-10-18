@@ -20,15 +20,15 @@ class AtlasPrivateReleaseStrategy < CurlDownloadStrategy
   end
 end
 
-# Developer-ID-signed + notarized macOS build of the **Atlas** desktop app — the GUI for
+# Developer-ID-signed + notarized + stapled macOS build of the **Atlas** desktop app — the GUI for
 # the second-brain engine (the `brain` CLI is the companion formula in this tap). An Electron
 # app, so it ships as a cask: Atlas.app lands in /Applications. The bundle carries its own CLI
 # closure internally (a standalone Node + brain bin it spawns for status), so — unlike mimir —
 # the cask exposes NO `binary`: `brain` is its own formula and must not be shadowed.
 #
-# Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`); the app
-# is notarized (spctl: "Notarized Developer ID") but not stapled: every install or upgrade
-# lands it quarantined, so the first launch after each checks the notarization online.
+# Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`). The zip is
+# the notarized (spctl: "Notarized Developer ID"), stapled bundle (Atlas.app at the archive root),
+# so Gatekeeper validates it offline though every install or upgrade lands it quarantined.
 cask "atlas" do
   # version / asset id / sha256 are release-specific. No release step bumps this cask (the
   # README's caller table): re-point it with the bumper — do not hand-edit them.
@@ -37,11 +37,11 @@ cask "atlas" do
   # not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, DELIBERATELY: :no_check
   # disables integrity verification on a private download, and the versioned browser-download URL
   # 404s for private-repo assets even with a token — the API asset id is the only working fetch.
-  version "0.11.2"
-  sha256 "fcba79494cb260a40a98d53e9fc231eb1d84b52bb96f118333c665f488eef997"
+  version "0.11.3"
+  sha256 "0d30fe78fa32aff28e46a50dd232b3d7f34f769fca5ea52a1d3cde8fc1cf9b7d"
 
   # API asset URL (private repo). asset id is release-specific; re-point it with the bumper.
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/650945906",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/652514979",
       using: AtlasPrivateReleaseStrategy
   name "Atlas"
   desc "Second-brain desktop app (companion GUI to the brain CLI)"
