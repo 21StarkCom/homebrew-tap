@@ -20,15 +20,15 @@ class AtlasPrivateReleaseStrategy < CurlDownloadStrategy
   end
 end
 
-# Developer-ID-signed + notarized macOS build of the **Atlas** desktop app — the GUI for
+# Developer-ID-signed + notarized + stapled macOS build of the **Atlas** desktop app — the GUI for
 # the second-brain engine (the `brain` CLI is the companion formula in this tap). An Electron
 # app, so it ships as a cask: Atlas.app lands in /Applications. The bundle carries its own CLI
 # closure internally (a standalone Node + brain bin it spawns for status), so — unlike mimir —
 # the cask exposes NO `binary`: `brain` is its own formula and must not be shadowed.
 #
-# Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`); the app
-# is notarized (spctl: "Notarized Developer ID") but not stapled: every install or upgrade
-# lands it quarantined, so the first launch after each checks the notarization online.
+# Released from the source repo's `desktop-v*` tags (parallel to the CLI's `cli-v*`). The zip is
+# the notarized (spctl: "Notarized Developer ID"), stapled bundle (Atlas.app at the archive root),
+# so Gatekeeper validates it offline though every install or upgrade lands it quarantined.
 cask "atlas" do
   # version / asset id / sha256 are release-specific. No release step bumps this cask (the
   # README's caller table): re-point it with the bumper — do not hand-edit them.
