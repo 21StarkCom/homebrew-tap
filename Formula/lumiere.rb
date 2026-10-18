@@ -24,7 +24,7 @@ class Lumiere < Formula
   end
 
   depends_on arch: :arm64
-  depends_on macos: :tahoe # the four cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
+  depends_on macos: :tahoe # the cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
 
   def install
     # The dispatcher ships as plain `lumiere`, which "lumiere-*" does not match.
