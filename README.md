@@ -42,8 +42,8 @@ in the macOS keychain. Every `brew` command that reads a formula needs one, `bre
 included: a formula refuses to evaluate without it. A cask needs it only to download.
 Homebrew's sandboxed build and test workers cannot read gh's config, and never download,
 so they skip that check. A formula's files are installed without the
-quarantine xattr, so an ad-hoc-signed build runs under Homebrew but hits Gatekeeper if you
-unzip the release by hand. Casks install their apps quarantined. Every entry but
+quarantine xattr, so an ad-hoc-signed or un-notarized build runs under Homebrew but hits
+Gatekeeper if you unzip the release by hand. Casks install their apps quarantined. Every entry but
 `hermod-linux` and `frigg-linux` is **macOS arm64 only**; for another platform, build from
 the tool's own repo where it supports one (the agent-seats, frigg, lumiere, plume and
 stark-statusline sections say how).

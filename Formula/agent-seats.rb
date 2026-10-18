@@ -33,6 +33,8 @@ class AgentSeats < Formula
 
   def caveats
     <<~EOS
+      To run the daemon at login, register it once:
+        agent-seats daemon install
       After an upgrade, restart the daemon so it runs the new binary:
         agent-seats daemon restart
     EOS
