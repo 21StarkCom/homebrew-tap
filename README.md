@@ -251,9 +251,9 @@ brew install 21StarkCom/tap/lumiere
 ```
 
 **macOS 26 (Tahoe) or newer.** The ONNX tools (`lumiere-bg`, `lumiere-bg-swap`,
-`lumiere-product`, `lumiere-upscale`) are built for macOS 26.0. The release zip is a
-Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source in the
-`lumiere` repo (`make build`).
+`lumiere-product`, `lumiere-upscale`, `lumiere-veo`) are built for macOS 26.0. The release
+zip is a Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source
+in the `lumiere` repo (`make build`).
 
 ## plume
 

@@ -11,10 +11,10 @@ class Lumiere < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/592292376",
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/653156885",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.4.2"
-  sha256 "5db903a769d4d877a1295900bc06a734082df19c9a630a54dc7c4527924dfd30"
+  version "0.5.0"
+  sha256 "4a7b23b85692d3a3cd102465a593a17463c58ff7c0ab4dcfab87bea421124661"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -24,7 +24,7 @@ class Lumiere < Formula
   end
 
   depends_on arch: :arm64
-  depends_on macos: :tahoe # the four cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
+  depends_on macos: :tahoe # the cgo (ONNX) tools are built for macOS 26.0; bare symbol == ">="
 
   def install
     # The dispatcher ships as plain `lumiere`, which "lumiere-*" does not match.
