@@ -67,9 +67,10 @@ cask "mimir" do
     "com.21stark.mimir.menu",
   ]
 
-  # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
-  # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
-  # Trashes ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
+  # `brew uninstall --zap` only. Removes the three launchd jobs the app registers, Mímir Service's,
+  # the menu bar's login item and Mímir Sync's (the sync helper, registered only while sync is on),
+  # which a plain uninstall leaves registered against the deleted bundle. Trashes
+  # ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
   # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
   # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
   # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
@@ -80,6 +81,7 @@ cask "mimir" do
   zap launchctl: [
         "com.21stark.mimir.menu",
         "com.21stark.mimir.service",
+        "com.21stark.mimir.sync",
       ],
       trash:     [
         "~/Code/Temp/Mimir",
