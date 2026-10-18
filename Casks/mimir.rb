@@ -70,14 +70,15 @@ cask "mimir" do
 
   # `brew uninstall --zap` only. Removes the three launchd jobs the app registers, Mímir Service's,
   # the menu bar's login item and Mímir Sync's (the sync helper, registered only while sync is on,
-  # in a release after 0.38.0; zap skips a label launchd does not hold), which a plain uninstall
+  # from 0.39.0; zap skips a label launchd does not hold), which a plain uninstall
   # leaves registered against the deleted bundle. Trashes
   # ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
   # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
   # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
   # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
   # own Drive and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own
-  # bundle id.
+  # bundle id. From 0.39.0 Mímir Sync talks to iCloud through CloudKit, which caches its
+  # container's records for the helper's bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job.
   zap launchctl: [
@@ -89,6 +90,7 @@ cask "mimir" do
         "~/Code/Temp/Mimir",
         "~/Library/Application Support/.mimir-*",
         "~/Library/Application Support/Mimir",
+        "~/Library/Caches/CloudKit/com.21stark.mimir.sync",
         "~/Library/Caches/com.21stark.mimir",
         "~/Library/Caches/com.21stark.mimir.service",
         "~/Library/HTTPStorages/com.21stark.mimir",
