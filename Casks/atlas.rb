@@ -57,15 +57,19 @@ cask "atlas" do
 
   uninstall quit: "com.21stark.atlas.desktop"
 
-  # `brew uninstall --zap` only. Electron names the userData folder after the bundled
-  # package.json's `name`, `@atlas/desktop` (it sets no `productName`), so the app log, the pastes,
-  # Chromium's storage and Crashpad live under Application Support/@atlas/desktop; no release ever
-  # wrote Application Support/Atlas. The Config tab's Launch at login registers the app with
-  # `SMAppService.mainApp`, which outlives the bundle, so the zap deletes that login item by its
-  # display name through System Events (macOS asks for the terminal's Automation access).
+  # `brew uninstall --zap` only. Electron names the userData folder (the app log, the pastes,
+  # Chromium's storage and Crashpad) after the bundled package.json's `productName`, else its
+  # `name`. Since desktop 0.11.6 that is `Atlas`, so the folder is Application Support/Atlas.
+  # Builds before 0.11.6 wrote Application Support/@atlas/desktop. The first start of 0.11.6 or
+  # later moves that folder to Atlas, but keeps both when Atlas already holds files, and an install
+  # that has not started 0.11.6 still holds only the old one, so the zap trashes both. The
+  # Config tab's Launch at login registers the app with `SMAppService.mainApp`, which outlives the
+  # bundle, so the zap deletes that login item by its display name through System Events (macOS
+  # asks for the terminal's Automation access).
   zap login_item: "Atlas",
       trash:      [
         "~/Library/Application Support/@atlas/desktop",
+        "~/Library/Application Support/Atlas",
         "~/Library/Caches/com.21stark.atlas.desktop",
         "~/Library/HTTPStorages/com.21stark.atlas.desktop",
         "~/Library/Preferences/com.21stark.atlas.desktop.plist",
