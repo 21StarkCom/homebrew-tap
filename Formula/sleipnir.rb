@@ -30,6 +30,18 @@ class Sleipnir < Formula
   depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper
 
   def install
+    # The sleipnir pkg also puts `slp` on PATH, from /usr/local/sleipnir; refuse to install
+    # beside it (the pkg refuses over this formula from its side).
+    if File.exist?("/var/db/receipts/com.21stark.sleipnir.pkg.plist")
+      uninstall = "/usr/local/sleipnir/opt/sleipnir/uninstall.sh"
+      remove = if File.exist?(uninstall)
+        "sudo #{uninstall}"
+      else
+        "sudo pkgutil --forget com.21stark.sleipnir.pkg"
+      end
+      odie "sleipnir is already installed from its pkg. Remove it first: #{remove}"
+    end
+
     # The zip is the runnable tree (apps/, packages/, vendored node_modules, and the
     # signed helper at apps/mac-helper/.build/release/mac-helper). The helper is
     # resolved relative to packages/mac/src, so the layout must be kept intact —
