@@ -59,17 +59,20 @@ cask "mimir" do
   # builds), LaunchServices may reopen one of those instead: quit both and open the installed
   # Mímir, whose launch opens the menu inside its own bundle by path. Mímir Service needs no
   # directive: it seals when its bundle is replaced and exits once the new one verifies, and
-  # launchd relaunches it. Never `launchctl` here: Homebrew runs every `uninstall` directive but
-  # `signal` on `brew upgrade` too, so it would boot the service out on every upgrade (mimir's
-  # spec 2026-09-25-background-service §5.5).
+  # launchd relaunches it. Nor does Mímir Sync, a launchd agent the app registers while sync is
+  # on: `quit:` is for the app and its menu, never a launchd job. Never `launchctl` here: Homebrew
+  # runs every `uninstall` directive but `signal` on `brew upgrade` too, so it would boot the
+  # service out on every upgrade (mimir's spec 2026-09-25-background-service §5.5).
   uninstall quit: [
     "com.21stark.mimir",
     "com.21stark.mimir.menu",
   ]
 
-  # `brew uninstall --zap` only. Removes the two launchd jobs the app registers, Mímir Service's and
-  # the menu bar's login item, which a plain uninstall leaves registered against the deleted bundle.
-  # Trashes ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
+  # `brew uninstall --zap` only. Removes the three launchd jobs the app registers, Mímir Service's,
+  # the menu bar's login item and Mímir Sync's (the sync helper, registered only while sync is on,
+  # in a release after 0.38.0; zap skips a label launchd does not hold), which a plain uninstall
+  # leaves registered against the deleted bundle. Trashes
+  # ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
   # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
   # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
   # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
@@ -80,6 +83,7 @@ cask "mimir" do
   zap launchctl: [
         "com.21stark.mimir.menu",
         "com.21stark.mimir.service",
+        "com.21stark.mimir.sync",
       ],
       trash:     [
         "~/Code/Temp/Mimir",
@@ -145,10 +149,11 @@ cask "mimir" do
     or older, allow Mímir Service in Login Items if macOS asks, choose Always Allow on its
     Keychain dialogs, and pair the CLI again (above).
 
-    A plain `brew uninstall` leaves Mímir Service and the menu bar's login item registered
-    with launchd; stop the service with
-    `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`.
-    `brew uninstall --zap --cask 21StarkCom/tap/mimir` removes both AND moves Mímir's local
+    A plain `brew uninstall` leaves Mímir Service, the menu bar's login item and, while sync
+    is on, Mímir Sync registered with launchd; stop the service with
+    `launchctl bootout gui/$(id -u)/com.21stark.mimir.service`, and Mímir Sync with
+    `launchctl bootout gui/$(id -u)/com.21stark.mimir.sync`.
+    `brew uninstall --zap --cask 21StarkCom/tap/mimir` removes them all AND moves Mímir's local
     data, the vault and its plaintext export included, to the Trash (add `--force` once a
     plain uninstall has run).
   EOS

@@ -434,12 +434,12 @@ its menu bar item (`uninstall quit:`) and reopens both by bundle id. On a Mac th
 builds (same bundle ids), LaunchServices may reopen one of those instead: quit both and open the
 installed Mímir, whose launch opens its own menu by path. The service restarts itself on the new
 bundle, so the cask never boots it out on upgrade. `brew uninstall --cask mimir` removes the app
-but leaves the service and the menu's login item registered with launchd;
-`brew uninstall --zap --cask 21StarkCom/tap/mimir` also removes both (`zap launchctl:`) and
-trashes its local data (but never the login-Keychain vault key — that is the app's own Danger
-Zone → Erase Everything). Once a plain uninstall has run, add `--force`, and keep the full name:
-that uninstall drops Homebrew's trust in the cask, and an untrusted tap's cask loads only when
-named in full.
+but leaves the service, the menu's login item and, while sync is on, the Mímir Sync helper
+registered with launchd; `brew uninstall --zap --cask 21StarkCom/tap/mimir` also removes them all
+(`zap launchctl:`) and trashes its local data (but never the login-Keychain vault key — that is
+the app's own Danger Zone → Erase Everything). Once a plain uninstall has run, add `--force`, and
+keep the full name: that uninstall drops Homebrew's trust in the cask, and an untrusted tap's cask
+loads only when named in full.
 
 ## Repo layout
 
