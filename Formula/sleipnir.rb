@@ -33,12 +33,10 @@ class Sleipnir < Formula
     # The sleipnir pkg also puts `slp` on PATH, from /usr/local/sleipnir; refuse to install
     # beside it (the pkg refuses over this formula from its side).
     if File.exist?("/var/db/receipts/com.21stark.sleipnir.pkg.plist")
-      uninstall = "/usr/local/sleipnir/opt/sleipnir/uninstall.sh"
-      remove = if File.exist?(uninstall)
-        "sudo #{uninstall}"
-      else
-        "sudo pkgutil --forget com.21stark.sleipnir.pkg"
-      end
+      # opt/sleipnir is a link the pkg's postinstall makes; without it the script is still in the versioned tree.
+      uninstall = ["/usr/local/sleipnir/opt/sleipnir/uninstall.sh",
+                   *Dir["/usr/local/sleipnir/Cellar/sleipnir/*/uninstall.sh"]].find { |f| File.exist?(f) }
+      remove = uninstall ? "sudo #{uninstall}" : "sudo pkgutil --forget com.21stark.sleipnir.pkg"
       odie "sleipnir is already installed from its pkg. Remove it first: #{remove}"
     end
 
