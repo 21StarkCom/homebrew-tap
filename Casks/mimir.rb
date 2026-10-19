@@ -60,7 +60,9 @@ cask "mimir" do
   # Mímir, whose launch opens the menu inside its own bundle by path. Mímir Service needs no
   # directive: it seals when its bundle is replaced and exits once the new one verifies, and
   # launchd relaunches it. Nor does Mímir Sync, a launchd agent the app registers while sync is
-  # on: `quit:` is for the app and its menu, never a launchd job. Never `launchctl` here: Homebrew
+  # on: from 0.40.1 it exits 75 when its bundle is replaced, and launchd starts the new one. The
+  # 0.40.0 helper exits 0 instead and stays stopped until the next login (the caveat below).
+  # `quit:` is for the app and its menu, never a launchd job. Never `launchctl` here: Homebrew
   # runs every `uninstall` directive but `signal` on `brew upgrade` too, so it would boot the
   # service out on every upgrade (mimir's spec 2026-09-25-background-service §5.5).
   uninstall quit: [
@@ -107,6 +109,11 @@ cask "mimir" do
     Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
+
+    From 0.40.1, Mímir Sync starts again by itself after an upgrade. The upgrade from 0.40.0
+    can still stop sync, because the 0.40.0 helper runs during it: if Mímir Menu shows that
+    sync stopped, log out and log in one time. Before you join a Mac by approval, upgrade each
+    Mac in sync to 0.40.0 or later: an older build pauses its sync until you upgrade it.
 
     0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
     after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
