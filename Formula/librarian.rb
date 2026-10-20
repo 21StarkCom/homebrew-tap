@@ -26,8 +26,10 @@ class Librarian < Formula
     )
   end
 
+  # The librarian's tools run `brain`. Tap-qualified: a bare name resolves to homebrew/core first,
+  # and is ambiguous when another tap ships a `brain`.
+  depends_on "21starkcom/tap/brain"
   depends_on arch: :arm64 # the Agent SDK's vendored `claude` is darwin-arm64
-  depends_on "brain" # the librarian's tools run `brain`
   depends_on :macos
   depends_on "node" # librarian is node ESM; the keg node runs dist/bin.js
 
@@ -43,16 +45,29 @@ class Librarian < Formula
     (bin/"librarian").chmod 0755
   end
 
+  def caveats
+    <<~EOS
+      After an upgrade, restart the daemon so it runs the new version:
+        brew services restart librarian
+    EOS
+  end
+
   service do
     run [opt_bin/"librarian", "daemon"]
     keep_alive true
     # A LaunchAgent's default PATH lacks /opt/homebrew/bin, where `brain` and `mimir` live.
     environment_variables PATH: std_service_path_env
+    # The daemon logs to stderr. Its `daemon-unreachable` error says to read `<state>/logs/`.
+    log_path "~/.local/state/atlas/librarian/logs/daemon.log"
+    error_log_path "~/.local/state/atlas/librarian/logs/daemon.log"
   end
 
   test do
     # `librarian version` prints the version; assert it against the formula's version —
     # version-agnostic, never a hardcoded string.
     assert_match version.to_s, shell_output("#{bin}/librarian version")
+    # Every session starts the SDK's vendored `claude`, found beside the SDK as node finds it.
+    sdk = (libexec/"node_modules/@anthropic-ai/claude-agent-sdk").realpath
+    assert_match "(Claude Code)", shell_output("#{sdk.parent}/claude-agent-sdk-darwin-arm64/claude --version")
   end
 end

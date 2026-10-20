@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 14 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 15 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux` and
 `frigg-linux`, hermod's and frigg's Linux x86_64 builds for the devbox. The tap builds
 nothing. It only pins each entry to a published release, and each source repo's release
 re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 17 of the 19 are re-pinned on each release
+**Status:** active. Every entry installs today; 18 of the 20 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -157,24 +157,6 @@ so it's online-notarized — moot under Homebrew, which installs a formula's fil
 quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
 
-## librarian
-
-The [`librarian`](https://github.com/21StarkCom/atlas) CLI (`@atlas/librarian`): an agent
-that answers questions from the Atlas vaults, through `librarian ask`, an MCP server
-(`librarian mcp`, registered by `librarian install`) and a daemon.
-
-```sh
-brew install 21StarkCom/tap/librarian
-brew services start librarian
-```
-
-Like `brain`, the release zip is a **`pnpm deploy` tree** that the formula installs into
-`libexec` and wraps to run under the keg's `node`. It depends on the `brain` formula. Its
-`service do` block runs `librarian daemon` with `keep_alive` and Homebrew's standard service
-`PATH`, because a LaunchAgent's default `PATH` lacks `/opt/homebrew/bin`. The package has no
-Mach-O of its own; its one Mach-O is the Agent SDK's Anthropic-signed `claude`, so it is not
-notarized. Released from `librarian-v*` tags by atlas's `scripts/release-librarian.sh`.
-
 ## frigg
 
 The [`frigg`](https://github.com/21StarkCom/frigg) IT-ops toolkit for Google Workspace and
@@ -258,6 +240,28 @@ compiled with the release Mac's Homebrew `bun`, whose build targets macOS 27.0, 
 formula requires macOS 27 (Golden Gate). A checkout of the `idun` repo can instead
 install a live, repo-tracking wrapper with `./setup.sh`, which steps aside when this
 formula is installed.
+
+## librarian
+
+The [`librarian`](https://github.com/21StarkCom/atlas) CLI (`@atlas/librarian`): an agent
+that answers questions from the Atlas vaults, through `librarian ask`, an MCP server
+(`librarian mcp`, registered by `librarian install`) and a daemon.
+
+```sh
+brew install 21StarkCom/tap/librarian
+brew services start librarian
+brew services restart librarian    # after each upgrade: the running daemon is the old version
+```
+
+Like `brain`, the release zip is a **`pnpm deploy` tree** that the formula installs into
+`libexec` and wraps to run under the keg's `node`. It depends on this tap's `brain` formula,
+by its full name. Its `service do` block runs `librarian daemon` with `keep_alive` and
+Homebrew's standard service `PATH`, because a LaunchAgent's default `PATH` lacks
+`/opt/homebrew/bin`. The daemon's log is `~/.local/state/atlas/librarian/logs/daemon.log`.
+Homebrew does not restart a service on upgrade, and the upgrade's cleanup removes the old
+version, so restart the service after each upgrade. The package has no Mach-O of its own;
+its one Mach-O is the Agent SDK's Anthropic-signed `claude`, so it is not notarized.
+Released from `librarian-v*` tags by atlas's `scripts/release-librarian.sh`.
 
 ## lucius
 
