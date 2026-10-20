@@ -71,6 +71,7 @@ does not record GitHub's host key.
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
@@ -155,6 +156,24 @@ recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline
 so it's online-notarized — moot under Homebrew, which installs a formula's files without the
 quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
+
+## librarian
+
+The [`librarian`](https://github.com/21StarkCom/atlas) CLI (`@atlas/librarian`): an agent
+that answers questions from the Atlas vaults, through `librarian ask`, an MCP server
+(`librarian mcp`, registered by `librarian install`) and a daemon.
+
+```sh
+brew install 21StarkCom/tap/librarian
+brew services start librarian
+```
+
+Like `brain`, the release zip is a **`pnpm deploy` tree** that the formula installs into
+`libexec` and wraps to run under the keg's `node`. It depends on the `brain` formula. Its
+`service do` block runs `librarian daemon` with `keep_alive` and Homebrew's standard service
+`PATH`, because a LaunchAgent's default `PATH` lacks `/opt/homebrew/bin`. The package has no
+Mach-O of its own; its one Mach-O is the Agent SDK's Anthropic-signed `claude`, so it is not
+notarized. Released from `librarian-v*` tags by atlas's `scripts/release-librarian.sh`.
 
 ## frigg
 
@@ -493,6 +512,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
 | `hermod-linux` | hermod | `ts/scripts/release-darwin.sh` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `idun` | idun | `scripts/release-darwin.sh` | the signing Mac |
+| `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
 | `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
