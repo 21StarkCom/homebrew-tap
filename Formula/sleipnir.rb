@@ -66,9 +66,10 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
-      The caps `chrome-popups-dismiss` and `mac-screenshot --app` need goldfinger, a cask
-      this formula cannot depend on. Install it, then set it up, once:
-        brew install --cask 21starkcom/tap/goldfinger
+      The caps `chrome-popups-dismiss`, `claude-code-terminal-login` and `mac-screenshot --app`
+      need goldfinger, a cask this formula cannot depend on, and goldfinger needs macOS 26
+      (Tahoe) or newer. Install it, then set it up, once:
+        brew install --cask 21StarkCom/tap/goldfinger
         goldfinger setup
 
       sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir

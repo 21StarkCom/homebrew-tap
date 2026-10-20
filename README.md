@@ -74,7 +74,7 @@ does not record GitHub's host key.
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
-| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized `mac-helper` | any |
+| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
@@ -303,10 +303,13 @@ or headed, plus a suite of capabilities).
 brew install 21StarkCom/tap/sleipnir
 ```
 
-sleipnir drives system Chrome and a Swift AX/CGEvent helper, so there is no Linux build.
+sleipnir drives system Chrome on macOS, so there is no Linux build.
 sleipnir has **no build step** — Bun runs its TypeScript directly — so the release zip is
-the runnable tree (source + a vendored prod `node_modules`) plus the Developer-ID-signed +
-notarized Swift `mac-helper`. The formula installs the tree into `libexec` and wraps `slp` /
+the runnable tree (source + a vendored prod `node_modules`), whose only Mach-O are the
+Developer-ID-signed darwin-arm64 `bare-fs`, `bare-path` and `bare-url` prebuilds, in a
+notarized zip. The caps `chrome-popups-dismiss`, `claude-code-terminal-login` and
+`mac-screenshot --app` need the `goldfinger` cask (below), which a formula cannot depend
+on. The formula installs the tree into `libexec` and wraps `slp` /
 `sleipnir`, `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0) and
 `sleipnir-mcp` (the MCP server an agent client runs, from 0.12.1) over Homebrew's
 `bun` (a formula dependency), each keeping the caller's working-directory `.env` and
