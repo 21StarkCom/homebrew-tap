@@ -3,7 +3,7 @@
 # Signed (Developer ID) + notarized macOS build of sleipnir — a CLI that drives
 # dedicated, persistent Chrome profiles for ad-hoc agent tasks. Bun runs the
 # TypeScript directly (no build step), so the zip ships the source tree + vendored
-# prod node_modules; the one compiled artifact is the Swift mac-helper.
+# prod node_modules; its only compiled artifacts are the darwin-arm64 bare-* prebuilds.
 class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/sleipnir"
@@ -25,9 +25,9 @@ class Sleipnir < Formula
     )
   end
 
-  depends_on arch: :arm64 # the shipped mac-helper is a signed arm64 Mach-O
+  depends_on arch: :arm64 # the zip ships only the darwin-arm64 bare-fs, bare-path and bare-url prebuilds
   depends_on "bun" # Bun runs the TypeScript directly; sleipnir has no build step
-  depends_on :macos # drives system Chrome + a Swift AX/CGEvent helper
+  depends_on :macos # drives system Chrome
 
   def install
     # The sleipnir pkg also puts `slp` on PATH, from /usr/local/sleipnir; refuse to install
@@ -40,10 +40,10 @@ class Sleipnir < Formula
       odie "sleipnir is already installed from its pkg. Remove it first: #{remove}"
     end
 
-    # The zip is the runnable tree (apps/, packages/, vendored node_modules, and the
-    # signed helper at apps/mac-helper/.build/release/mac-helper). The helper is
-    # resolved relative to packages/mac/src, so the layout must be kept intact —
-    # install the whole tree into libexec and wrap each command's launcher.
+    # The zip is the runnable tree (apps/, packages/ and vendored node_modules).
+    # packages/core/src/install-origin.ts finds the tree root by climbing from
+    # packages/core/src, so the layout must be kept intact — install the whole
+    # tree into libexec and wrap each command's launcher.
     libexec.install Dir["*"]
     # `huginn` is the browser extension's CLI (`huginn <action>` = `slp huginn <action>`), and
     # `sleipnir-mcp` the stdio MCP server an agent client starts from its own working directory.
@@ -66,6 +66,12 @@ class Sleipnir < Formula
 
   def caveats
     <<~EOS
+      The caps `chrome-popups-dismiss`, `claude-code-terminal-login` and `mac-screenshot --app`
+      need goldfinger, a cask this formula cannot depend on, and goldfinger needs macOS 26
+      (Tahoe) or newer. Install it, then set it up, once:
+        brew install --cask 21StarkCom/tap/goldfinger
+        goldfinger setup
+
       sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir
       0.13.0 was the first release to ship one). Each `brew upgrade 21StarkCom/tap/sleipnir`
       reaches every browser running one with no command, once nothing is using the extension
