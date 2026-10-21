@@ -65,8 +65,8 @@ does not record GitHub's host key.
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
-| `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | ad-hoc | any |
-| `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-cockpit`, `gws-align-managers`, `gws-build-all-group` | Go | none | none: Linux x86_64 |
+| `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | ad-hoc | any |
+| `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
@@ -163,7 +163,9 @@ The [`frigg`](https://github.com/21StarkCom/frigg) IT-ops toolkit for Google Wor
 the vendor fleet: the `frigg` CLI, the `frigg-cockpit` TUI, and two single-purpose
 Workspace CLIs, `gws-align-managers` (bulk-align org-chart manager edges from a CSV) and
 `gws-build-all-group` (rebuild the all-hands group from the directory). Both `gws-*` tools
-dry-run by default; `--apply` mutates the live directory.
+dry-run by default; `--apply` mutates the live directory. The formula installs `frigg` and
+every `frigg-*` and `gws-*` binary in the release zip, so a tool frigg carves out of the
+CLI (`frigg-zoom` is the first) installs with no tap change.
 
 ```sh
 brew install 21StarkCom/tap/frigg
@@ -177,7 +179,7 @@ On Linux x86_64 (the devbox):
 brew install 21StarkCom/tap/frigg-linux
 ```
 
-`frigg-linux` installs the same four tools from the static linux/amd64 build that frigg's
+`frigg-linux` installs the same tools from the static linux/amd64 build that frigg's
 release ships beside the darwin one. It is a formula of its own for the reason
 `hermod-linux` is (see [hermod](#hermod)), and its binaries are unsigned. On another
 platform, `go install` from the `frigg` repo.
