@@ -332,7 +332,9 @@ the runnable tree (source + a vendored prod `node_modules`), whose only Mach-O a
 Developer-ID-signed darwin-arm64 `bare-fs`, `bare-path` and `bare-url` prebuilds, in a
 notarized zip. The caps `chrome-popups-dismiss`, `claude-code-terminal-login` and
 `mac-screenshot --app` need the `goldfinger` cask (below), which a formula cannot depend
-on. The formula installs the tree into `libexec` and wraps `slp` /
+on, and the `captcha-solve` cap (from 0.30.0) runs `claude -p` on the operator's own Claude
+sign-in, so it needs Claude Code's `claude` on `PATH`, which a formula cannot depend on
+either. The formula installs the tree into `libexec` and wraps `slp` /
 `sleipnir`, `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0) and
 `sleipnir-mcp` (the MCP server an agent client runs, from 0.12.1) over Homebrew's
 `bun` (a formula dependency), each keeping the caller's working-directory `.env` and

@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/658331389",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/661292195",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.29.1"
-  sha256 "4bf8ba121a6ea0324d8d6da769dce97ec57cf35bd7905247f78fa989a91c4ef3"
+  version "0.30.0"
+  sha256 "248fcd0f8781f6ba1e06b03fdef3449bf64b7a72b14fb9c74712149e9e570dae"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -71,6 +71,11 @@ class Sleipnir < Formula
       (Tahoe) or newer. Install it, then set it up, once:
         brew install --cask 21StarkCom/tap/goldfinger
         goldfinger setup
+
+      0.30.0's `captcha-solve` cap runs `claude -p` on your own Claude sign-in, so it needs
+      Claude Code's `claude` on PATH, which this formula cannot depend on either; without it the
+      cap exits 3 saying `claude not found`. It runs only on the hCaptcha and reCAPTCHA demo
+      pages, and any other `--url` exits 2.
 
       sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir
       0.13.0 was the first release to ship one). Each `brew upgrade 21StarkCom/tap/sleipnir`
