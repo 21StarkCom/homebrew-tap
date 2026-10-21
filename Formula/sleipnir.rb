@@ -72,6 +72,11 @@ class Sleipnir < Formula
         brew install --cask 21StarkCom/tap/goldfinger
         goldfinger setup
 
+      0.30.0's `captcha-solve` cap runs `claude -p` on your own Claude sign-in, so it needs
+      Claude Code's `claude` on PATH, which this formula cannot depend on either; without it the
+      cap exits 3 saying `claude not found`. It runs only on the hCaptcha and reCAPTCHA demo
+      pages, and any other `--url` exits 2.
+
       sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir
       0.13.0 was the first release to ship one). Each `brew upgrade 21StarkCom/tap/sleipnir`
       reaches every browser running one with no command, once nothing is using the extension
