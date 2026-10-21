@@ -33,12 +33,11 @@ class Frigg < Formula
   def install
     # Globbed so the install tracks the tool set as frigg carves out new frigg-* binaries;
     # the zip's README.md matches no pattern. The literal "frigg" fails the install on a
-    # zip without it, where a glob that matched nothing would leave an empty keg.
+    # zip without the main CLI, which "frigg-*" does not match.
     bin.install "frigg", *Dir["frigg-*", "gws-*"]
   end
 
   test do
-    assert_path_exists bin/"frigg"
     # Every frigg binary prints the release version on --version.
     bin.children.each { |tool| assert_match version.to_s, shell_output("#{tool} --version") }
   end

@@ -165,7 +165,7 @@ Workspace CLIs, `gws-align-managers` (bulk-align org-chart manager edges from a 
 `gws-build-all-group` (rebuild the all-hands group from the directory). Both `gws-*` tools
 dry-run by default; `--apply` mutates the live directory. The formula installs `frigg` and
 every `frigg-*` and `gws-*` binary in the release zip, so a tool frigg carves out of the
-CLI (`frigg-zoom` is the first) installs with no tap change.
+CLI (`frigg-zoom` will be the first) installs with no tap change.
 
 ```sh
 brew install 21StarkCom/tap/frigg
