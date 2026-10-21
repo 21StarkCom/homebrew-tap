@@ -6,7 +6,7 @@
 # Gatekeeper is not in the path. Built + published by frigg's GitHub Actions release
 # workflow (STARK-2219).
 class Frigg < Formula
-  desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-cockpit TUI, and gws-* CLIs"
+  desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-* and gws-* tools"
   homepage "https://github.com/21StarkCom/frigg"
   # version / asset id / sha256 are release-specific and rewritten when frigg's
   # release calls the bumper (the README's caller table) — do not hand-edit them.
@@ -31,13 +31,14 @@ class Frigg < Formula
   depends_on :macos
 
   def install
-    bin.install "frigg", "frigg-cockpit", "gws-align-managers", "gws-build-all-group"
+    # Globbed so the install tracks the tool set as frigg carves out new frigg-* binaries;
+    # the zip's README.md matches no pattern. The literal "frigg" fails the install on a
+    # zip without the main CLI, which "frigg-*" does not match.
+    bin.install "frigg", *Dir["frigg-*", "gws-*"]
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/frigg --version")
-    assert_match version.to_s, shell_output("#{bin}/frigg-cockpit --version")
-    assert_match version.to_s, shell_output("#{bin}/gws-align-managers --version")
-    assert_match version.to_s, shell_output("#{bin}/gws-build-all-group --version")
+    # Every frigg binary prints the release version on --version.
+    bin.children.each { |tool| assert_match version.to_s, shell_output("#{tool} --version") }
   end
 end
