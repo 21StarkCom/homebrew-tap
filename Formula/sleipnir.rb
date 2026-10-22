@@ -89,6 +89,17 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.31.0 no longer needs Chrome Canary. A launch uses CHROME_BINARY, else the browser
+      `slp browser register` pins, else your own Google Chrome, as its own process beside yours.
+      A Mac with /Applications/Google Chrome Canary.app and a Sleipnir profile Canary has run in
+      keeps Canary, recorded once in profiles.json; `slp browser` names the browser and where
+      it came from. `slp doctor`, `--json` included, now calls its `chrome` row `browser`, a
+      `warn`, not a `fail`, when there is no Chrome. 0.31.0 also ships Huginn Secrets 0.10.0
+      (the update above): with a Mímir browser token, its popup shows the 2FA codes Mímir opens
+      to a browser on the page's site, and Fill code puts one into the page. Those codes need a
+      Mímir with `browser.code`, and token Fill Mímir 0.30.0 or newer; with an older Mímir, or
+      no token, the popup takes the codes from the CLI, as before.
+
       0.28.0 ships Huginn 0.64.0 (the update above), whose chat panel takes files. Huginn
       copies each file a message carries (attached, pasted or dropped) into that chat's
       folder under ~/.sleipnir/huginn/scratch/, owner-only, for the chat's agent to read.
