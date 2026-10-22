@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/661292195",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/664795386",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.30.0"
-  sha256 "248fcd0f8781f6ba1e06b03fdef3449bf64b7a72b14fb9c74712149e9e570dae"
+  version "0.31.0"
+  sha256 "d85a42cb0debfdabfb06a5b2aad0ce718c69ccd4911306f34f0c23677db4dee6"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -88,6 +88,17 @@ class Sleipnir < Formula
       Huginn (named Sleipnir Companion before Huginn 0.39.0) in each such profile's
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
+
+      0.31.0 no longer needs Chrome Canary. A launch uses CHROME_BINARY, else the browser
+      `slp browser register` pins, else your own Google Chrome, as its own process beside yours.
+      A Mac with /Applications/Google Chrome Canary.app and a Sleipnir profile Canary has run in
+      keeps Canary, recorded once in profiles.json; `slp browser` names the browser and where
+      it came from. `slp doctor`, `--json` included, now calls its `chrome` row `browser`, a
+      `warn`, not a `fail`, when there is no Chrome. 0.31.0 also ships Huginn Secrets 0.10.0
+      (the update above): with a Mímir browser token, its popup shows the 2FA codes Mímir opens
+      to a browser on the page's site, and Fill code puts one into the page. Those codes need a
+      Mímir with `browser.code`, and token Fill Mímir 0.30.0 or newer; with an older Mímir, or
+      no token, the popup takes the codes from the CLI, as before.
 
       0.28.0 ships Huginn 0.64.0 (the update above), whose chat panel takes files. Huginn
       copies each file a message carries (attached, pasted or dropped) into that chat's
