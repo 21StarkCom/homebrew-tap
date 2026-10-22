@@ -13,10 +13,10 @@ class Bragi < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/bragi/releases/assets/605904447",
+  url "https://api.github.com/repos/21StarkCom/bragi/releases/assets/666231007",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.1.0"
-  sha256 "ec52675bf76c6e3464403bbf48aefefb0c7681ec747723b3fe4fa85d77cee836"
+  version "0.2.0"
+  sha256 "84669b376618e1aba5441d2fe77a136dd0790f03eecbf3872854bb9641cb091f"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
