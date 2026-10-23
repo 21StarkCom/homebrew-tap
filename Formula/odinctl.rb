@@ -4,8 +4,10 @@
 # that run a playbook on the odin agent kernel, from a terminal (`odinctl run`) or on a schedule
 # (`odinctl schedule`, which writes its own launchd plists, so this formula has no service block).
 # node ESM, like `librarian`: the zip ships an `npm install --install-links` tree (dist +
-# node_modules + conformance). It has no Mach-O of its own; its one Mach-O is the Agent SDK's
-# Anthropic-signed `claude`. Released from `odinctl-v*` tags by `scripts/release-odinctl.sh`.
+# node_modules + conformance + bin). Two Mach-O files: the Agent SDK's Anthropic-signed `claude`,
+# and odin's face, `bin/odin-face`, the Go program `odinctl ui` starts, which the release builds
+# and signs with the operator's Developer ID (from 0.3.0). Released from `odinctl-v*` tags by
+# `scripts/release-odinctl.sh`.
 # The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
 class Odinctl < Formula
   desc "Doors that run a playbook on the odin agent kernel (terminal and schedule)"
@@ -48,6 +50,8 @@ class Odinctl < Formula
     # `odinctl --version` prints `odinctl <version>`; assert it against the formula's version —
     # version-agnostic, never a hardcoded string.
     assert_equal "odinctl #{version}", shell_output("#{bin}/odinctl --version").strip
+    # `odinctl ui` starts the face beside the shim, at libexec/bin/odin-face; it names its release.
+    assert_equal "odin-face #{version}", shell_output("#{libexec}/bin/odin-face --version").strip
     # Every run starts the SDK's vendored `claude`, found beside the SDK as node finds it.
     sdk = (libexec/"node_modules/@anthropic-ai/claude-agent-sdk").realpath
     assert_match "(Claude Code)", shell_output("#{sdk.parent}/claude-agent-sdk-darwin-arm64/claude --version")
