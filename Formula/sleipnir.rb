@@ -89,6 +89,14 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.32.0 ships Huginn 0.67.0 (the update above), whose chat can leave the side panel:
+      Detach moves it into a window of its own. From then on the chat acts on the active tab of
+      the Chrome window of its kind (regular or incognito) you used last, not the tab it opened
+      beside, so its session reads and acts on whatever page you switch to. Keep on top floats
+      that window above every app, and Attach puts the chat back in a side panel. A
+      `huginn click` on an element that stays outside the viewport now exits 4, where it
+      pressed nothing and reported success.
+
       0.31.0 no longer needs Chrome Canary. A launch uses CHROME_BINARY, else the browser
       `slp browser register` pins, else your own Google Chrome, as its own process beside yours.
       A Mac with /Applications/Google Chrome Canary.app and a Sleipnir profile Canary has run in
@@ -172,9 +180,9 @@ class Sleipnir < Formula
       secret.
 
       0.17.1 renames a Huginn or Huginn Secrets installation in your everyday Chrome that
-      0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS keeps
+      0.16.1 or 0.17.0 left named after the browser though you had labelled it: macOS 27 keeps
       Chrome's own profile folder from the native host, so there the label set in its popup is
-      what names it. It takes that label when its browser next connects, keeping its 6 hex,
+      what names it (macOS 26 still names it after your Chrome profile). It takes that label when its browser next connects, keeping its 6 hex,
       grants, update state and recordings (`slp-huginn-chrome-c17187` labelled "Work Profile"
       becomes `slp-huginn-work-profile-c17187`), and the old ID exits 2 naming the new one:
       update scripts and MCP client configs again from `slp huginn list` and
