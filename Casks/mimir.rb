@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.46.0"
-  sha256 "0e161df7ae06bf23a666c02248a06124d1d491075f388f516050dc7b73f8bb8c"
+  version "0.47.0"
+  sha256 "082e21ed2f8012ff3c0468d67f69e19dcec375942efd2a4927dfcc4d018895da"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/669523730",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/670013525",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -113,10 +113,16 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    0.46.0 adds Google Cloud discovery. Before you run a discovery, upgrade each Mac in sync to
-    0.46.0: a Mac on 0.45.0 or older refuses each item that a discovery makes or changes. That
-    Mac shows no error, and its upgrade to 0.46.0 does not fetch those items. It gets each one
-    only when the item changes again, or when it reads all of iCloud again.
+    0.46.0 adds Google Cloud discovery, and from 0.47.0 an item that a discovery makes syncs at
+    sync model 3. Before you run a discovery, upgrade each Mac in sync to 0.47.0: a Mac on
+    0.46.0 or older pauses its sync at such a record and asks for an update. At its first poll
+    after the upgrade, a Mac reads all of iCloud one time and gets each item that it refused on
+    0.45.0. A record that a Mac on 0.46.0 saved stays at model 1 until its item changes again,
+    and a Mac on 0.45.0 or older refuses that record with no error.
+
+    0.47.0 sends mirror bundles at contract 2. A Linux mirror older than mimir-linux 0.2.0
+    refuses each new bundle and keeps the bundle it has: install mimir-linux 0.2.1 or later on
+    each mirror host.
 
     From 0.40.1, Mímir Sync starts again by itself after an upgrade, and from 0.46.0 Mímir
     Service starts a stopped Mímir Sync again. The upgrade from 0.40.0 can still stop sync,
