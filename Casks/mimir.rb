@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.45.0"
-  sha256 "c9871702bd6d444942cadd12f38eee4b3c9a3240e6aaf8f3aae98ddcd9c29ab8"
+  version "0.46.0"
+  sha256 "0e161df7ae06bf23a666c02248a06124d1d491075f388f516050dc7b73f8bb8c"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/666939092",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/669523730",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -61,7 +61,8 @@ cask "mimir" do
   # directive: it seals when its bundle is replaced and exits once the new one verifies, and
   # launchd relaunches it. Nor does Mímir Sync, a launchd agent the app registers while sync is
   # on: from 0.40.1 it exits 75 when its bundle is replaced, and launchd starts the new one. The
-  # 0.40.0 helper exits 0 instead and stays stopped until the next login (the caveat below).
+  # 0.40.0 helper exits 0 instead and stays stopped until the next login, or until a 0.46.0 or
+  # later Mímir Service starts it again with `launchctl kickstart` (the caveat below).
   # `quit:` is for the app and its menu, never a launchd job. Never `launchctl` here: Homebrew
   # runs every `uninstall` directive but `signal` on `brew upgrade` too, so it would boot the
   # service out on every upgrade (mimir's spec 2026-09-25-background-service §5.5).
@@ -82,7 +83,9 @@ cask "mimir" do
   # bundle id. From 0.39.0 Mímir Sync talks to iCloud through CloudKit, which caches its
   # container's records for the helper's bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
-  # Danger Zone → Erase Everything, never a package manager's job.
+  # Danger Zone → Erase Everything, never a package manager's job. The Keychain's other items stay
+  # too, the Google Cloud refresh tokens (`com.21stark.mimir.gcp-refresh`, from 0.46.0) included:
+  # removing an account in Mímir deletes its token (the caveat below).
   zap launchctl: [
         "com.21stark.mimir.menu",
         "com.21stark.mimir.service",
@@ -110,10 +113,16 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    From 0.40.1, Mímir Sync starts again by itself after an upgrade. The upgrade from 0.40.0
-    can still stop sync, because the 0.40.0 helper runs during it: if Mímir Menu shows that
-    sync stopped, log out and log in one time. Before you join a Mac by approval, upgrade each
-    Mac in sync to 0.40.0 or later: an older build pauses its sync until you upgrade it.
+    0.46.0 adds Google Cloud discovery. Before you run a discovery, upgrade each Mac in sync to
+    0.46.0: a Mac on 0.45.0 or older refuses each item that a discovery makes or changes. That
+    Mac shows no error, and its upgrade to 0.46.0 does not fetch those items. It gets each one
+    only when the item changes again, or when it reads all of iCloud again.
+
+    From 0.40.1, Mímir Sync starts again by itself after an upgrade, and from 0.46.0 Mímir
+    Service starts a stopped Mímir Sync again. The upgrade from 0.40.0 can still stop sync,
+    because the 0.40.0 helper runs during it: if Mímir Menu still shows that sync stopped, log
+    out and log in one time. Before you join a Mac by approval, upgrade each Mac in sync to
+    0.40.0 or later: an older build pauses its sync until you upgrade it.
 
     0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
     after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
@@ -164,6 +173,7 @@ cask "mimir" do
     `launchctl bootout gui/$(id -u)/com.21stark.mimir.sync`.
     `brew uninstall --zap --cask 21StarkCom/tap/mimir` removes them all AND moves Mímir's local
     data, the vault and its plaintext export included, to the Trash (add `--force` once a
-    plain uninstall has run).
+    plain uninstall has run). Zap leaves Mímir's Keychain items, the refresh token of each
+    Google Cloud account included: remove each account in Mímir first to delete its token.
   EOS
 end
