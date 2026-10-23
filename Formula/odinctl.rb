@@ -33,8 +33,8 @@ class Odinctl < Formula
   depends_on "node" # odinctl is node ESM; the keg node runs dist/bin.js
 
   def install
-    # The zip is the runnable tree (dist/, node_modules/ with no symlinks, conformance/,
-    # package.json). odinctl reads its conformance fixtures from libexec/conformance, so keep
+    # The zip is the runnable tree (dist/, bin/, conformance/, package.json, and a node_modules/
+    # with no symlinks). odinctl reads its conformance fixtures from libexec/conformance, so keep
     # the layout intact under libexec and wrap the entry point.
     libexec.install Dir["*"]
     (bin/"odinctl").write <<~SH
@@ -45,9 +45,9 @@ class Odinctl < Formula
   end
 
   test do
-    # `odinctl --version` prints the version; assert it against the formula's version —
+    # `odinctl --version` prints `odinctl <version>`; assert it against the formula's version —
     # version-agnostic, never a hardcoded string.
-    assert_match version.to_s, shell_output("#{bin}/odinctl --version")
+    assert_equal "odinctl #{version}", shell_output("#{bin}/odinctl --version").strip
     # Every run starts the SDK's vendored `claude`, found beside the SDK as node finds it.
     sdk = (libexec/"node_modules/@anthropic-ai/claude-agent-sdk").realpath
     assert_match "(Claude Code)", shell_output("#{sdk.parent}/claude-agent-sdk-darwin-arm64/claude --version")
