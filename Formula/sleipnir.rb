@@ -288,7 +288,7 @@ class Sleipnir < Formula
     # `slp ua` lists the UA profiles — no browser, no profile, no side effects.
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
     # `huginn --help` prints its usage without reaching a browser or the native host.
-    assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
+    assert_match "Usage: huginn", shell_output("#{bin}/huginn --help")
     # The MCP launcher answers `help` before it imports the server or opens stdio.
     assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
     # `slp huginn install` registers Huginn's native host and Huginn Secrets' own
@@ -303,7 +303,7 @@ class Sleipnir < Formula
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
     (testpath/".env").write "SLEIPNIR_HOME=#{testpath}/from-dotenv\n"
     assert_match "mac-desktop-chrome", shell_output("#{bin}/slp ua")
-    assert_match "usage: huginn", shell_output("#{bin}/huginn --help")
+    assert_match "Usage: huginn", shell_output("#{bin}/huginn --help")
     # `help` returns before the server loads; `initialize` over stdio loads its whole module
     # graph from the installed tree, and the server exits when stdin closes.
     init = { jsonrpc: "2.0", id: 1, method: "initialize",
