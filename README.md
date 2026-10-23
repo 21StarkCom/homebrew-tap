@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 15 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 16 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux` and
 `frigg-linux`, hermod's and frigg's Linux x86_64 builds for the devbox. The tap builds
 nothing. It only pins each entry to a published release, and each source repo's release
 re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 18 of the 20 are re-pinned on each release
+**Status:** active. Every entry installs today; 19 of the 21 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -74,6 +74,7 @@ does not record GitHub's host key.
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
+| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
@@ -302,6 +303,24 @@ brew install 21StarkCom/tap/lumiere
 zip is a Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source
 in the `lumiere` repo (`make build`).
 
+## odinctl
+
+The [`odinctl`](https://github.com/21StarkCom/odin) CLI (`@21starkcom/odinctl`): the doors
+that run a playbook on the odin agent kernel, from a terminal (`odinctl run`) or on a
+schedule (`odinctl schedule`).
+
+```sh
+brew install 21StarkCom/tap/odinctl
+```
+
+The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
+Like `librarian`, the release zip is a node ESM tree (`dist/`, a vendored `node_modules` with
+no symlinks, and the `conformance/` fixtures) that the formula installs into `libexec` and
+wraps to run under the keg's `node`. It has no `service do` block: `odinctl schedule` writes
+its own launchd plists. The package has no Mach-O of its own; its one Mach-O is the Agent
+SDK's Anthropic-signed `claude`, so it is not notarized. Released from `odinctl-v*` tags by
+odin's `scripts/release-odinctl.sh`.
+
 ## plume
 
 The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — one
@@ -523,6 +542,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
 | `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
+| `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `stark-statusline` | idavoll | `statusline/release.sh` (`make statusline-release STATUSLINE_VERSION=X.Y.Z`), for a `statusline-v*` tag | the operator's Mac |
