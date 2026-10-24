@@ -113,12 +113,21 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.48.0 keeps the MCP token's digest and both MCP switches in Mímir Service's Keychain item
+    `mcp-auth`, not in `mcp.json`. At its first start, Mímir Service can show one Keychain
+    dialog for `com.21stark.mimir.loopback-tokens`: this dialog is expected, so allow it. MCP
+    stays on only if your Keychain holds the token that `mcp.json` names. Otherwise MCP and
+    Allow drop box (create_item) are off: choose Unlock… in Mímir Menu, set MCP ▸ Enabled on,
+    choose Rotate Token… if Copy Token has no token, and give the new token to each agent. Set
+    MCP ▸ Allow drop box (create_item) on to use `create_item` again. The CLI's TCP fallback is
+    now off unless CLI ▸ Allow TCP fallback is on, or you pass `--tcp`.
+
     0.46.0 adds Google Cloud discovery, and from 0.47.0 an item that a discovery makes syncs at
-    sync model 3. Before you run a discovery, upgrade each Mac in sync to 0.47.0: a Mac on
-    0.46.0 or older pauses its sync at such a record and asks for an update. At its first poll
-    after the upgrade, a Mac reads all of iCloud one time and gets each item that it refused on
-    0.45.0. A record that a Mac on 0.46.0 saved stays at model 1 until its item changes again,
-    and a Mac on 0.45.0 or older refuses that record with no error.
+    sync model 3. Before you run a discovery, upgrade each Mac in sync to 0.47.0 or later: a
+    Mac on 0.46.0 or older pauses its sync at such a record and asks for an update. At its
+    first poll after the upgrade, a Mac reads all of iCloud one time and gets each item that it
+    refused on 0.45.0. A record that a Mac on 0.46.0 saved stays at model 1 until its item
+    changes again, and a Mac on 0.45.0 or older refuses that record with no error.
 
     0.47.0 sends mirror bundles at contract 2. A Linux mirror older than mimir-linux 0.2.0
     refuses each new bundle and keeps the bundle it has: install mimir-linux 0.2.1 or later on
