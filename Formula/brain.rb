@@ -45,6 +45,18 @@ class Brain < Formula
     (bin/"brain").chmod 0755
   end
 
+  service do
+    # Every 600 s, fast-forward each registry vault whose entry sets `track`, then sync every
+    # registry vault. launchd starts no second run while one is still going.
+    run [opt_bin/"brain", "vaults", "sync", "--pull"]
+    run_type :interval
+    interval 600
+    # A LaunchAgent's default PATH lacks /opt/homebrew/bin, where git and node live.
+    environment_variables PATH: std_service_path_env
+    log_path "~/.local/state/atlas/logs/vaults-sync-service.log"
+    error_log_path "~/.local/state/atlas/logs/vaults-sync-service.log"
+  end
+
   test do
     # `brain version` prints `brain <version>`; assert it against the formula's version —
     # version-agnostic (never a hardcoded string), answered before the registry loads.

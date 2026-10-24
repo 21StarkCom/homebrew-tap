@@ -64,7 +64,7 @@ does not record GitHub's host key.
 | `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login` | `bun build --compile` | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
-| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` | node ESM tree | Developer ID + notarized native modules | any |
+| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
@@ -144,6 +144,7 @@ vault, and run the review/housekeep surfaces.
 
 ```sh
 brew install 21StarkCom/tap/brain
+brew services start brain    # runs `brain vaults sync --pull` every 10 minutes
 ```
 
 Unlike the single-binary CLIs, `brain` is **node ESM** inside a pnpm monorepo, so the
@@ -157,6 +158,13 @@ recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline
 so it's online-notarized — moot under Homebrew, which installs a formula's files without the
 quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
+
+Its `service do` block is an interval job, not a daemon: launchd runs
+`brain vaults sync --pull` at the start and then every 600 s, so each registry vault whose
+entry sets `track` follows its branch on its own. It uses Homebrew's standard service `PATH`,
+because a LaunchAgent's default `PATH` lacks `/opt/homebrew/bin`, where `git` and `node` live.
+Each run writes to `~/.local/state/atlas/logs/vaults-sync-service.log`. Each run starts the
+current keg through `opt_bin`, so an upgrade needs no service restart.
 
 ## frigg
 
