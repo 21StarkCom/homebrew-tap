@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/671726393",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/672395499",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.35.0"
-  sha256 "e2417cd61c30de33e6c15b60dc1fedc00ac5e0103e9b5fe727016ab56575ea2e"
+  version "0.36.0"
+  sha256 "d35ac6da32abab8db825d50157a0767a8eb857b40a952248dad5a0354e56884c"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -298,6 +298,9 @@ class Sleipnir < Formula
       probe = shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/huginn/bin/#{host} --probe")
       assert_equal true, JSON.parse(probe).fetch("ok")
     end
+    # `slp gungnir` imports its package (and that package's own zod) only when it runs, so
+    # `slp ua` never loads it; `adapters` loads its whole module graph with no browser or Huginn.
+    assert_kind_of Array, JSON.parse(shell_output("#{bin}/slp gungnir adapters --json")).fetch("adapters")
     # A bunfig.toml preload or .env in the working directory must not reach the wrappers.
     (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
