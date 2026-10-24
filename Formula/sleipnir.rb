@@ -298,6 +298,9 @@ class Sleipnir < Formula
       probe = shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/huginn/bin/#{host} --probe")
       assert_equal true, JSON.parse(probe).fetch("ok")
     end
+    # `slp gungnir` imports its package (and that package's own zod) only when it runs, so
+    # `slp ua` never loads it; `adapters` loads its whole module graph with no browser or Huginn.
+    assert_kind_of Array, JSON.parse(shell_output("#{bin}/slp gungnir adapters --json")).fetch("adapters")
     # A bunfig.toml preload or .env in the working directory must not reach the wrappers.
     (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
