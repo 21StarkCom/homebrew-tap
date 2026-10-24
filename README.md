@@ -74,7 +74,7 @@ does not record GitHub's host key.
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
-| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
+| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
@@ -317,9 +317,10 @@ The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin languag
 Like `librarian`, the release zip is a node ESM tree (`dist/`, a vendored `node_modules` with
 no symlinks, and the `conformance/` fixtures) that the formula installs into `libexec` and
 wraps to run under the keg's `node`. It has no `service do` block: `odinctl schedule` writes
-its own launchd plists. The package has no Mach-O of its own; its one Mach-O is the Agent
-SDK's Anthropic-signed `claude`, so it is not notarized. Released from `odinctl-v*` tags by
-odin's `scripts/release-odinctl.sh`.
+its own launchd plists. The package's own Mach-O is `bin/odin-face`, the Go program that
+`odinctl ui` starts, signed with the operator's Developer ID and notarized; its other Mach-O
+is the Agent SDK's Anthropic-signed `claude`. Released from `odinctl-v*` tags by odin's
+`scripts/release-odinctl.sh`.
 
 ## plume
 
