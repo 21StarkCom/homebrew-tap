@@ -46,13 +46,19 @@ class Brain < Formula
   end
 
   service do
-    # Every 600 s, fast-forward each registry vault whose entry sets `track`, then sync every
-    # registry vault. launchd starts no second run while one is still going.
+    # Every 600 s, sync every registry vault. A vault whose entry sets `track` is first
+    # fast-forwarded to that branch; a refused fast-forward skips that vault's sync. launchd
+    # starts no second run while one is still going.
     run [opt_bin/"brain", "vaults", "sync", "--pull"]
     run_type :interval
     interval 600
-    # A LaunchAgent's default PATH lacks /opt/homebrew/bin, where git and node live.
+    # Nobody waits on this job, so launchd may throttle its CPU and I/O.
+    process_type :background
+    # A LaunchAgent's default PATH lacks /opt/homebrew/bin, so brain's `git` would be /usr/bin's.
+    # The wrapper runs node by its full path.
     environment_variables PATH: std_service_path_env
+    # Each run appends one summary line per vault here. brain's own rotated log (`logs.dir`)
+    # records each run's start and end, with timestamps.
     log_path "~/.local/state/atlas/logs/vaults-sync-service.log"
     error_log_path "~/.local/state/atlas/logs/vaults-sync-service.log"
   end

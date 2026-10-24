@@ -160,11 +160,18 @@ quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
 
 Its `service do` block is an interval job, not a daemon: launchd runs
-`brain vaults sync --pull` at the start and then every 600 s, so each registry vault whose
-entry sets `track` follows its branch on its own. It uses Homebrew's standard service `PATH`,
-because a LaunchAgent's default `PATH` lacks `/opt/homebrew/bin`, where `git` and `node` live.
-Each run writes to `~/.local/state/atlas/logs/vaults-sync-service.log`. Each run starts the
-current keg through `opt_bin`, so an upgrade needs no service restart.
+`brain vaults sync --pull` when the service loads (at `brew services start` and at
+each login) and then every 600 s, as a background process, so each registry vault whose entry
+sets `track` follows its branch on its own. It uses Homebrew's standard service `PATH`,
+because a LaunchAgent's default `PATH` lacks `/opt/homebrew/bin`, where Homebrew's `git`
+lives. Each run appends one summary line per vault to
+`~/.local/state/atlas/logs/vaults-sync-service.log`; brain's own log records each run's
+start and end, with timestamps. Each run starts the current keg through `opt_bin`,
+so an upgrade needs no service restart.
+The job gets no shell environment and runs in `/`: it reads
+`~/.config/atlas/brain.config.yaml` and the Gemini key file or Keychain item, never an
+`ATLAS_*` variable (`ATLAS_CONFIG`, `ATLAS_GEMINI_API_KEY`) that your shell exports.
+`brew uninstall` does not stop a started service, so run `brew services stop brain` first.
 
 ## frigg
 
