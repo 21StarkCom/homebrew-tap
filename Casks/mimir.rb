@@ -113,6 +113,16 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.49.0 keeps the vault's version inside Mímir Service's Keychain item `vault-key`, with
+    the vault key. This change is one-way: a Mímir older than 0.49.0 can't read that key, so
+    to go back to one, restore your vault with your recovery key. If this Mac syncs, leave sync
+    before you go back: an older Mímir refuses a restore while sync is on. Mímir Service now
+    refuses a vault file older than the newest one it wrote; a vault file with no generation
+    mark gets Trust this vault file on the lock screen, behind its own Touch ID. Before you
+    upgrade a Mac that syncs, finish each Remove in Settings › Sync: a re-key that stops
+    across the upgrade can leave a vault that this Mac can't unlock. If a Remove stopped
+    during the upgrade, remove that Mac again.
+
     0.48.0 keeps the MCP token's digest and both MCP switches in Mímir Service's Keychain item
     `mcp-auth`, not in `mcp.json`. At its first start, Mímir Service can show one Keychain
     dialog for `com.21stark.mimir.loopback-tokens`: this dialog is expected, so allow it. MCP
@@ -141,9 +151,10 @@ cask "mimir" do
 
     0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
     after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
-    and is retried at the next unlock. The move is one-way: 0.31.x still opens the vault, but
-    a Mímir older than 0.31.0 finds no key item and needs a restore from a backup with your
-    recovery key, so keep a recent Drive backup and your recovery key before going back.
+    and is retried at the next unlock. The move is one-way: a Mímir older than 0.31.0 finds no
+    key item and needs a restore from a backup with your recovery key. Once 0.49.0 unlocks the
+    vault, any Mímir older than 0.49.0 needs that restore too (see 0.49.0 above). Keep a recent
+    Drive backup and your recovery key before going back.
 
     A vault no Mímir 0.30 has unlocked is still at schema 1. From 0.31.1 Mímir Service converts
     it at its first unlock, so upgrading from 0.29.x or older no longer needs a pass through
