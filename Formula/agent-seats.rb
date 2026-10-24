@@ -12,10 +12,10 @@ class AgentSeats < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/agent-seats/releases/assets/672050552",
+  url "https://api.github.com/repos/21StarkCom/agent-seats/releases/assets/672220853",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.21.0"
-  sha256 "46608b720fc4acd543f066a0901994d4c43f27e822f05ed38c5ac29373e3c263"
+  version "0.21.1"
+  sha256 "8e3a6fda7d9b1574469e188e748d44fbb674bf394815e1bc8af4441d0c8969db"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
