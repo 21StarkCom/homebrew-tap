@@ -77,6 +77,11 @@ class Sleipnir < Formula
       cap exits 3 saying `claude not found`. It runs only on the hCaptcha and reCAPTCHA demo
       pages, and any other `--url` exits 2.
 
+      0.38.0's `slp gungnir` adapter `cursor.members` reads the Cursor team through frigg at
+      /opt/homebrew/bin/frigg, a formula this one does not depend on: without it, each
+      `cursor.members` read, check and plan exits 3 saying `frigg could not start`. Install it:
+        brew install 21StarkCom/tap/frigg
+
       sleipnir drives Huginn 0.41.0 or newer, the builds that update themselves (sleipnir
       0.13.0 was the first release to ship one). Each `brew upgrade 21StarkCom/tap/sleipnir`
       reaches every browser running one with no command, once nothing is using the extension
@@ -301,6 +306,10 @@ class Sleipnir < Formula
     # `slp gungnir` imports its package (and that package's own zod) only when it runs, so
     # `slp ua` never loads it; `adapters` loads its whole module graph with no browser or Huginn.
     assert_kind_of Array, JSON.parse(shell_output("#{bin}/slp gungnir adapters --json")).fetch("adapters")
+    # `slp skills` (read-only without `install`) names each skill through the opt link, not this
+    # versioned keg, so a link `slp skills install` makes outlives `brew upgrade`.
+    links = JSON.parse(shell_output("#{bin}/slp skills --json")).fetch("links")
+    assert_includes links.map { |l| l.fetch("target") }, "#{opt_libexec}/skills/sleipnir"
     # A bunfig.toml preload or .env in the working directory must not reach the wrappers.
     (testpath/"bunfig.toml").write 'preload = ["./preload.ts"]'
     (testpath/"preload.ts").write 'throw new Error("cwd bunfig preload ran")'
