@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.49.0"
-  sha256 "555682864dddf4bafd042baee0b948ec04337f455a4b23065acbfe5c15bc1033"
+  version "0.50.0"
+  sha256 "e85f81b03525fc5d6cf3286c082f9c7b75698a04f715c8e83f0b05aeea29d02a"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/672948668",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/674254716",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -78,10 +78,12 @@ cask "mimir" do
   # ~/Code/Temp/Mimir too: the plaintext copy of the whole vault, secrets in the clear, that
   # every schema 2 conversion writes (a schema 1 vault's first unlock under 0.30, or under Mímir
   # Service from 0.31.1, or a schema 1 backup's restore) and Mímir never deletes
-  # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 Mímir Service makes its
-  # own Drive and AI calls (URLSession.shared), so it keeps a cache and HTTP storage under its own
-  # bundle id. From 0.39.0 Mímir Sync talks to iCloud through CloudKit, which caches its
-  # container's records for the helper's bundle id.
+  # (PlaintextV1Export.defaultRoot, the service's root too). From 0.31.0 to 0.49.0 Mímir Service
+  # made its own Drive and AI calls through URLSession.shared, which kept a cache (GCP secret
+  # values among it) and HTTP storage under its own bundle id; 0.50.0 sends with no cache and
+  # empties that cache at start, but an older install's folders stay until zap. From 0.39.0
+  # Mímir Sync talks to iCloud through CloudKit, which caches its container's records for the
+  # helper's bundle id.
   # Leaves the login-Keychain vault key alone — that crypto-erases the vault and is the app's own
   # Danger Zone → Erase Everything, never a package manager's job. The Keychain's other items stay
   # too, the Google Cloud refresh tokens (`com.21stark.mimir.gcp-refresh`, from 0.46.0) included:
@@ -113,15 +115,32 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.50.0 changes the sync records. Upgrade each Mac in sync together, and let each Mac sync
+    before you upgrade it. A Mac on 0.49.0 or older pauses its sync at the first approval or
+    delete from a 0.50.0 Mac, until you upgrade it. After the upgrade, the first sync of each
+    Mac reads all of iCloud one time. A Mac that upgrades before it gets an approval made on
+    0.49.0 refuses the records of the approved Mac: leave sync on the approved Mac, then join
+    it again with the recovery key. A 0.50.0 Mac refuses a join request that a Mac on 0.49.0
+    or older answered first. While the list of Macs holds a Mac approved on 0.49.0 or older,
+    join a new Mac with the recovery key.
+
+    Before 0.50.0, a Google Cloud discovery left a copy of each secret value that it read in
+    ~/Library/Caches/com.21stark.mimir.service, not encrypted beyond FileVault. 0.50.0 removes
+    that cache when Mímir Service starts. Upgrade each Mac before its next discovery. If a
+    program that you do not trust ran as your user while that cache existed, rotate the
+    secrets that discovery read. An older PagerDuty item can keep its Routing Key as a public
+    value: tick Sensitive on it to seal it.
+
     0.49.0 keeps the vault's version inside Mímir Service's Keychain item `vault-key`, with
     the vault key. This change is one-way: a Mímir older than 0.49.0 can't read that key, so
     to go back to one, restore your vault with your recovery key. If this Mac syncs, leave sync
     before you go back: an older Mímir refuses a restore while sync is on. Mímir Service now
     refuses a vault file older than the newest one it wrote; a vault file with no generation
     mark gets Trust this vault file on the lock screen, behind its own Touch ID. Before you
-    upgrade a Mac that syncs, finish each Remove in Settings › Sync: a re-key that stops
-    across the upgrade can leave a vault that this Mac can't unlock. If a Remove stopped
-    during the upgrade, remove that Mac again.
+    upgrade a Mac that syncs, finish each Remove in Settings › Sync. If a re-key stopped
+    across the upgrade and this Mac's vault key does not open the vault, the 0.50.0 lock
+    screen offers Open with recovery key, with every change kept. If a Remove stopped during
+    the upgrade, remove that Mac again.
 
     0.48.0 keeps the MCP token's digest and both MCP switches in Mímir Service's Keychain item
     `mcp-auth`, not in `mcp.json`. At its first start, Mímir Service can show one Keychain
@@ -133,11 +152,12 @@ cask "mimir" do
     now off unless CLI ▸ Allow TCP fallback is on, or you pass `--tcp`.
 
     0.46.0 adds Google Cloud discovery, and from 0.47.0 an item that a discovery makes syncs at
-    sync model 3. Before you run a discovery, upgrade each Mac in sync to 0.47.0 or later: a
-    Mac on 0.46.0 or older pauses its sync at such a record and asks for an update. At its
-    first poll after the upgrade, a Mac reads all of iCloud one time and gets each item that it
-    refused on 0.45.0. A record that a Mac on 0.46.0 saved stays at model 1 until its item
-    changes again, and a Mac on 0.45.0 or older refuses that record with no error.
+    sync model 3. Before you run a discovery, upgrade each Mac in sync to 0.50.0 or later (see
+    0.50.0 above): a Mac on 0.46.0 or older pauses its sync at such a record and asks for an
+    update. At its first poll after the upgrade, a Mac reads all of iCloud one time and gets
+    each item that it refused on 0.45.0. A record that a Mac on 0.46.0 saved stays at model 1
+    until its item changes again, and a Mac on 0.45.0 or older refuses that record with no
+    error.
 
     0.47.0 sends mirror bundles at contract 2. A Linux mirror older than mimir-linux 0.2.0
     refuses each new bundle and keeps the bundle it has: install mimir-linux 0.2.1 or later on
@@ -147,7 +167,8 @@ cask "mimir" do
     Service starts a stopped Mímir Sync again. The upgrade from 0.40.0 can still stop sync,
     because the 0.40.0 helper runs during it: if Mímir Menu still shows that sync stopped, log
     out and log in one time. Before you join a Mac by approval, upgrade each Mac in sync to
-    0.40.0 or later: an older build pauses its sync until you upgrade it.
+    0.50.0 or later (see 0.50.0 above): a build older than 0.40.0 pauses its sync until you
+    upgrade it.
 
     0.32.0 moves the vault key into Mímir Service's own Keychain item at the first unlock
     after upgrading, with no Keychain dialog; a step that fails shows in the menu bar's Issues
