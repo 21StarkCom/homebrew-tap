@@ -115,6 +115,15 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
+    0.52.0 sends mirror bundles at contract 3. Before a Mac runs 0.52.0, install mimir-linux
+    0.3.0 or later on each mirror host: a Linux mirror on mimir-linux 0.2.x or older refuses
+    each new bundle and keeps the bundle it has. The safety net now withholds an unticked
+    value under a key that its template declares secret, such as the Routing Key of an older
+    PagerDuty item or the certificate of an Apple Signing Certificate item. `expiry ls` and
+    tidy then read that certificate's date only through an open CLI door. Upgrade each Mac in
+    sync soon: a Mac on 0.51.0 or older keeps the old rules until you upgrade it. Its sync
+    does not pause, because the sync records do not change.
+
     0.51.0 fixes eight faults in the list of Macs in sync. Upgrade each Mac in sync soon: a
     Mac on 0.50.0 or older keeps the old rules until you upgrade it. Its sync does not pause,
     because the sync records do not change. Before you upgrade, finish each Remove in
@@ -176,8 +185,8 @@ cask "mimir" do
     error.
 
     0.47.0 sends mirror bundles at contract 2. A Linux mirror older than mimir-linux 0.2.0
-    refuses each new bundle and keeps the bundle it has: install mimir-linux 0.2.1 or later on
-    each mirror host.
+    refuses each new bundle and keeps the bundle it has. From 0.52.0, each mirror host needs
+    mimir-linux 0.3.0 or later (see 0.52.0 above).
 
     From 0.40.1, Mímir Sync starts again by itself after an upgrade, and from 0.46.0 Mímir
     Service starts a stopped Mímir Sync again. The upgrade from 0.40.0 can still stop sync,
