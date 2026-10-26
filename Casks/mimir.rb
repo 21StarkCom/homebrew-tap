@@ -115,9 +115,9 @@ cask "mimir" do
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
 
-    0.52.0 sends mirror bundles at contract 3. Before a Mac runs 0.52.0, install mimir-linux
-    0.3.0 or later on each mirror host: a Linux mirror on mimir-linux 0.2.x or older refuses
-    each new bundle and keeps the bundle it has. The safety net now withholds an unticked
+    0.52.0 sends mirror bundles at contract 3. Before a Mac runs 0.52.0 or later, install
+    mimir-linux 0.3.0 or later on each mirror host: a Linux mirror on mimir-linux 0.2.x or older
+    refuses each new bundle and keeps the bundle it has. The safety net now withholds an unticked
     value under a key that its template declares secret, such as the Routing Key of an older
     PagerDuty item or the certificate of an Apple Signing Certificate item. `expiry ls` and
     tidy then read that certificate's date only through an open CLI door. Upgrade each Mac in
