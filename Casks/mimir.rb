@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.50.0"
-  sha256 "e85f81b03525fc5d6cf3286c082f9c7b75698a04f715c8e83f0b05aeea29d02a"
+  version "0.51.0"
+  sha256 "4a8366c9dde0845cc4e16e5344b399633ffa1a4ef6259c4f93b0c588f4152263"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/674254716",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/677227067",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
@@ -114,6 +114,22 @@ cask "mimir" do
     Opening Mímir registers Mímir Service, the background helper the `mimir` CLI and MCP
     talk to. Pair the CLI from the Mímir menu bar item (CLI ▸ Pair a CLI…, then
     `mimir pair`); `mimir status` reports the state.
+
+    0.51.0 fixes eight faults in the list of Macs in sync. Upgrade each Mac in sync soon: a
+    Mac on 0.50.0 or older keeps the old rules until you upgrade it. Its sync does not pause,
+    because the sync records do not change. Before you upgrade, finish each Remove in
+    Settings › Sync (see 0.49.0 below). To leave sync, upgrade first: a Leave now runs while
+    sync pauses for an update, and a change that this Mac made during the pause then stays
+    on this Mac only.
+
+    0.51.0 takes the CLI switch, the TCP fallback and the session length from Mímir Service's
+    Keychain item `cli-auth`, not from `cli.json`. The first start copies them from `cli.json`,
+    so the CLI stays as it was. After that, an edit of `cli.json` can only turn the CLI or its
+    TCP fallback off, or make its sessions shorter. To turn on the CLI or its TCP fallback, or
+    to make sessions longer, open the vault, then use CLI ▸ CLI enabled, Allow TCP fallback or
+    Session length in Mímir Menu. At each start, the CLI stays off until Mímir Service reads
+    `cli-auth`. If a later start finds no `cli-auth` or `mcp-auth` item, that door goes off at
+    the next unlock: turn it on again in the menu, and for MCP, rotate its token.
 
     0.50.0 changes the sync records. Upgrade each Mac in sync together, and let each Mac sync
     before you upgrade it. A Mac on 0.49.0 or older pauses its sync at the first approval or
