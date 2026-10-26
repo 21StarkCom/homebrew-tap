@@ -257,7 +257,7 @@ brew install 21StarkCom/tap/idun
 The release zip is a `bun build --compile` binary, Developer-ID signed + notarized. It is
 compiled with the release Mac's Homebrew `bun`, whose build targets macOS 27.0, so the
 formula requires macOS 27 (Golden Gate). A checkout of the `idun` repo can instead
-install a live, repo-tracking wrapper with `./setup.sh`, which steps aside when this
+install a live, repo-tracking wrapper with `apps/idun/setup.sh`, which steps aside when this
 formula is installed.
 
 ## librarian
@@ -333,7 +333,7 @@ The release zip is a `bun build --compile` binary, Developer-ID signed + notariz
 a `njord-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
 `bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
 checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
-`./setup.sh`, which is how the Linux devbox runs it.
+`apps/idun/setup.sh`, which steps aside when this formula is installed.
 
 ## odinctl
 
