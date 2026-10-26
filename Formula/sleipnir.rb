@@ -13,10 +13,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/678747185",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/678983191",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.39.0"
-  sha256 "c0bf6e66372525cdbf9ffbcd12d2ecdffdb2fb83f12a568f7b63ce1aa67810f1"
+  version "0.39.1"
+  sha256 "5ba43dd7c8fe7cbf1b15b61b13ecc81aeb305a2b178e411679cd3fdb81e5aacf"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -310,13 +310,13 @@ class Sleipnir < Formula
     assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
     # `slp huginn install` registers Huginn's native host and Huginn Secrets' own
     # (`com.21stark.huginn.secrets`) with Chrome; `--probe` loads each one's module graph
-    # from the installed tree without starting a host, all but Huginn's chat.
+    # from the installed tree without starting a host, Huginn's chat included from 0.39.1.
     %w[huginn-host.mjs huginn-secrets-host.mjs].each do |host|
       probe = shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/huginn/bin/#{host} --probe")
       assert_equal true, JSON.parse(probe).fetch("ok")
     end
-    # Huginn's host imports its chat (chat.ts, and from 0.39.0 the chat store it keeps on disk)
-    # only when Chrome starts it; importing it here loads that graph and starts nothing.
+    # The probe skips a chat.ts missing from the tree (the bridge's runtime has none), so import
+    # it here too: that fails when the zip leaves it out, and checks the export the host starts.
     (testpath/"chat.mjs").write "console.log(typeof (await import(process.argv[2])).startChats)"
     chat = shell_output("#{formula_opt_bin("bun")}/bun --no-env-file --config=/dev/null #{testpath}/chat.mjs " \
                         "#{libexec}/packages/huginn/src/chat.ts")
