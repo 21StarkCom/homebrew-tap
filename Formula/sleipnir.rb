@@ -94,6 +94,17 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.39.0 ships Huginn 0.68.8 (the update above), which keeps every chat and resumes it.
+      Closing the panel no longer ends a chat: a running turn goes on to its end with no panel
+      open, then the chat sleeps. Your next message wakes it in its own folder, with its own
+      Claude or Codex session; Stop ends a running turn. A chat that sent a message keeps its
+      scratch folder, empty or not, and its record and journal under SLEIPNIR_HOME's
+      huginn/chats/. The journal holds the page text and tool results the chat saw, and
+      nothing prunes it: treat both folders as secret. Only Delete, in a chat's menu in
+      Recents (the first button in the panel's header), removes them, with the agent's own
+      session file. While a chat shows or runs, a pill at the bottom of its tab shows its
+      latest command, with the text and values it entered.
+
       0.32.0 ships Huginn 0.67.0 (the update above), whose chat can leave the side panel:
       Detach moves it into a window of its own. From then on the chat acts on the active tab of
       the Chrome window of its kind (regular or incognito) you used last, not the tab it opened
@@ -116,8 +127,9 @@ class Sleipnir < Formula
       0.28.0 ships Huginn 0.64.0 (the update above), whose chat panel takes files. Huginn
       copies each file a message carries (attached, pasted or dropped) into that chat's
       folder under ~/.sleipnir/huginn/scratch/, owner-only, for the chat's agent to read.
-      A folder with a file in it stays when the chat ends, and nothing removes it later:
-      treat it as secret, and remove it yourself.
+      A folder with a file in it stays when the chat ends: treat it as secret. Until 0.39.0
+      (above) nothing removed it later; now Delete does, and a folder removed by hand leaves
+      the chat's journal.
 
       0.27.0 ships Huginn 0.62.2 (the update above), whose chat panel needs no idun: Huginn's
       host starts Claude Code (`claude`) or Codex (`codex app-server`) itself, the first it
@@ -127,8 +139,8 @@ class Sleipnir < Formula
       Claude chat does (below), with no permission prompts (approvals `never` and
       `danger-full-access`) and your settings, hooks, MCP servers and AGENTS.md, so text on a
       page it reads reaches a session that runs any command without asking. Each chat works
-      in a fresh folder under ~/.sleipnir/huginn/scratch/, removed at its end only when empty
-      and otherwise kept, unswept: treat a kept one as secret.
+      in a fresh folder under ~/.sleipnir/huginn/scratch/. Until 0.39.0 (above), a chat's end
+      removed it only when empty, and kept it otherwise, unswept: treat a kept one as secret.
 
       0.23.0 ships Huginn 0.61.2 (the update above), whose popup's new Screenshot button
       captures the whole page, whatever it shows of a signed-in account, into
@@ -297,12 +309,18 @@ class Sleipnir < Formula
     # The MCP launcher answers `help` before it imports the server or opens stdio.
     assert_match "Usage: sleipnir-mcp", shell_output("#{bin}/sleipnir-mcp help")
     # `slp huginn install` registers Huginn's native host and Huginn Secrets' own
-    # (`com.21stark.huginn.secrets`) with Chrome; `--probe` loads each one's whole module
-    # graph from the installed tree without starting a host.
+    # (`com.21stark.huginn.secrets`) with Chrome; `--probe` loads each one's module graph
+    # from the installed tree without starting a host, all but Huginn's chat.
     %w[huginn-host.mjs huginn-secrets-host.mjs].each do |host|
       probe = shell_output("#{formula_opt_bin("bun")}/bun #{libexec}/apps/huginn/bin/#{host} --probe")
       assert_equal true, JSON.parse(probe).fetch("ok")
     end
+    # Huginn's host imports its chat (chat.ts, and from 0.39.0 the chat store it keeps on disk)
+    # only when Chrome starts it; importing it here loads that graph and starts nothing.
+    (testpath/"chat.mjs").write "console.log(typeof (await import(process.argv[2])).startChats)"
+    chat = shell_output("#{formula_opt_bin("bun")}/bun --no-env-file --config=/dev/null #{testpath}/chat.mjs " \
+                        "#{libexec}/packages/huginn/src/chat.ts")
+    assert_equal "function", chat.strip
     # `slp gungnir` imports its package (and that package's own zod) only when it runs, so
     # `slp ua` never loads it; `adapters` loads its whole module graph with no browser or Huginn.
     assert_kind_of Array, JSON.parse(shell_output("#{bin}/slp gungnir adapters --json")).fetch("adapters")
