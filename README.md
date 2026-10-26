@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 16 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 17 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux` and
 `frigg-linux`, hermod's and frigg's Linux x86_64 builds for the devbox. The tap builds
 nothing. It only pins each entry to a published release, and each source repo's release
 re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 19 of the 21 are re-pinned on each release
+**Status:** active. Every entry installs today; 20 of the 22 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -74,6 +74,7 @@ does not record GitHub's host key.
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
+| `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules | any |
@@ -318,6 +319,22 @@ brew install 21StarkCom/tap/lumiere
 zip is a Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source
 in the `lumiere` repo (`make build`).
 
+## njord
+
+The [`njord`](https://github.com/21StarkCom/idun) GitHub-work CLI — pull requests, CI,
+Actions runs, cleanup and a fleet's repos. It is the second app of the `idun` repo, and
+takes over the `idun gh` and `idun user` verbs.
+
+```sh
+brew install 21StarkCom/tap/njord
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
+a `njord-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
+checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
+`./setup.sh`, which is how the Linux devbox runs it.
+
 ## odinctl
 
 The [`odinctl`](https://github.com/21StarkCom/odin) CLI (`@21starkcom/odinctl`): the doors
@@ -558,6 +575,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
 | `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
+| `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
@@ -567,7 +585,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's and alfred's releases and plume's and frigg's `release.yml` merge their
+agent-seats', idun's (`idun` and `njord`) and alfred's releases and plume's and frigg's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
