@@ -4,8 +4,8 @@
 # the `@atlas/cli` package). node ESM — no bun-compile; the zip ships a `pnpm deploy`
 # tree (dist + node_modules incl. the signed native modules better-sqlite3 and
 # @lancedb/lancedb-darwin-arm64) plus the runtime command registry at
-# docs/specs/cli-contract/. Released from `cli-v*` tags (parallel to the desktop
-# app's `desktop-v*`); the CLI version line is synced to the desktop app's.
+# docs/specs/cli-contract/. Released from `cli-v*` tags on its own version line; the
+# desktop app's `desktop-v*` line releases apart from it, so the two numbers can differ.
 class Brain < Formula
   desc "Atlas CLI — the second-brain engine (ingest, index, retrieve, review)"
   homepage "https://github.com/21StarkCom/atlas"
@@ -15,10 +15,10 @@ class Brain < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/673063020",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/677342059",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.12.1"
-  sha256 "8d7b8e176668be584617f125f60601fb1a12e8a626f5759a3eafe605e74af4d6"
+  version "0.13.0"
+  sha256 "666e0b839bf6484601b02ec195346707105a97951b19363bf5a0375ad3d6a365"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
