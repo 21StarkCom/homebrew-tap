@@ -15,10 +15,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/682496875",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/682998651",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.41.0"
-  sha256 "4311effa444dd2016ebfeb19a98bc115326a48b4f2126951e95e94d6036f6d30"
+  version "0.41.1"
+  sha256 "87d355c9c6d347ef3d785fe6cded60be9d1a1a742104cb9aeb2aeaf676475c0a"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -96,16 +96,23 @@ class Sleipnir < Formula
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
 
+      0.41.1 ships Huginn 0.69.7 (the update above), whose Settings page (the popup's Settings
+      row, or Chrome's Extension options) sets how long Recents keeps a chat: Forever, the
+      default, or 90, 30 or 7 days. With a period, Huginn's host removes each sleeping chat
+      whose last turn is older, as Delete does (below), when it starts, once a day and when you
+      save the setting; a chat that runs or that a panel shows stays.
+
       0.39.0 ships Huginn 0.68.8 (the update above), which keeps every chat and resumes it.
       Closing the panel no longer ends a chat: a running turn goes on to its end with no panel
       open, then the chat sleeps. Your next message wakes it in its own folder, with its own
       Claude or Codex session; Stop ends a running turn. A chat that sent a message keeps its
       scratch folder, empty or not, and its record and journal under SLEIPNIR_HOME's
-      huginn/chats/. The journal holds the page text and tool results the chat saw, and
-      nothing prunes it: treat both folders as secret. Only Delete, in a chat's menu in
-      Recents (the first button in the panel's header), removes them, with the agent's own
-      session file. While a chat shows or runs, a pill at the bottom of its tab shows its
-      latest command, with the text and values it entered.
+      huginn/chats/. The journal holds the page text and tool results the chat saw: treat both
+      folders as secret. Delete, in a chat's menu in Recents (the first button in the panel's
+      header), removes them, with the agent's own session file; so does a keep period from
+      0.41.1 (above). Under Forever, the default, nothing else prunes them. While a chat shows
+      or runs, a pill at the bottom of its tab shows its latest command, with the text and
+      values it entered.
 
       0.32.0 ships Huginn 0.67.0 (the update above), whose chat can leave the side panel:
       Detach moves it into a window of its own. From then on the chat acts on the active tab of
