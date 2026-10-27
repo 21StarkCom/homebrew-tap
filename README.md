@@ -323,7 +323,7 @@ in the `lumiere` repo (`make build`).
 
 The [`njord`](https://github.com/21StarkCom/idun) GitHub-work CLI — pull requests, CI,
 Actions runs, cleanup and a fleet's repos. It is the second app of the `idun` repo, and
-takes over the `idun gh` and `idun user` verbs.
+holds the fleet's GitHub verbs (`njord pr-open`, `njord pr-merge`, `njord user`, …).
 
 ```sh
 brew install 21StarkCom/tap/njord
@@ -589,7 +589,7 @@ agent-seats', idun's (`idun` and `njord`) and alfred's releases and plume's and 
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
-`idun gh pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
+`njord pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
 `no-ticket` (by `bump.sh`) while its title names no ticket.
 
 ## Download authentication and CI
