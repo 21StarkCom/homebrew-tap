@@ -64,7 +64,7 @@ does not record GitHub's host key.
 | `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login` | `bun build --compile` | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
-| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules | any |
+| `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules in the zip; lancedb ad hoc once installed | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
@@ -154,10 +154,13 @@ release zip is a **`pnpm deploy` tree** — `dist/`, a vendored `node_modules` (
 `@lancedb/lancedb-darwin-arm64`; LanceDB's optional ML embedding stack is pruned), and the
 runtime command registry at `docs/specs/cli-contract/`. The formula installs that tree into
 `libexec`, wraps `brain` to run under the keg's `node`, and pins `ATLAS_ROOT` so the
-registry always resolves. The natives are **Developer-ID signed + notarized** (submission
-recorded in the `21StarkCom/apple-developer` ledger). A CLI zip can't be offline-**stapled**,
-so it's online-notarized — moot under Homebrew, which installs a formula's files without the
-quarantine xattr.
+registry always resolves. The natives are **Developer-ID signed + notarized** in the release
+zip (submission recorded in the `21StarkCom/apple-developer` ledger). The lancedb module in
+the keg carries an ad hoc signature: it is a dylib, so on install Homebrew rewrites its
+install name to the `opt` path and re-signs it ad hoc. `better-sqlite3` is a bundle, which
+has no install name, so it keeps its Developer ID signature. A CLI zip can't be
+offline-**stapled**, so it's online-notarized — moot under Homebrew, which installs a
+formula's files without the quarantine xattr.
 Released from `cli-v*` tags, parallel to the desktop app's `desktop-v*`.
 
 Its `service do` block is an interval job, not a daemon: launchd runs
