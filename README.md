@@ -77,7 +77,7 @@ does not record GitHub's host key.
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
-| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules | any |
+| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
@@ -389,11 +389,13 @@ sleipnir drives system Chrome on macOS, so there is no Linux build.
 sleipnir has **no build step** — Bun runs its TypeScript directly — so the release zip is
 the runnable tree (source + a vendored prod `node_modules`), whose only Mach-O are the
 Developer-ID-signed darwin-arm64 `bare-fs`, `bare-path` and `bare-url` prebuilds, in a
-notarized zip. The caps `chrome-popups-dismiss`, `claude-code-terminal-login` and
-`mac-screenshot --app` need the `goldfinger` cask (below), which a formula cannot depend
-on, and the `captcha-solve` cap (from 0.30.0) runs `claude -p` on the operator's own Claude
-sign-in, so it needs Claude Code's `claude` on `PATH`, which a formula cannot depend on
-either. The formula installs the tree into `libexec` and wraps `slp` /
+notarized zip. The copies in the keg carry an ad hoc signature: as it installs each
+prebuild, Homebrew rewrites its dylib install name and re-signs it ad hoc. The caps
+`chrome-popups-dismiss`, `claude-code-terminal-login` and `mac-screenshot --app` need the
+`goldfinger` cask (below), which a formula cannot depend on, and the `captcha-solve` cap
+(from 0.30.0) runs `claude -p` on the operator's own Claude sign-in, so it needs Claude
+Code's `claude` on `PATH`, which a formula cannot depend on either. The formula installs
+the tree into `libexec` and wraps `slp` /
 `sleipnir`, `huginn` (the Sleipnir Huginn browser extension's CLI, from 0.11.0) and
 `sleipnir-mcp` (the MCP server an agent client runs, from 0.12.1) over Homebrew's
 `bun` (a formula dependency), each keeping the caller's working-directory `.env` and
