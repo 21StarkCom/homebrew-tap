@@ -16,12 +16,13 @@
 set -euo pipefail
 
 TAP_REPO="21StarkCom/homebrew-tap"
-# The fleet's below-the-ticket-bar mark. idun gh pr-merge skips its ticket stamp
+# The fleet's below-the-ticket-bar mark. njord pr-merge skips its ticket stamp
 # only for a PR carrying it; unlabeled, the stamp falls back to whatever ticket
 # the merging session is bound to. publish_pr syncs it to the PR's final title.
 NO_TICKET_LABEL="no-ticket"
-# A title that names a ticket, as idun gh pr-merge reads one (TICKET_PREFIX_RE
-# in idun's src/gh/lib/draft_schema.ts, matched against the trimmed title).
+# A title that names a ticket, as njord pr-merge reads one (TICKET_PREFIX_RE in
+# the idun repo's apps/njord/src/lib/draft_schema.ts, matched against the
+# trimmed title).
 TICKET_TITLE_RE='^[a-z]+\([A-Z][A-Z0-9]{1,9}-[0-9]+\)!?:'
 # Every workflow this tap runs on a pull request: --merge waits for all of them
 # (Decision 4). scripts/test-bump.sh fails when this differs from the
@@ -404,17 +405,17 @@ sync_no_ticket() {
   if [[ "${want}" = true ]] && [[ "${marked}" != true ]]
   then
     gh pr edit "${pr}" -R "${TAP_REPO}" --add-label "${NO_TICKET_LABEL}" >&2 ||
-      say "bump.sh: warning: could not label PR #${pr} ${NO_TICKET_LABEL}; before any idun gh pr-merge, run: gh pr edit ${pr} -R ${TAP_REPO} --add-label ${NO_TICKET_LABEL}"
+      say "bump.sh: warning: could not label PR #${pr} ${NO_TICKET_LABEL}; before any njord pr-merge, run: gh pr edit ${pr} -R ${TAP_REPO} --add-label ${NO_TICKET_LABEL}"
   elif [[ "${want}" != true ]] && [[ "${marked}" = true ]]
   then
     gh pr edit "${pr}" -R "${TAP_REPO}" --remove-label "${NO_TICKET_LABEL}" >&2 ||
-      say "bump.sh: warning: could not remove ${NO_TICKET_LABEL} from PR #${pr}, whose title names a ticket; before any idun gh pr-merge, run: gh pr edit ${pr} -R ${TAP_REPO} --remove-label ${NO_TICKET_LABEL}"
+      say "bump.sh: warning: could not remove ${NO_TICKET_LABEL} from PR #${pr}, whose title names a ticket; before any njord pr-merge, run: gh pr edit ${pr} -R ${TAP_REPO} --remove-label ${NO_TICKET_LABEL}"
   fi
   [[ "${want}" != true ]] || [[ "${merge}" = true ]] ||
     say "==> PR #${pr}'s title names no ticket. If a ticket covers this bump, retitle it and drop ${NO_TICKET_LABEL} in one command: gh pr edit ${pr} -R ${TAP_REPO} --title 'chore(STARK-<n>): bump ${entry} to ${tag}' --remove-label ${NO_TICKET_LABEL}"
 }
 
-# Whether title $1 names a ticket, as idun gh pr-merge reads it: TICKET_TITLE_RE
+# Whether title $1 names a ticket, as njord pr-merge reads it: TICKET_TITLE_RE
 # against the title with its leading whitespace trimmed.
 ticket_titled() {
   local t="$1"
