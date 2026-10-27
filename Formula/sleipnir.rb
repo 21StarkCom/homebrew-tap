@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
-# Signed (Developer ID) + notarized macOS build of sleipnir — a CLI that drives
-# dedicated, persistent Chrome profiles for ad-hoc agent tasks. Bun runs the
-# TypeScript directly (no build step), so the zip ships the source tree + vendored
-# prod node_modules; its only compiled artifacts are the darwin-arm64 bare-* prebuilds.
+# macOS build of sleipnir — a CLI that drives dedicated, persistent Chrome profiles
+# for ad-hoc agent tasks. Bun runs the TypeScript directly (no build step), so the zip
+# ships the source tree + vendored prod node_modules; its only compiled artifacts are the
+# darwin-arm64 bare-* prebuilds, signed (Developer ID) + notarized in the release zip.
+# The copies installed in the keg carry an ad hoc signature: as it installs each prebuild,
+# Homebrew rewrites its dylib install name to the opt path and re-signs it ad hoc.
 class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/sleipnir"
