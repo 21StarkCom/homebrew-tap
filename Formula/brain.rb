@@ -1,11 +1,14 @@
 # frozen_string_literal: true
 
-# Developer-ID-signed macOS build of `brain`, the Atlas CLI (`21StarkCom/atlas`,
-# the `@atlas/cli` package). node ESM — no bun-compile; the zip ships a `pnpm deploy`
-# tree (dist + node_modules incl. the signed native modules better-sqlite3 and
-# @lancedb/lancedb-darwin-arm64) plus the runtime command registry at
-# docs/specs/cli-contract/. Released from `cli-v*` tags on its own version line; the
-# desktop app's `desktop-v*` line releases apart from it, so the two numbers can differ.
+# macOS build of `brain`, the Atlas CLI (`21StarkCom/atlas`, the `@atlas/cli` package).
+# node ESM — no bun-compile; the zip ships a `pnpm deploy` tree (dist + node_modules incl.
+# the native modules better-sqlite3 and @lancedb/lancedb-darwin-arm64, signed (Developer ID)
+# + notarized in the release zip) plus the runtime command registry at docs/specs/cli-contract/.
+# The lancedb module installed in the keg carries an ad hoc signature: it is a dylib, so on
+# install Homebrew rewrites its install name to the opt path and re-signs it ad hoc.
+# better-sqlite3 is a bundle, which has no install name, so it keeps its Developer ID signature.
+# Released from `cli-v*` tags on its own version line; the desktop app's `desktop-v*` line
+# releases apart from it, so the two numbers can differ.
 class Brain < Formula
   desc "Atlas CLI — the second-brain engine (ingest, index, retrieve, review)"
   homepage "https://github.com/21StarkCom/atlas"
