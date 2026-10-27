@@ -31,10 +31,11 @@ class FriggLinux < Formula
   depends_on :linux
 
   def install
-    # Globbed so the install tracks the tool set: frigg-cockpit, the frg-* vendor binaries
-    # and their frg-<command> links (frigg v0.64.0 on, STARK-13456), and the gws-* tools;
-    # the zip's README.md matches no pattern. The literal "frigg" fails the install on a
-    # zip without the main CLI, which no glob matches.
+    # Globbed so the install tracks the tool set: frigg-cockpit, the vendor binaries and
+    # their links (frigg-<command> up to v0.63.0; frg-<vendor> and frg-<command> from
+    # v0.64.0, STARK-13456), and the gws-* tools; the zip's README.md matches no pattern.
+    # The literal "frigg" fails the install on a zip without the main CLI, which no glob
+    # matches.
     bin.install "frigg", *Dir["frigg-*", "frg-*", "gws-*"]
   end
 
