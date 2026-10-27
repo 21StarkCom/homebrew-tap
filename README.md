@@ -65,8 +65,8 @@ does not record GitHub's host key.
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules | any |
-| `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | ad-hoc | any |
-| `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `gws-*` | Go | none | none: Linux x86_64 |
+| `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
+| `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
@@ -181,8 +181,10 @@ the vendor fleet: the `frigg` CLI, the `frigg-cockpit` TUI, and two single-purpo
 Workspace CLIs, `gws-align-managers` (bulk-align org-chart manager edges from a CSV) and
 `gws-build-all-group` (rebuild the all-hands group from the directory). Both `gws-*` tools
 dry-run by default; `--apply` mutates the live directory. The formula installs `frigg` and
-every `frigg-*` and `gws-*` binary in the release zip, so a tool frigg carves out of the
-CLI (`frigg-zoom` will be the first) installs with no tap change.
+every `frigg-*`, `frg-*` and `gws-*` binary in the release zip, so a vendor tool frigg
+carves out of the CLI installs with no tap change. From frigg `v0.64.0`, each vendor tool
+is `frg-<vendor>` (`frg-zoom` runs `frigg zoom`), and a vendor with several commands also
+ships a `frg-<command>` link for each one.
 
 ```sh
 brew install 21StarkCom/tap/frigg

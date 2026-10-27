@@ -5,7 +5,7 @@
 # is the macOS build. Static Go binaries, unsigned: Linux has no Gatekeeper. Built +
 # published by frigg's GitHub Actions release workflow (STARK-11775).
 class FriggLinux < Formula
-  desc "Google Workspace IT-ops toolkit for Linux: frigg CLI, frigg-* and gws-* tools"
+  desc "Google Workspace IT-ops toolkit for Linux: frigg, frigg-*, frg-*, gws-* tools"
   homepage "https://github.com/21StarkCom/frigg"
   # version / asset id / sha256 are release-specific and rewritten when frigg's
   # release calls the bumper with --asset-suffix linux_amd64.zip (the README's caller
@@ -31,10 +31,11 @@ class FriggLinux < Formula
   depends_on :linux
 
   def install
-    # Globbed so the install tracks the tool set as frigg carves out new frigg-* binaries;
+    # Globbed so the install tracks the tool set: frigg-cockpit, the frg-* vendor binaries
+    # and their frg-<command> links (frigg v0.64.0 on, STARK-13456), and the gws-* tools;
     # the zip's README.md matches no pattern. The literal "frigg" fails the install on a
-    # zip without the main CLI, which "frigg-*" does not match.
-    bin.install "frigg", *Dir["frigg-*", "gws-*"]
+    # zip without the main CLI, which no glob matches.
+    bin.install "frigg", *Dir["frigg-*", "frg-*", "gws-*"]
   end
 
   test do
