@@ -182,8 +182,9 @@ holds:
 
 - one line that says the 21StarkCom mirror job writes the block and the
   marked files, and that a change made there is lost at the next run;
-- the install commands: `brew install GetEvinced/tap/<entry>` and
-  `brew install --cask GetEvinced/tap/<cask>`;
+- the install commands: `brew tap GetEvinced/tap`,
+  `brew trust --tap GetEvinced/tap`, `brew install GetEvinced/tap/<entry>`
+  and `brew install --cask GetEvinced/tap/<cask>`;
 - the token note: Homebrew's `gh` signed in to an account with read access
   to `GetEvinced/homebrew-tap`, or `HOMEBREW_GITHUB_API_TOKEN`;
 - a note that a Mac with both taps must use full names in every `brew`
@@ -204,7 +205,9 @@ The rest of the README stays as the Evinced team wrote it.
   `timeout-minutes: 90`:
   1. Check out this repo with `persist-credentials: false`.
   2. Mint an App token with `actions/create-github-app-token`, pinned by
-     SHA: `owner: GetEvinced`, `repositories: homebrew-tap`.
+     SHA: `client-id` from `GETEVINCED_TAP_APP_CLIENT_ID`, `owner: GetEvinced`,
+     `repositories: homebrew-tap`. The action marks its `app-id` input as
+     deprecated (v3.3.0), so the spec uses the Client ID.
   3. Run `scripts/mirror.sh` with `MIRROR_SOURCE_TOKEN` from
      `HOMEBREW_RELEASE_READ_TOKEN` and `MIRROR_TARGET_TOKEN` from the App
      token. Commit as the App's bot user.
@@ -235,10 +238,10 @@ merges to `main` and wrote the cron line. The spec adds no other alert.
 4. Make one private key. Store it in Mimir.
 5. Make the Environment `getevinced-mirror` in this repo, with a deployment
    branch policy of `main` only.
-6. Set its variable `GETEVINCED_TAP_APP_ID` and its secret
-   `GETEVINCED_TAP_APP_KEY`.
+6. Set its variable `GETEVINCED_TAP_APP_CLIENT_ID` (the App's Client ID)
+   and its secret `GETEVINCED_TAP_APP_KEY`.
 
-Steps 1 and 2 need a browser session of a GetEvinced owner. Steps 4 and 6
+Steps 1, 2 and 4 need a browser session of a GetEvinced owner. Steps 4 and 6
 handle a secret value, so they need the operator's GO.
 
 ## Testing
@@ -293,9 +296,11 @@ Before merge, after the setup:
    branch `mirror-proof`.
 
 After merge: the push run of `mirror.yml` copies every entry to GetEvinced
-`main`. The ticket gets the run link, the GetEvinced commit, and the output
-of `brew tap GetEvinced/tap` and `brew fetch GetEvinced/tap/idun` on the
-operator's Mac.
+`main`. A manual run on `main` then makes no GetEvinced commit. The ticket
+gets the run links, the GetEvinced commit, and the output of
+`brew tap GetEvinced/tap`, `brew trust --tap GetEvinced/tap` and
+`brew fetch GetEvinced/tap/idun` on the operator's Mac. Homebrew 7 loads
+no formula from a tap that is not trusted.
 
 ## Risks
 
