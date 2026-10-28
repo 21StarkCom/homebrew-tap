@@ -40,5 +40,9 @@ class Bragi < Formula
     # The helper records under the hardened runtime, which wants the microphone entitlement.
     assert_match %r{<key>com\.apple\.security\.device\.audio-input</key>\s*<true/>},
                  shell_output("codesign -d --entitlements - --xml #{bin}/bragi-audio 2>&1")
+    # Since 0.4.0 the helper is its own responsible process, so macOS asks for the
+    # microphone with the usage string in its embedded Info.plist; without it, no prompt.
+    assert_match "NSMicrophoneUsageDescription",
+                 shell_output("launchctl plist __TEXT,__info_plist #{bin}/bragi-audio")
   end
 end
