@@ -1,11 +1,12 @@
 # Mirror this tap to `GetEvinced/homebrew-tap`
 
-Every entry of this tap (`21StarkCom/tap`) also lives in the Evinced tap,
-`GetEvinced/homebrew-tap` (`GetEvinced/tap`), with its release asset copied
+Every entry of this tap (`21StarkCom/tap`) but five also lives in the Evinced
+tap, `GetEvinced/homebrew-tap` (`GetEvinced/tap`), with its release asset copied
 into GetEvinced. A job in this repo keeps the copy in step after each push to
 `main`, with no hand work. An Evinced engineer with read access to the
-GetEvinced tap installs the fleet with `brew install GetEvinced/tap/<entry>`
-and needs no access to 21StarkCom.
+GetEvinced tap installs those entries with `brew install GetEvinced/tap/<entry>`
+and needs no access to 21StarkCom. The five that stay here hold the operator's
+source or readable JS (D11).
 
 ## Why
 
@@ -55,10 +56,11 @@ and needs no access to 21StarkCom.
 | D4 | The App becomes a second bypass actor of ruleset `17658502`. The ruleset and its other actor stay as they are. |
 | D5 | The copies live as releases of `GetEvinced/homebrew-tap`, one release per entry and version, tag `<entry>-v<version>`. An asset keeps its source name. When that name holds other bytes in the release, the copy is `<first 12 hex of sha256>-<source name>`. |
 | D6 | The job writes only files that hold the mirror marker, and the README block. It reads other files only to refuse a name clash. It never changes `aac`, `evinced` or any other unmarked file. |
-| D7 | The job deletes no release and no uploaded asset. It deletes only an incomplete upload, which no entry can pin. |
+| D7 | The job deletes no release and no uploaded asset. It deletes only an incomplete upload that a dead run left (untouched for an hour), which no entry can pin. A younger one may be another run's: the entry fails, and the next run retries. |
 | D8 | The job reads 21StarkCom with the existing `HOMEBREW_RELEASE_READ_TOKEN`. It adds no 21StarkCom credential. |
 | D9 | The replica copies `Formula/` and `Casks/` only. `scripts/`, the workflows, `CLAUDE.md` and the bumper stay here. |
 | D10 | The App key lives in the Actions Environment `getevinced-mirror` of this repo, which only `main` can use. A run on any other ref gets no key. |
+| D11 | `atlas`, `brain`, `librarian`, `lucius` and `odinctl` are never copied, and a marked copy of one is deleted. Their assets hold the operator's source (`lucius`: 112 `.ts` files) or readable JS with source maps (the atlas repo's `atlas`, `brain` and `librarian`; `odinctl`). The operator picked them on 2026-10-28, after the first proof run had copied `brain`; that release was deleted by hand. `librarian` also depends on `brain`. `sleipnir` (its TypeScript tree), `agent-seats` (an unminified bundle) and the minified bundles of `idun`, `njord` and `hermod` stay in the mirror: the operator saw what each holds and did not name them. |
 
 ## Design
 
@@ -98,8 +100,13 @@ scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 - The script writes the changed entries to `$GITHUB_OUTPUT` when that file
   is set, as `formulae` and `casks`, one space-separated list each.
 - `--help` is its reference, as for `bump.sh`.
-- It needs bash 4 or later, and it checks this at its start. CI runs it on
+- It needs bash 4.4 or later (older bash aborts on an empty array under
+  `set -u`), and it checks this at its start. CI runs it on
   `ubuntu-latest`; on a Mac, run it with Homebrew's bash.
+- It copies what the checkout holds, so it refuses (exit 2) a checkout with
+  uncommitted changes under `Formula/` or `Casks/`, and a push to `main`
+  from a HEAD that is not `origin/main`. `--dry-run` and a scratch
+  `--branch` skip the second check.
 - No token goes into a command line, a URL or `.git/config`. Git gets the
   token from an `http.extraheader` in the environment
   (`GIT_CONFIG_COUNT`), and `gh` gets it from `GH_TOKEN`.
@@ -107,18 +114,21 @@ scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Steps, in this order:
 
 1. Clone the GetEvinced branch.
-2. For each `Formula/*.rb` and `Casks/*.rb` in this checkout, read the asset
-   URL, `version` and `sha256`. Use the bumper's anchored URL pattern
-   (`URL_RE` in `scripts/bump.sh`). An entry fails when it has other than
-   one `url`, `version` or `sha256` stanza, or when its first line is not
-   `# frozen_string_literal: true`.
-3. Find the GetEvinced release `<entry>-v<version>`. Find its asset whose
-   `digest` is `sha256:<pinned sha256>` and whose state is `uploaded`.
+2. For each `Formula/*.rb` and `Casks/*.rb` in this checkout but the D11
+   entries, read the asset URL, `version` and `sha256`. Use the bumper's
+   anchored URL pattern (`URL_RE` in `scripts/bump.sh`). An entry fails when
+   it has other than one `url`, `version` or `sha256` stanza, when its first
+   line is not `# frozen_string_literal: true`, or when a formula and a cask
+   share its name.
+3. Find the GetEvinced release `<entry>-v<version>`: in the release listing,
+   else by its tag (the listing can miss a new one). The entry fails when two
+   releases share the tag. Find its asset whose `digest` is
+   `sha256:<pinned sha256>` and whose state is `uploaded`.
 4. When no such asset exists:
    1. Download the source asset with `MIRROR_SOURCE_TOKEN`.
    2. Compare its SHA-256 with the pinned `sha256`. The entry fails when
       they differ.
-   3. Delete each incomplete upload in the release.
+   3. Delete each incomplete upload in the release, by D7.
    4. When the release does not exist, create it as a draft: target `main`,
       not marked latest, and a body that names the source repo, the source
       asset id and the SHA-256.
@@ -127,11 +137,13 @@ Steps, in this order:
 5. Write the entry's file in the GetEvinced clone. The file is this tap's
    file with the changes in "The copy of an entry" below.
 6. Delete each marked GetEvinced file whose entry is no longer in this
-   checkout. Leave the releases of that entry in place.
+   checkout, is a D11 entry, or moved between `Formula/` and `Casks/`.
+   Leave the releases of that entry in place.
 7. Write the README block (below).
-8. Commit all changes in one commit and push it. When GitHub rejects the
-   push, clone again and do steps 5 to 8 again, up to three times. Step 3
-   finds the uploads that finished, so they are not done again.
+8. Commit all changes in one commit and push it. When the push loses a race
+   (`fetch first` or `non-fast-forward`), clone again and do steps 5 to 8
+   again, up to three times; step 3 found the uploads already, so they are
+   not done again. Any other refusal (a ruleset, a permission) stops the run.
 9. Exit non-zero when an entry failed.
 
 Errors:
@@ -158,7 +170,8 @@ The copy is the source file with these changes, and no others:
 3. Each match of `21starkcom/tap\b`, in any case, becomes
    `getevinced/tap`, written in the case of the match: `21StarkCom/tap`
    becomes `GetEvinced/tap`, and `21starkcom/tap` becomes `getevinced/tap`.
-   This keeps `librarian`'s dependency on `brain` inside the GetEvinced tap.
+   This keeps a dependency on another entry, and the caveats that name one
+   (`sleipnir`, `mimir`, `goldfinger`), inside the GetEvinced tap.
 4. `read access to 21StarkCom private repos` becomes
    `read access to GetEvinced private repos`.
 
@@ -246,9 +259,21 @@ handle a secret value, so they need the operator's GO.
 
 ## Testing
 
-`scripts/test-mirror.sh` covers:
+`scripts/test-mirror.sh` uses fixture entries only: `bump.yml` is the gate
+of every bump PR, so a change to a real entry must never turn it red. It covers:
 
 - a first run into an empty tap: all entries, releases and the README block;
+- the excluded entries (D11): not copied, no `gh` call, a marked copy deleted;
+- an entry moved from `Formula/` to `Casks/`: the old copy goes;
+- a formula and a cask with one name: both fail;
+- a source checkout with uncommitted entries, or not at `origin/main`: exit 2;
+- an upload another run has in progress (under an hour old): that entry
+  fails, and nothing is deleted;
+- a release that the listing misses: the script asks for its tag;
+- two releases with one tag: that entry fails;
+- a push that loses a race (a commit lands on `main` first): a fresh clone and
+  a second push; a push the remote refuses: no retry, exit 1;
+- a README whose END line has no newline after it;
 - a second run with no change: no upload, no commit;
 - a version bump of one entry: one upload, one changed file;
 - a reused asset: the release has a matching digest, so no download;
@@ -262,13 +287,18 @@ handle a secret value, so they need the operator's GO.
 - an unmarked GetEvinced file with an entry's name: that entry fails, the
   file stays;
 - `aac.rb` and `evinced.rb` stay byte for byte the same;
-- the copy rules on a copy of `librarian.rb`, `sleipnir.rb` and
-  `Casks/mimir.rb`, and a `21StarkCom/tap` with no slash after it;
-- a rejected push that succeeds after a fresh clone;
+- the copy rules on fixtures that have a `depends_on "21starkcom/tap/…"`,
+  caveats with `21StarkCom/tap` (with and without a slash after it) and
+  `21STARKCOM/tap`, a `21StarkCom/homebrew-tap` that stays, and a cask with
+  "21StarkCom private repos";
 - `--branch` with a branch that does not exist yet;
 - `--only`: other entries and step 6 untouched;
-- no token in `.git/config` or in the stub's argument log;
-- `--dry-run`: no write of any kind.
+- no token and no base64 git credential in the work directory, the stub's
+  argument log or the output;
+- `--dry-run`: no write of any kind, with no git identity and no source token.
+
+The live proof and `mirror.yml`'s `verify` job check the copies of the real
+entries.
 
 ## Live proof
 
@@ -287,8 +317,9 @@ Before merge, after the setup:
    `GetEvinced/homebrew-tap` only, so it proves that a user needs no
    21StarkCom access. Use it as `HOMEBREW_GITHUB_API_TOKEN` for steps 4
    and 5.
-4. Run `brew fetch` of every formula and `brew fetch --cask` of every cask
-   from the scratch tap.
+4. Run `brew fetch` of every copied formula and `brew fetch --cask` of every
+   copied cask from the scratch tap: 15 formulae and 2 casks (D11 leaves out 5
+   of the 22 entries).
 5. Run `brew uninstall 21starkcom/tap/tyr`, then
    `brew install getevinced/mirror-proof/tyr` and
    `brew test getevinced/mirror-proof/tyr`.
@@ -308,8 +339,14 @@ no formula from a tap that is not trusted.
 ## Risks
 
 - **Reach:** every member of GetEvinced, and each outside collaborator of
-  its tap, can download every mirrored binary, Mimir and Heimdall included.
-  This is the outcome the operator asked for.
+  its tap, can download every mirrored asset, Mimir and Heimdall included.
+  This is the outcome the operator asked for. Some copied assets are still
+  readable: `sleipnir` ships its TypeScript tree, and the `bun build
+  --compile` binaries embed their JS bundle (`agent-seats` unminified). D11
+  lists what the operator left out.
+- **A new entry is copied by default.** The exclusion is a list in
+  `scripts/mirror.sh`; an entry added to this tap reaches GetEvinced unless
+  its PR adds it there.
 - **Key leak:** a leaked key of `21stark-tap-mirror` reaches one repo. It can
   still push to that repo's `main`, `aac` and `evinced` included, and the
   Ruby in those files runs on the Macs that install them. D10 keeps the key

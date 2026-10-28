@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# scripts/mirror.sh: copies every entry of this tap, with its release asset, into
-# GetEvinced/homebrew-tap, so an Evinced engineer installs the fleet with no
+# scripts/mirror.sh: copies the entries of this tap, with their release assets,
+# into GetEvinced/homebrew-tap, so an Evinced engineer installs them with no
 # access to 21StarkCom. The design is docs/specs/getevinced-mirror.md (epic
 # STARK-13601); `scripts/mirror.sh --help` is the reference. Tests:
 # scripts/test-mirror.sh. .github/workflows/mirror.yml runs it on each push to main.
@@ -12,30 +12,39 @@
 # shellcheck disable=SC2016,SC2249,SC2310
 set -euo pipefail
 
-if ((BASH_VERSINFO[0] < 4))
+# 4.4: older bash aborts on an empty "${array[@]}" under set -u.
+if ((BASH_VERSINFO[0] < 4 || (BASH_VERSINFO[0] == 4 && BASH_VERSINFO[1] < 4)))
 then
-  echo "mirror.sh: needs bash 4 or later, not ${BASH_VERSION}. On a Mac, run it with Homebrew's bash." >&2
+  echo "mirror.sh: needs bash 4.4 or later, not ${BASH_VERSION}. On a Mac, run it with Homebrew's bash." >&2
   exit 2
 fi
 
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
+# Entries that never reach GetEvinced: their assets hold the operator's source
+# or readable JS (the atlas repo's atlas, brain and librarian; lucius; odinctl).
+# The operator's decision of 2026-10-28 (spec D11). A marked copy of one is deleted.
+EXCLUDED="atlas brain librarian lucius odinctl"
 MARKER='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
 FROZEN='# frozen_string_literal: true'
 BEGIN_MARK='<!-- BEGIN 21stark-mirror -->'
 END_MARK='<!-- END 21stark-mirror -->'
 PUSH_TRIES=3
+# An upload that is not "uploaded" this long after its last update is a dead run's.
+STALE_UPLOAD_SECONDS=3600
 # The bumper's URL_RE (scripts/bump.sh), with the asset id captured too.
 URL_RE='^[[:space:]]*url[[:space:]]+"https://api\.github\.com/repos/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/releases/assets/([0-9]+)"'
 VERSION_RE='^[[:space:]]*version[[:space:]]+"([^"]+)"'
 SHA_RE='^[[:space:]]*sha256[[:space:]]+"([0-9a-f]{64})"'
 HOMEPAGE_RE='^[[:space:]]*homepage[[:space:]]+"([^"]+)"'
 ENTRY_RE='^[A-Za-z0-9][A-Za-z0-9@+._-]*$'
+NL=$'\n'
 
 dry_run=false branch=main
-declare -a only=() names=()
-declare -A kind=() rel=() src_repo=() src_id=() ver=() sha=() new_id=() failed=() wanted=()
+declare -a only=() names=() changed_formulae=() changed_casks=()
+declare -A kind=() rel=() src_repo=() src_id=() ver=() sha=() new_id=() failed=() wanted=() excluded=()
 tmp="" clone="" src_root="" src_rev="" created_branch=false auth_header=""
+changed="" pushed=false rejected=false attempt=0
 
 usage() {
   cat <<'EOF'
@@ -44,13 +53,17 @@ Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
 each entry's release asset is copied into a GetEvinced release, and each entry
 is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md).
+(docs/specs/getevinced-mirror.md). atlas, brain, librarian, lucius and odinctl
+are never copied: their assets hold source or readable JS.
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist
   --only <entry>    copy only this entry (repeatable), and delete no file
   --dry-run         print the plan; upload, delete, commit and push nothing
   -h, --help        this text
+
+Run it from a checkout whose Formula/ and Casks/ have no uncommitted change.
+To push main, HEAD must be origin/main (git fetch first).
 
 Environment:
   MIRROR_SOURCE_TOKEN  reads the 21StarkCom release assets (not needed for --dry-run)
@@ -64,12 +77,13 @@ whose digest is the pinned sha256; else download the source asset, check it,
 make the release as a draft, upload, and publish it. Then write the entry with
 the marker line, the copy's asset URL, 21starkcom/tap renamed to getevinced/tap,
 and "21StarkCom private repos" renamed. Then delete marked files whose entry left
-this tap, rewrite the README block, commit once and push. A rejected push clones
-again and writes again, up to three times. Files without the marker line (aac,
-evinced) are never changed. No release or uploaded asset is ever deleted.
+this tap, moved, or is excluded; rewrite the README block; commit once and push.
+A push that loses a race clones again and writes again, up to three times. Files
+without the marker line (aac, evinced) are never changed. No release and no
+uploaded asset is ever deleted; an upload a dead run left (an hour old) is.
 
 Exit: 0 every entry copied; 1 an entry failed (the others still pushed) or the
-run failed; 2 usage. Needs bash 4+, git, gh, jq and perl.
+run failed; 2 usage. Needs bash 4.4+, git, gh, jq, perl and sha256sum or shasum.
 EOF
 }
 
@@ -145,14 +159,41 @@ parse_args() {
   [[ ${branch} =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || usage_error "bad branch name: ${branch}"
 }
 
+# The copy is of what this checkout holds, so it must hold what main holds.
+check_source() {
+  local dirty head main
+  ${dry_run} && return 0
+  dirty="$(git -C "${src_root}" status --porcelain -- Formula Casks)" ||
+    usage_error "${src_root} is not a git checkout"
+  [[ -z ${dirty} ]] || usage_error "Formula/ or Casks/ has uncommitted changes:${NL}${dirty}"
+  [[ ${branch} == main ]] || return 0
+  head="$(git -C "${src_root}" rev-parse HEAD)"
+  main="$(git -C "${src_root}" rev-parse -q --verify refs/remotes/origin/main)" ||
+    usage_error "no origin/main in ${src_root}: git fetch origin main first"
+  [[ ${head} == "${main}" ]] ||
+    usage_error "HEAD ${head:0:7} is not origin/main ${main:0:7}: copy main only from a checkout of it (git fetch first)"
+}
+
 # Reads every Formula/ and Casks/ entry of this checkout into the arrays.
 read_entries() {
-  local f name line first n_url n_ver n_sha
+  local f name line first n_url n_ver n_sha e
+  for e in ${EXCLUDED}; do excluded[${e}]=1; done
   for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb
   do
     [[ -f ${f} ]] || continue
     name="${f##*/}"
     name="${name%.rb}"
+    if [[ -n ${excluded[${name}]:-} ]]
+    then
+      say "${name}: excluded; not copied"
+      continue
+    fi
+    if [[ -n ${kind[${name}]:-} ]]
+    then
+      # Homebrew keeps formula and cask names apart; the copy keys by name.
+      fail_entry "${name}" "is both ${rel[${name}]} and ${f#"${src_root}"/}; the mirror copies neither"
+      continue
+    fi
     names+=("${name}")
     if [[ ${f} == */Casks/* ]]; then kind[${name}]=cask; else kind[${name}]=formula; fi
     rel[${name}]="${f#"${src_root}"/}"
@@ -183,10 +224,11 @@ read_entries() {
       fail_entry "${name}" "needs one url, version and sha256 stanza each; has ${n_url}, ${n_ver} and ${n_sha}"
     fi
   done
-  ((${#names[@]} > 0)) || die "no Formula/*.rb or Casks/*.rb in ${src_root}"
+  ((${#names[@]} > 0)) || die "no entry to copy in ${src_root}"
   local o
   for o in "${only[@]}"
   do
+    [[ -z ${excluded[${o}]:-} ]] || usage_error "--only ${o}: it is excluded from the mirror"
     [[ -n ${kind[${o}]:-} ]] || usage_error "--only ${o}: no such entry in this tap"
     wanted[${o}]=1
   done
@@ -234,36 +276,54 @@ check_clashes() {
 list_releases() {
   dst_gh api --paginate "repos/${TARGET_REPO}/releases?per_page=100" >"${tmp}/releases.json" ||
     die "cannot list the releases of ${TARGET_REPO}"
-  jq -c '.[] | {id, tag: .tag_name, draft, assets: [.assets[] | {id, name, state, digest}]}' \
+  jq -c '.[] | {id, tag: .tag_name, draft, assets: [.assets[] | {id, name, state, digest, updated_at}]}' \
     "${tmp}/releases.json" >"${tmp}/releases.jsonl"
 }
 
-# The release with tag $1, a published one before a draft, as one JSON line.
-release_for() {
-  jq -sc --arg t "$1" '[.[] | select(.tag == $t)] | sort_by(.draft) | .[0] // empty' "${tmp}/releases.jsonl"
+# Sets $release to the one release tagged $1, as a JSON line, or to "" when none
+# has the tag. Returns 1 when more than one has it: an upload by tag could then
+# land in another release than the one read back.
+find_release() {
+  local n
+  n="$(jq -s --arg t "$1" '[.[] | select(.tag == $t)] | length' "${tmp}/releases.jsonl")"
+  ((n <= 1)) || return 1
+  release="$(jq -sc --arg t "$1" '[.[] | select(.tag == $t)][0] // empty' "${tmp}/releases.jsonl")"
+  [[ -z ${release} ]] || return 0
+  # Not in the listing (made since, or a page short): ask for the tag itself.
+  release="$(dst_gh api "repos/${TARGET_REPO}/releases/tags/$1" 2>/dev/null |
+    jq -c '{id, tag: .tag_name, draft, assets: [.assets[] | {id, name, state, digest, updated_at}]}' 2>/dev/null)" ||
+    release=""
+  return 0
+}
+
+publish_release() { # <entry> <release id> <tag>
+  dst_gh api -X PATCH "repos/${TARGET_REPO}/releases/$2" -F draft=false -f make_latest=false >/dev/null || {
+    fail_entry "$1" "cannot publish the release $3"
+    return 1
+  }
 }
 
 # Sets new_id[$1] to a GetEvinced asset with the entry's bytes: an uploaded copy
 # found by its digest, or one this run uploads. Fails the entry on any error.
 ensure_asset() {
-  local name="$1" tag release rjson rid draft found sname file got uname taken asset state digest
+  local name="$1" tag release="" rjson rid draft found sname file got uname taken asset state digest busy
   tag="${name}-v${ver[${name}]}"
-  release="$(release_for "${tag}")"
+  find_release "${tag}" || {
+    fail_entry "${name}" "${TARGET_REPO} has more than one release tagged ${tag}; delete the extra one"
+    return 0
+  }
   if [[ -n ${release} ]]
   then
+    rid="$(jq -r .id <<<"${release}")"
+    draft="$(jq -r .draft <<<"${release}")"
     found="$(jq -r --arg d "sha256:${sha[${name}]}" \
       '[.assets[] | select(.state == "uploaded" and .digest == $d)][0].id // empty' <<<"${release}")"
     if [[ -n ${found} ]]
     then
-      draft="$(jq -r .draft <<<"${release}")"
-      rid="$(jq -r .id <<<"${release}")"
+      # A draft here holds the asset of a run that stopped before publishing.
       if [[ ${draft} == true ]] && ! ${dry_run}
       then
-        # A failed run uploaded it and stopped before publishing.
-        dst_gh api -X PATCH "repos/${TARGET_REPO}/releases/${rid}" -F draft=false -f make_latest=false >/dev/null || {
-          fail_entry "${name}" "cannot publish the release ${tag}"
-          return 0
-        }
+        publish_release "${name}" "${rid}" "${tag}" || return 0
       fi
       new_id[${name}]="${found}"
       say "${name} ${ver[${name}]}: reuse asset ${found} of release ${tag}"
@@ -272,15 +332,26 @@ ensure_asset() {
   fi
   if ${dry_run}
   then
+    # A stand-in id, so the plan shows the file this copy would change.
+    new_id[${name}]=0
     say "${name} ${ver[${name}]}: would copy ${src_repo[${name}]} asset ${src_id[${name}]} to release ${tag}"
     return 0
   fi
 
-  sname="$(src_gh api "repos/${src_repo[${name}]}/releases/assets/${src_id[${name}]}" --jq .name)" ||
-    {
-      fail_entry "${name}" "cannot read ${src_repo[${name}]} asset ${src_id[${name}]}"
-      return 0
-    }
+  # An upload still in progress may be another run's; one an hour old is dead.
+  busy="$(jq -r --argjson age "${STALE_UPLOAD_SECONDS}" \
+    '[.assets[] | select(.state != "uploaded" and (now - (.updated_at | fromdateiso8601)) < $age)][0].id // empty' \
+    <<<"${release:-"{}"}" 2>/dev/null)" || busy=""
+  if [[ -n ${busy} ]]
+  then
+    fail_entry "${name}" "an upload to ${tag} is in progress (asset ${busy}); the next run retries"
+    return 0
+  fi
+
+  sname="$(src_gh api "repos/${src_repo[${name}]}/releases/assets/${src_id[${name}]}" --jq .name)" || {
+    fail_entry "${name}" "cannot read ${src_repo[${name}]} asset ${src_id[${name}]}"
+    return 0
+  }
   [[ ${sname} =~ ^[A-Za-z0-9._+@-]+$ ]] || {
     fail_entry "${name}" "unexpected source asset name: ${sname}"
     return 0
@@ -313,9 +384,7 @@ ensure_asset() {
     }
     draft=true
   else
-    rid="$(jq -r .id <<<"${release}")"
-    draft="$(jq -r .draft <<<"${release}")"
-    # An incomplete upload is a failed run's; no entry can pin it.
+    # A dead run's incomplete upload; no entry can pin it.
     for asset in $(jq -r '.assets[] | select(.state != "uploaded") | .id' <<<"${release}")
     do
       dst_gh api -X DELETE "repos/${TARGET_REPO}/releases/assets/${asset}" >/dev/null || {
@@ -356,10 +425,7 @@ ensure_asset() {
   fi
   if [[ ${draft} == true ]]
   then
-    dst_gh api -X PATCH "repos/${TARGET_REPO}/releases/${rid}" -F draft=false -f make_latest=false >/dev/null || {
-      fail_entry "${name}" "cannot publish the release ${tag}"
-      return 0
-    }
+    publish_release "${name}" "${rid}" "${tag}" || return 0
   fi
   new_id[${name}]="$(jq -r .id <<<"${asset}")"
   say "${name} ${ver[${name}]}: uploaded asset ${new_id[${name}]}"
@@ -390,23 +456,36 @@ write_copy() {
   printf '%s\n' "${out}" >"${clone}/${rel[${name}]}"
 }
 
-# Deletes each marked GetEvinced file whose entry is no longer in this tap.
+# Deletes each marked GetEvinced file whose entry left this tap, moved between
+# Formula/ and Casks/, or is excluded.
 remove_departed() {
-  local f name
+  local f name path why
   for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb
   do
     marked "${f}" || continue
     name="${f##*/}"
     name="${name%.rb}"
-    [[ -n ${kind[${name}]:-} ]] && continue
-    say "${name}: left 21StarkCom/homebrew-tap; deleting ${f#"${clone}"/} (its releases stay)"
+    path="${f#"${clone}"/}"
+    if [[ -n ${excluded[${name}]:-} ]]
+    then
+      why="is excluded from the mirror"
+    elif [[ -z ${kind[${name}]:-} ]]
+    then
+      why="left 21StarkCom/homebrew-tap"
+    elif [[ ${rel[${name}]} != "${path}" ]]
+    then
+      why="moved to ${rel[${name}]}"
+    else
+      continue
+    fi
+    say "${name}: ${why}; deleting ${path} (its releases stay)"
     rm -f "${f}"
   done
 }
 
 # Rewrites the README block from the marked files in the clone.
 write_readme() {
-  local block f name k v home line
+  local block f name k v home line sep=""
   block="${BEGIN_MARK}
 ## Mirrored from 21StarkCom/homebrew-tap
 
@@ -447,21 +526,24 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
   if [[ -f "${clone}/README.md" ]] && grep -qxF -- "${BEGIN_MARK}" "${clone}/README.md" &&
      grep -qxF -- "${END_MARK}" "${clone}/README.md"
   then
+    # The END line may be the file's last, with no newline after it.
     BLOCK="${block}" BEGIN_MARK="${BEGIN_MARK}" END_MARK="${END_MARK}" perl -0777 -pi -e '
-      s/^\Q$ENV{BEGIN_MARK}\E\n.*?^\Q$ENV{END_MARK}\E\n/$ENV{BLOCK}\n/ms
+      s/^\Q$ENV{BEGIN_MARK}\E\n.*?^\Q$ENV{END_MARK}\E(?:\n|\z)/$ENV{BLOCK}\n/ms
     ' "${clone}/README.md" || die "cannot rewrite the README block"
   else
-    local sep=""
     [[ ! -s "${clone}/README.md" ]] || sep="${NL}"
     printf '%s%s\n' "${sep}" "${block}" >>"${clone}/README.md"
   fi
 }
 
 # Writes every copy, deletes departed files and the README block; commits and
-# pushes. Sets rejected=true when GitHub refuses the push. main runs it as a plain
+# pushes. Sets rejected=true when the push lost a race. main runs it as a plain
 # command, so set -e holds inside it.
 write_and_push() {
   local name path head
+  local -a was_formulae=("${changed_formulae[@]}") was_casks=("${changed_casks[@]}")
+  attempt=$((attempt + 1))
+  rejected=false
   for name in "${names[@]}"
   do
     active "${name}" || continue
@@ -470,57 +552,61 @@ write_and_push() {
   done
   ((${#only[@]} > 0)) || remove_departed
   write_readme
-  rejected=false
   cgit add -A
   cgit diff --cached --name-only >"${tmp}/changed"
   changed_formulae=() changed_casks=() changed=""
   while IFS= read -r path
   do
-    [[ -n ${path} ]] || continue
+    [[ ${path} == *.rb ]] || continue
     name="${path##*/}"
     name="${name%.rb}"
-    case "${path}" in
-      Formula/*.rb) changed_formulae+=("${name}") ;;
-      Casks/*.rb) changed_casks+=("${name}") ;;
-    esac
-    if [[ -n ${kind[${name}]:-} && -e "${clone}/${path}" ]]
+    if [[ ! -e "${clone}/${path}" ]]
     then
-      changed+="${NL}- ${name} ${ver[${name}]}"
-    elif [[ ${path} == *.rb ]]
-    then
-      changed+="${NL}- ${name}: deleted (left 21StarkCom/homebrew-tap)"
+      changed+="${NL}- ${name}: deleted from ${path}"
+      continue
     fi
+    case "${path}" in
+      Formula/*) changed_formulae+=("${name}") ;;
+      Casks/*) changed_casks+=("${name}") ;;
+    esac
+    changed+="${NL}- ${name} ${ver[${name}]:-}"
   done <"${tmp}/changed"
-  # A deleted entry is not one to fetch.
-  local -a keep=()
-  for name in "${changed_formulae[@]}"; do [[ -e "${clone}/Formula/${name}.rb" ]] && keep+=("${name}"); done
-  changed_formulae=("${keep[@]}")
-  keep=()
-  for name in "${changed_casks[@]}"; do [[ -e "${clone}/Casks/${name}.rb" ]] && keep+=("${name}"); done
-  changed_casks=("${keep[@]}")
 
   if cgit diff --cached --quiet
   then
+    if ((attempt > 1))
+    then
+      # The earlier push landed (its reply was lost) or a twin run pushed the same
+      # files: GetEvinced holds them, so report them as this run's.
+      changed_formulae=("${was_formulae[@]}") changed_casks=("${was_casks[@]}")
+      pushed=true
+      say "${TARGET_REPO} ${branch}: already holds this copy"
+      return 0
+    fi
     say "${TARGET_REPO} ${branch}: no change"
     ${created_branch} || return 0
+  elif ${dry_run}
+  then
+    say "dry run: would commit and push to ${TARGET_REPO} ${branch}:"
+    cgit diff --cached --stat >"${tmp}/stat"
+    sed 's/^/  /' "${tmp}/stat"
+    return 0
   else
     cgit commit -q -m "mirror: 21StarkCom/homebrew-tap@${src_rev}" \
       -m "Copied by scripts/mirror.sh (docs/specs/getevinced-mirror.md).${changed:+${NL}${changed}}"
   fi
+  ${dry_run} && return 0
   head="$(cgit rev-parse --short HEAD)"
-  if ${dry_run}
-  then
-    say "dry run: would push ${head} to ${TARGET_REPO} ${branch}"
-    cgit show --stat --format='%s' HEAD >"${tmp}/stat"
-    sed 's/^/  /' "${tmp}/stat"
-    return 0
-  fi
-  if cgit push -q origin "HEAD:refs/heads/${branch}"
+  if cgit push -q origin "HEAD:refs/heads/${branch}" 2>"${tmp}/push.err"
   then
     pushed=true
     say "${TARGET_REPO} ${branch}: pushed ${head}"
-  else
+  elif grep -qE '\[rejected\].*\((fetch first|non-fast-forward)\)' "${tmp}/push.err"
+  then
     rejected=true
+  else
+    # A ruleset, permission or network refusal: a retry would meet it again.
+    die "${TARGET_REPO} refused the push:${NL}$(<"${tmp}/push.err")"
   fi
 }
 
@@ -531,11 +617,13 @@ main() {
   do
     command -v "${tool}" >/dev/null || die "${tool} is required"
   done
+  command -v sha256sum >/dev/null || command -v shasum >/dev/null || die "sha256sum or shasum is required"
   [[ -n ${MIRROR_TARGET_TOKEN:-} ]] || usage_error "MIRROR_TARGET_TOKEN is not set"
   ${dry_run} || [[ -n ${MIRROR_SOURCE_TOKEN:-} ]] || usage_error "MIRROR_SOURCE_TOKEN is not set"
   auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${MIRROR_TARGET_TOKEN}" | base64 | tr -d '\n')"
 
   src_root="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
+  check_source
   src_rev="$(git -C "${src_root}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/mirror.XXXXXX")"
   trap cleanup EXIT
@@ -546,21 +634,19 @@ main() {
   check_clashes
   list_releases
 
-  local name try=1
+  local name
   for name in "${names[@]}"
   do
     active "${name}" || continue
     ensure_asset "${name}"
   done
 
-  pushed=false
   while :
   do
     write_and_push
     ${rejected} || break
-    ((try < PUSH_TRIES)) || die "${TARGET_REPO} rejected the push ${PUSH_TRIES} times"
-    try=$((try + 1))
-    warn "${TARGET_REPO} rejected the push; cloning again (try ${try} of ${PUSH_TRIES})"
+    ((attempt < PUSH_TRIES)) || die "${TARGET_REPO} rejected the push ${PUSH_TRIES} times"
+    warn "${TARGET_REPO} rejected the push; cloning again (try $((attempt + 1)) of ${PUSH_TRIES})"
     clone_target
     check_clashes
   done
@@ -575,10 +661,9 @@ main() {
   fi
 
   local n_failed=0
-  for name in "${names[@]}"
+  for name in "${!failed[@]}"
   do
     selected "${name}" || continue
-    [[ -z ${failed[${name}]:-} ]] && continue
     n_failed=$((n_failed + 1))
     warn "FAILED ${name}: ${failed[${name}]}"
   done
@@ -592,7 +677,4 @@ main() {
   say "done: every entry is copied"
 }
 
-NL=$'\n'
-declare -a changed_formulae=() changed_casks=()
-changed="" pushed=false rejected=false
 main "$@"
