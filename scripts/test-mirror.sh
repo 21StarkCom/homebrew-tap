@@ -394,7 +394,7 @@ tgt() { "${REAL_GIT}" --git-dir="${R}/target.git" "$@"; }
 tgt_file() { tgt show "${2:-main}:$1" 2>/dev/null; }
 tgt_has() { tgt cat-file -e "${2:-main}:$1" 2>/dev/null; }
 tgt_lacks() { ! tgt_has "$@"; }
-head_of() { tgt rev-parse "${1:-main}" 2>/dev/null; }
+head_of() { tgt rev-parse main 2>/dev/null; }
 head_is() { [[ "$(head_of)" == "$1" ]]; }
 aac_same() {
   [[ "$(tgt rev-parse "${1:-main}:Formula/aac.rb")" == "${AAC_SHA}" &&
