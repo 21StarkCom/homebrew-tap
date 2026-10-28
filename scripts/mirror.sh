@@ -223,6 +223,16 @@ read_entries() {
     then
       fail_entry "${name}" "needs one url, version and sha256 stanza each; has ${n_url}, ${n_ver} and ${n_sha}"
     fi
+    # The copy renames 21StarkCom/tap/<x> to GetEvinced/tap/<x>, which does not
+    # exist for an excluded x: such an entry stays out until it is excluded too.
+    for e in ${EXCLUDED}
+    do
+      if grep -qiE "21starkcom/tap/${e}([^A-Za-z0-9_-]|\$)" "${f}"
+      then
+        fail_entry "${name}" "it names 21StarkCom/tap/${e}, which the mirror excludes; exclude ${name} too, or drop the reference"
+        break
+      fi
+    done
   done
   ((${#names[@]} > 0)) || die "no entry to copy in ${src_root}"
   local o
