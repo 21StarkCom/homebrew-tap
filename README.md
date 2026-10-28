@@ -544,10 +544,14 @@ loads only when named in full.
 | `Casks/` | One cask per GUI app, each with an initialization-only download adapter. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
+| `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`. `--help` is its reference. |
+| `scripts/test-mirror.sh` | The mirror's tests, against a bare remote and a stubbed `gh`. |
+| `docs/specs/getevinced-mirror.md` | The design of the GetEvinced mirror (epic STARK-13601). |
 | `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors, with synthetic credentials only and gh's login hidden. |
 | `scripts/verify-download.rb` | Checks hermod's authenticated preflight and a partial-download resume against the pinned checksum. |
 | `.github/workflows/formulae.yml` | On ubuntu arm64 (Homebrew on Linux): styles every entry, runs both verify scripts, audits and fetches every formula and cask, and fetches with only a gh login. |
-| `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu, and under bash 3.2 in the `bash:3.2` image. |
+| `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu, and under bash 3.2 in the `bash:3.2` image, and `scripts/test-mirror.sh` on ubuntu. |
+| `.github/workflows/mirror.yml` | On each push to `main`, daily and by hand: runs `scripts/mirror.sh` as the `21stark-tap-mirror` App, then fetches the changed copies (every copy, daily and by hand) from GetEvinced. |
 | `.github/workflows/secret-scan.yml` | The fleet's shared secret scan. |
 
 ## How it fits the fleet
@@ -557,6 +561,13 @@ running this repo's `scripts/bump.sh` (21stark ADR-0008), which reads the asset 
 checksum back from the published release and opens a PR here. Two entries have no release
 that bumps them: the atlas cask, re-pointed by hand at a `desktop-v*` release, and tyr, a
 frozen v0.109.0 CLI from before tyr became library-only.
+
+Every push to `main` also reaches [`GetEvinced/homebrew-tap`](https://github.com/GetEvinced/homebrew-tap)
+(`GetEvinced/tap`), for Evinced engineers who cannot read 21StarkCom. `mirror.yml` copies each
+entry's release asset into a release there and writes the entry there with its URL on that
+copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
+([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
+line, so the Evinced team's own `aac` and `evinced` stay theirs, and it deletes no release.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the

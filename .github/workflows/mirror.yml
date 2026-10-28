@@ -1,0 +1,160 @@
+name: mirror
+
+# Copies every entry of this tap, with its release asset, into
+# GetEvinced/homebrew-tap (docs/specs/getevinced-mirror.md, epic STARK-13601),
+# then fetches the changed copies from GetEvinced to prove they download. No
+# pull_request trigger: bump.yml, a gate workflow, runs scripts/test-mirror.sh, so
+# this file stays out of bump.sh's GATE_WORKFLOWS. The App key lives in the
+# Environment getevinced-mirror, which only main can use (D10), and each job also
+# refuses any other ref, so a dispatch on another branch skips both jobs.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    # The daily safety net: heals a run that failed, and fetches every copy.
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  # One run at a time; GitHub keeps one pending run, and a newer one replaces it.
+  group: mirror
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: getevinced-mirror
+    # The first run copies 2.47 GB; a release of Atlas or frigg copies ~0.5 GB.
+    timeout-minutes: 90
+    outputs:
+      formulae: ${{ steps.mirror.outputs.formulae }}
+      casks: ${{ steps.mirror.outputs.casks }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Mint a GetEvinced/homebrew-tap token
+        id: app
+        # app-id is deprecated in v3; the Environment holds the App's Client ID.
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.GETEVINCED_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GETEVINCED_TAP_APP_KEY }}
+          owner: GetEvinced
+          repositories: homebrew-tap
+          permission-contents: write
+      - name: Name the App's bot as the committer
+        id: bot
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+        run: |
+          id="$(gh api "users/${SLUG}%5Bbot%5D" --jq .id)"
+          echo "name=${SLUG}[bot]" >>"$GITHUB_OUTPUT"
+          echo "email=${id}+${SLUG}[bot]@users.noreply.github.com" >>"$GITHUB_OUTPUT"
+      - name: Mirror
+        id: mirror
+        env:
+          MIRROR_SOURCE_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
+          MIRROR_TARGET_TOKEN: ${{ steps.app.outputs.token }}
+          MIRROR_GIT_NAME: ${{ steps.bot.outputs.name }}
+          MIRROR_GIT_EMAIL: ${{ steps.bot.outputs.email }}
+        run: scripts/mirror.sh
+
+  verify:
+    needs: sync
+    # After a partial failure too (always()), for the entries sync did push. A
+    # scheduled or manual run checks every copy; a push run, the changed ones.
+    if: >-
+      always() && github.ref == 'refs/heads/main' && needs.sync.result != 'skipped' &&
+      (github.event_name != 'push' || needs.sync.outputs.formulae != '' || needs.sync.outputs.casks != '')
+    # Arm, as in formulae.yml: on x86 `brew fetch --cask` skips an arm64-only cask.
+    runs-on: ubuntu-24.04-arm
+    environment: getevinced-mirror
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - name: Put the runner's Homebrew on PATH
+        run: echo /home/linuxbrew/.linuxbrew/bin >>"$GITHUB_PATH"
+      - name: Update Homebrew
+        # Before the tap is registered, as in formulae.yml: `brew update` fetches
+        # every registered tap, and this checkout keeps no credentials.
+        run: brew update
+      - name: Mint a read token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.GETEVINCED_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.GETEVINCED_TAP_APP_KEY }}
+          owner: GetEvinced
+          repositories: homebrew-tap
+          permission-contents: read
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: GetEvinced/homebrew-tap
+          token: ${{ steps.app.outputs.token }}
+          path: getevinced-tap
+          persist-credentials: false
+      - name: Register it as the tap getevinced/tap
+        # And trust it: Homebrew 7 loads no formula from a tap it does not trust.
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/getevinced"
+          ln -s "$GITHUB_WORKSPACE/getevinced-tap" "$(brew --repository)/Library/Taps/getevinced/homebrew-tap"
+          brew trust --tap GetEvinced/tap
+      - name: Pick the copies to check
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          FORMULAE: ${{ needs.sync.outputs.formulae }}
+          CASKS: ${{ needs.sync.outputs.casks }}
+        run: |
+          marker='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
+          marked() { grep -lxF -- "$marker" getevinced-tap/"$1"/*.rb 2>/dev/null | sed -E 's#.*/##; s#\.rb$##' | tr '\n' ' '; }
+          if [[ "$EVENT" != push ]]; then
+            FORMULAE="$(marked Formula)"
+            CASKS="$(marked Casks)"
+          fi
+          echo "formulae=$FORMULAE" >>"$GITHUB_OUTPUT"
+          echo "casks=$CASKS" >>"$GITHUB_OUTPUT"
+          echo "checking formulae: ${FORMULAE:-none}; casks: ${CASKS:-none}"
+      - name: Style the copies
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
+          FORMULAE: ${{ steps.pick.outputs.formulae }}
+          CASKS: ${{ steps.pick.outputs.casks }}
+        run: |
+          paths=()
+          for f in $FORMULAE; do paths+=("getevinced-tap/Formula/$f.rb"); done
+          for c in $CASKS; do paths+=("getevinced-tap/Casks/$c.rb"); done
+          ((${#paths[@]} == 0)) || brew style "${paths[@]}"
+      - name: Fetch the copies with a token that reads GetEvinced only
+        env:
+          HOMEBREW_GITHUB_API_TOKEN: ${{ steps.app.outputs.token }}
+          FORMULAE: ${{ steps.pick.outputs.formulae }}
+          CASKS: ${{ steps.pick.outputs.casks }}
+        run: |
+          # Each fetch checks the download against the pinned sha256. Never add --os
+          # or --arch: brew fetch then looks only for a bottle and downloads nothing.
+          for f in $FORMULAE; do
+            brew fetch "getevinced/tap/$f"
+            [[ "$f" == *-linux ]] || continue
+            # The same check as formulae.yml: a -linux copy holds a Linux x86-64 tool.
+            tool="${f%-linux}"
+            cache="$(brew --cache "getevinced/tap/$f")"
+            [[ -s "$cache" ]] || { echo "getevinced/tap/$f: brew fetch downloaded nothing" >&2; exit 1; }
+            unzip -q -o "$cache" "$tool" -d "$RUNNER_TEMP/$f"
+            format="$(file -b "$RUNNER_TEMP/$f/$tool")"
+            [[ "$format" == *"ELF 64-bit LSB "*"executable, x86-64,"* ]] ||
+              { echo "getevinced/tap/$f: $tool is not a Linux x86-64 executable: $format" >&2; exit 1; }
+            echo "getevinced/tap/$f: $tool is a Linux x86-64 executable"
+          done
+          for c in $CASKS; do
+            brew fetch --cask "getevinced/tap/$c"
+          done
