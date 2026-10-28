@@ -15,10 +15,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/682998651",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/684068705",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.41.1"
-  sha256 "87d355c9c6d347ef3d785fe6cded60be9d1a1a742104cb9aeb2aeaf676475c0a"
+  version "0.41.2"
+  sha256 "da467a6fa15e91077bda33be66fc6979517ef5653341cf238fc7bce39771d36d"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -95,6 +95,14 @@ class Sleipnir < Formula
       Huginn (named Sleipnir Companion before Huginn 0.39.0) in each such profile's
       chrome://extensions. That install also rewrites a launcher from sleipnir 0.12.2 or
       earlier, which names the versioned bun and sleipnir kegs.
+
+      0.41.2 ships Huginn 0.69.11 (the update above), whose Settings page has a Sound section:
+      dictation in the chat's composer, reading replies aloud, Test microphone, Test voice and
+      Run doctor. Huginn's host runs bragi for it, the first it finds in /opt/homebrew/bin,
+      /usr/local/bin, ~/.local/bin or its PATH, a formula this one does not depend on: without
+      it, the section says Huginn found no bragi. Dictation and Test microphone need bragi
+      0.4.0 or newer. Install it (an older bragi takes `brew upgrade 21StarkCom/tap/bragi`):
+        brew install 21StarkCom/tap/bragi
 
       0.41.1 ships Huginn 0.69.7 (the update above), whose Settings page (the popup's Settings
       row, or Chrome's Extension options) sets how long Recents keeps a chat: Forever, the
