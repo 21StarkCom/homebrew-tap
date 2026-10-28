@@ -19,8 +19,10 @@ permissions:
   contents: read
 
 concurrency:
-  # One run at a time; GitHub keeps one pending run, and a newer one replaces it.
-  group: mirror
+  # One run on main at a time; GitHub keeps one pending run, and a newer one
+  # replaces it. A dispatch on another ref (whose jobs skip) gets a group of its
+  # own, so it cannot replace a pending main run.
+  group: ${{ github.ref == 'refs/heads/main' && 'mirror' || format('mirror-{0}', github.run_id) }}
   cancel-in-progress: false
 
 jobs:
@@ -28,7 +30,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: getevinced-mirror
-    # The first run copies 2.47 GB; a release of Atlas or frigg copies ~0.5 GB.
+    # The first run copies 1.54 GB (D11 leaves out 0.93 GB); a frigg release
+    # (frigg and frigg-linux) copies ~0.85 GB.
     timeout-minutes: 90
     outputs:
       formulae: ${{ steps.mirror.outputs.formulae }}
@@ -36,6 +39,10 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          # main's tip, not the run's commit: checkout points origin/main at the
+          # commit it checks out, so mirror.sh's HEAD == origin/main check cannot
+          # stop a re-run of an older run from copying an older main over a newer.
+          ref: main
           persist-credentials: false
       - name: Mint a GetEvinced/homebrew-tap token
         id: app
@@ -67,10 +74,10 @@ jobs:
 
   verify:
     needs: sync
-    # After a partial failure too (always()), for the entries sync did push. A
+    # After a partial failure too (!cancelled()), for the entries sync did push. A
     # scheduled or manual run checks every copy; a push run, the changed ones.
     if: >-
-      always() && github.ref == 'refs/heads/main' && needs.sync.result != 'skipped' &&
+      !cancelled() && github.ref == 'refs/heads/main' && needs.sync.result != 'skipped' &&
       (github.event_name != 'push' || needs.sync.outputs.formulae != '' || needs.sync.outputs.casks != '')
     # Arm, as in formulae.yml: on x86 `brew fetch --cask` skips an arm64-only cask.
     runs-on: ubuntu-24.04-arm
@@ -120,6 +127,12 @@ jobs:
           if [[ "$EVENT" != push ]]; then
             FORMULAE="$(marked Formula)"
             CASKS="$(marked Casks)"
+            # No marked file: an empty tap, or a $marker that no longer matches
+            # scripts/mirror.sh's MARKER. Fail rather than check nothing and pass.
+            if [[ -z "${FORMULAE// /}${CASKS// /}" ]]; then
+              echo "getevinced-tap holds no file with the mirror marker; does \$marker still match scripts/mirror.sh's MARKER?" >&2
+              exit 1
+            fi
           fi
           echo "formulae=$FORMULAE" >>"$GITHUB_OUTPUT"
           echo "casks=$CASKS" >>"$GITHUB_OUTPUT"
@@ -142,8 +155,11 @@ jobs:
         run: |
           # Each fetch checks the download against the pinned sha256. Never add --os
           # or --arch: brew fetch then looks only for a bottle and downloads nothing.
+          # One call downloads the formulae concurrently, as in formulae.yml.
+          refs=()
+          for f in $FORMULAE; do refs+=("getevinced/tap/$f"); done
+          ((${#refs[@]} == 0)) || brew fetch "${refs[@]}"
           for f in $FORMULAE; do
-            brew fetch "getevinced/tap/$f"
             [[ "$f" == *-linux ]] || continue
             # The same check as formulae.yml: a -linux copy holds a Linux x86-64 tool.
             tool="${f%-linux}"
@@ -156,5 +172,11 @@ jobs:
             echo "getevinced/tap/$f: $tool is a Linux x86-64 executable"
           done
           for c in $CASKS; do
-            brew fetch --cask "getevinced/tap/$c"
+            cask="getevinced/tap/$c"
+            brew fetch --cask "$cask"
+            # As in formulae.yml: a cask Homebrew skips exits 0 having downloaded
+            # nothing. Ask --cache as macOS arm64: it prints nothing for one on Linux.
+            [[ -s "$(brew --cache --cask --os=tahoe --arch=arm "$cask")" ]] ||
+              { echo "$cask: brew fetch --cask downloaded nothing" >&2; exit 1; }
+            echo "$cask: fetched"
           done

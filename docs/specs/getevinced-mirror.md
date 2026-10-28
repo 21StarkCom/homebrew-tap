@@ -60,7 +60,7 @@ source or readable JS (D11).
 | D8 | The job reads 21StarkCom with the existing `HOMEBREW_RELEASE_READ_TOKEN`. It adds no 21StarkCom credential. |
 | D9 | The replica copies `Formula/` and `Casks/` only. `scripts/`, the workflows, `CLAUDE.md` and the bumper stay here. |
 | D10 | The App key lives in the Actions Environment `getevinced-mirror` of this repo, which only `main` can use. A run on any other ref gets no key. |
-| D11 | `atlas`, `brain`, `librarian`, `lucius` and `odinctl` are never copied, and a marked copy of one is deleted. Their assets hold the operator's source (`lucius`: 112 `.ts` files) or readable JS with source maps (the atlas repo's `atlas`, `brain` and `librarian`; `odinctl`). The operator picked them on 2026-10-28, after the first proof run had copied `brain`; that release was deleted by hand. `librarian` also depends on `brain`. `sleipnir` (its TypeScript tree), `agent-seats` (an unminified bundle) and the minified bundles of `idun`, `njord` and `hermod` stay in the mirror: the operator saw what each holds and did not name them. |
+| D11 | `atlas`, `brain`, `librarian`, `lucius` and `odinctl` are never copied, and a marked copy of one is deleted. Their assets hold the operator's source (`lucius`: 112 `.ts` files) or readable JS with source maps (the atlas repo's `atlas`, `brain` and `librarian`; `odinctl`). The operator picked them on 2026-10-28, after the first proof run had copied `brain`; that release was deleted by hand. `librarian` also depends on `brain`, and any entry that names an excluded one fails until it is excluded too. `sleipnir` (its TypeScript tree), `agent-seats` (an unminified bundle) and the minified bundles of `idun`, `njord` and `hermod` stay in the mirror: the operator saw what each holds and did not name them. |
 
 ## Design
 
@@ -264,6 +264,9 @@ of every bump PR, so a change to a real entry must never turn it red. It covers:
 
 - a first run into an empty tap: all entries, releases and the README block;
 - the excluded entries (D11): not copied, no `gh` call, a marked copy deleted;
+- an entry that names an excluded one (`21StarkCom/tap/brain`): it fails
+  before any read or upload, since its copy would name an entry GetEvinced
+  lacks;
 - an entry moved from `Formula/` to `Casks/`: the old copy goes;
 - a formula and a cask with one name: both fail;
 - a source checkout with uncommitted entries, or not at `origin/main`: exit 2;

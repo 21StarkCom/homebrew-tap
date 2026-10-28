@@ -567,7 +567,8 @@ Every push to `main` also reaches [`GetEvinced/homebrew-tap`](https://github.com
 entry's release asset into a release there and writes the entry there with its URL on that
 copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
 ([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
-line, so the Evinced team's own `aac` and `evinced` stay theirs, and it deletes no release.
+line and its own block of the README there, so the Evinced team's own `aac` and `evinced`
+stay theirs, and it deletes no release.
 Five entries never go there: `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose
 assets hold source or readable JS (spec D11). A new entry goes there unless its PR adds it
 to `EXCLUDED` in `scripts/mirror.sh`.

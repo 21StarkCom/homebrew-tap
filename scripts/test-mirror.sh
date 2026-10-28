@@ -121,6 +121,7 @@ formula_text() { # <name> <version> <asset id> <sha256>
         '    EOS' \
         '  end'
       ;;
+    needsbrain) printf '%s\n' '  depends_on "21StarkCom/tap/brain"' ;;
     *) printf '%s\n' '  def install' "    bin.install \"$1\"" '  end' ;;
   esac
   printf '%s\n' 'end'
@@ -562,6 +563,18 @@ check "deletes the marked brain copy" tgt_lacks Formula/brain.rb
 check "says why" out_has "brain: is excluded from the mirror; deleting Formula/brain.rb"
 run_mirror --only lucius
 check "--only an excluded entry exits 2" is_code 2
+
+begin "an entry that names an excluded one"
+rig
+source_asset needsbrain 501 "needsbrain 1.0.0"
+set_formula needsbrain 1.0.0 501
+commit_src
+run_mirror
+check "exit 1" is_code 1
+check "says it names an excluded entry" err_has "it names 21StarkCom/tap/brain, which the mirror excludes"
+check "no copy of it" tgt_lacks Formula/needsbrain.rb
+check "nothing of it is read or uploaded" log_lacks needsbrain
+check "the others are pushed" tgt_has Formula/demo.rb
 
 begin "an entry moved from Formula/ to Casks/"
 rig
