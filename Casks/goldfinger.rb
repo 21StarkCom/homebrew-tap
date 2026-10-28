@@ -34,11 +34,11 @@ cask "goldfinger" do
   # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version
   # string is not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, as mimir's
   # cask does: the API asset id is the only working private fetch, and integrity stays checked.
-  version "0.12.0"
-  sha256 "3860bf72642c6cd7e5a0f932165fae6e23190e8fed3faa752a25cde5a30f20c8"
+  version "0.12.1"
+  sha256 "55beda4fb7d5ff990b425fd93c7f0441367714be371ead316780aa67a9c3973f"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/goldfinger/releases/assets/671749304",
+  url "https://api.github.com/repos/21StarkCom/goldfinger/releases/assets/683935170",
       using: GoldfingerPrivateReleaseStrategy
   name "Goldfinger"
   desc "Background computer use for agents: operate native apps without taking focus"
