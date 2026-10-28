@@ -1,7 +1,9 @@
 name: bump
 
 # scripts/bump.sh's tests (scripts/test-bump.sh), under the runner's bash and under
-# bash 3.2, the oldest bash a signing Mac runs bump.sh under (macOS's /bin/bash).
+# bash 3.2, the oldest bash a signing Mac runs bump.sh under (macOS's /bin/bash);
+# and scripts/mirror.sh's tests (scripts/test-mirror.sh), which this gate runs so
+# that mirror.yml needs no pull_request trigger of its own.
 # ADR-0008 Decision 4: bump.sh --merge waits for this workflow, so its pull_request
 # trigger must stay unfiltered, and scripts/test-bump.sh fails if the gate's
 # workflow list and this directory's pull_request workflows disagree.
@@ -30,6 +32,20 @@ jobs:
         run: shellcheck scripts/bump.sh scripts/test-bump.sh
       - name: Test bump.sh
         run: scripts/test-bump.sh
+
+  mirror-test:
+    # mirror.sh needs bash 4 or later and runs only here and on a Mac with
+    # Homebrew's bash, so it has no bash 3.2 job.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Shellcheck
+        run: shellcheck scripts/mirror.sh scripts/test-mirror.sh
+      - name: Test mirror.sh
+        run: scripts/test-mirror.sh
 
   bash-3-2:
     # Docker Hub's bash 3.2 image (Alpine), in place of a macOS runner: its bash is
