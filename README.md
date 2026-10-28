@@ -133,9 +133,12 @@ bragi doctor         # the helper, the microphone, the providers' credentials
 ```
 
 **macOS 15 (Sequoia) or newer.** Both binaries are Developer-ID signed + notarized, and
-`bragi-audio` carries the microphone entitlement. bragi starts the helper from beside its
-own resolved path, so the formula installs the two side by side. The first capture asks
-macOS for the microphone in your terminal's name.
+`bragi-audio` carries the microphone entitlement and its own usage string. bragi starts the
+helper from beside its own resolved path, so the formula installs the two side by side. The
+first `bragi listen` or `bragi session` asks macOS for the microphone as bragi-audio, whoever
+started bragi. macOS keys that answer to the helper's keg path, so each `brew upgrade bragi`
+asks once more. `bragi doctor` never asks: until macOS has asked, it warns
+`audio.permission_pending`.
 
 ## brain
 
