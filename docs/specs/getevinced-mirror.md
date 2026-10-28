@@ -278,9 +278,11 @@ Before merge, after the setup:
    the operator's `gh` login as both tokens. This writes real releases,
    which the first run on `main` reuses, and the scratch branch
    `mirror-proof`, which the ruleset does not guard.
-2. On the operator's Mac, tap the scratch tap `getevinced/mirror-proof`
-   from `GetEvinced/homebrew-tap`, check out `mirror-proof` in it, and
-   trust it.
+2. On the operator's Mac, set `HOMEBREW_NO_AUTO_UPDATE=1` for steps 2 to
+   7. Without it, `brew install` runs `brew update`, which checks the
+   scratch tap back out to `main`. Tap the scratch tap
+   `getevinced/mirror-proof` from `GetEvinced/homebrew-tap`, check out
+   `mirror-proof` in it, and trust it.
 3. Mint an App token with `permission-contents: read`. It can read
    `GetEvinced/homebrew-tap` only, so it proves that a user needs no
    21StarkCom access. Use it as `HOMEBREW_GITHUB_API_TOKEN` for steps 4
@@ -292,8 +294,9 @@ Before merge, after the setup:
    `brew test getevinced/mirror-proof/tyr`.
 6. Put the Mac back: `brew uninstall getevinced/mirror-proof/tyr`, then
    `brew install 21starkcom/tap/tyr`.
-7. Clean up: untrust and untap `getevinced/mirror-proof`, and delete the
-   branch `mirror-proof`.
+7. Clean up: untap `getevinced/mirror-proof` while it is still trusted
+   (`brew untap` refuses an untrusted tap), then untrust it by its remote.
+   Delete the branch `mirror-proof`.
 
 After merge: the push run of `mirror.yml` copies every entry to GetEvinced
 `main`. A manual run on `main` then makes no GetEvinced commit. The ticket
