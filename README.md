@@ -568,6 +568,9 @@ entry's release asset into a release there and writes the entry there with its U
 copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
 ([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
 line, so the Evinced team's own `aac` and `evinced` stay theirs, and it deletes no release.
+Five entries never go there: `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose
+assets hold source or readable JS (spec D11). A new entry goes there unless its PR adds it
+to `EXCLUDED` in `scripts/mirror.sh`.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
