@@ -204,8 +204,8 @@ class Sleipnir < Formula
       side panel where a local Claude Code session reads and acts on the tab beside it, with
       no permission prompts and your settings, hooks and MCP servers, so text on a page it
       reads reaches a session that runs any command without asking. Until 0.27.0 (above) it
-      ran `idun bob --agent claude` and needed #{opt_bin}/sleipnir-mcp registered with Claude
-      Code at user scope. It acts through sleipnir-mcp's huginn tools, so close a chat left
+      ran idun's bob launcher with `--agent claude` and needed #{opt_bin}/sleipnir-mcp registered
+      with Claude Code at user scope. It acts through sleipnir-mcp's huginn tools, so close a chat left
       open across an upgrade, as you restart MCP clients. Its Record session saves a zip
       through Chrome's downloads (kept in ~/Documents/Huginn/chat-recordings/ when it cannot
       reach the panel) holding the replayable journey, a screenshot before and after each
