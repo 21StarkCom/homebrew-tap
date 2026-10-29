@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 # macOS arm64 build of lucius — a terminal brainstorming partner on the Claude
-# Agent SDK. Bun runs the TypeScript directly (no build step), so the zip ships
-# the source tree + vendored prod node_modules. Its one Mach-O is the SDK's own
-# Anthropic-signed `claude` binary (@anthropic-ai/claude-agent-sdk-darwin-arm64).
+# Agent SDK. The zip ships minified Bun bundles at the .ts paths this formula
+# names, plus their run-time files and the vendored prod node_modules. Its one
+# Mach-O is the SDK's own Anthropic-signed `claude` binary
+# (@anthropic-ai/claude-agent-sdk-darwin-arm64).
 class Lucius < Formula
   desc "Brainstorming partner with the capabilities of a second brain"
   homepage "https://github.com/21StarkCom/lucius"
@@ -26,14 +27,17 @@ class Lucius < Formula
   end
 
   depends_on arch: :arm64 # the vendored SDK `claude` binary is an arm64 Mach-O
-  depends_on "bun" # Bun runs the TypeScript directly; lucius has no build step
+  depends_on "bun" # Bun runs the minified bundles that lucius's release builds
   depends_on :macos # vault publication compiles a Darwin-only C shim through bun:ffi
 
   def install
-    # The zip is the runnable tree (bin/, src/, package.json, bun.lock, vendored
-    # node_modules). src/vault/publication.ts compiles ./publication.c beside it,
-    # and the SDK resolves its `claude` binary from node_modules, so the layout
-    # must be kept intact: install the whole tree into libexec and wrap the entry.
+    # The zip is the runnable tree: minified bundles at bin/lucius.ts,
+    # src/session/runtime.ts and src/vault/publication.ts, their run-time files
+    # (package.json, bun.lock, src/personas/, src/web/dist/, the src/vault/*.c
+    # shims) and the vendored prod node_modules. The bundles find those files
+    # from the package root, which holds package.json, and the SDK resolves its
+    # `claude` binary from node_modules, so the layout must be kept intact:
+    # install the whole tree into libexec and wrap the entry.
     libexec.install Dir["*"]
     # Keep the caller's working directory out of the runtime: by default Bun
     # loads its .env into process.env and runs its bunfig.toml preloads in-process.
