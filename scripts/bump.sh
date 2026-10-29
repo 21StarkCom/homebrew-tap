@@ -54,7 +54,8 @@ Point one entry of this tap at a published GitHub Release, then open a PR here.
 The checkout this script sits in is the one it reads and edits: clone the tap
 (depth 1 is enough) and run the script from that clone.
 
-  <entry>             exactly one of Formula/<entry>.rb and Casks/<entry>.rb
+  <entry>             exactly one of Formula/<entry>.rb, Casks/<entry>.rb and
+                      Casks/<first character>/<entry>.rb
   <tag>               the release tag, verbatim (v1.2.3, cli-v1.2.3). The version
                       is the tag without its leading non-digit prefix, and must
                       be X.Y.Z or X.Y.Z-<pre>.
@@ -616,8 +617,12 @@ main() {
   esac
   # CDPATH off: a relative scripts/.. must resolve against the working directory.
   tap_root="$(CDPATH='' cd -- "${tap_root}" && pwd -P)"
-  local found=0 cand
-  for cand in "Formula/${entry}.rb" "Casks/${entry}.rb"
+  # A cask can also sit in a folder of Casks/ named for its first character, as
+  # homebrew/cask shards its casks (Casks/i/idavoll.rb): Homebrew reads
+  # Casks/**/*.rb. The idavoll cask is there so that idavoll's Fleet CLIs step,
+  # which reads Casks/*.rb, never installs it.
+  local found=0 cand shard="Casks/${entry:0:1}/${entry}.rb"
+  for cand in "Formula/${entry}.rb" "Casks/${entry}.rb" "${shard}"
   do
     if [[ -f "${tap_root}/${cand}" ]]
     then
@@ -625,8 +630,8 @@ main() {
       found=$((found + 1))
     fi
   done
-  [[ "${found}" -ne 0 ]] || die "no tap entry ${entry}: neither Formula/${entry}.rb nor Casks/${entry}.rb exists in ${tap_root}"
-  [[ "${found}" -eq 1 ]] || die "${entry} is ambiguous: both Formula/${entry}.rb and Casks/${entry}.rb exist"
+  [[ "${found}" -ne 0 ]] || die "no tap entry ${entry}: none of Formula/${entry}.rb, Casks/${entry}.rb and ${shard} exists in ${tap_root}"
+  [[ "${found}" -eq 1 ]] || die "${entry} is ambiguous: more than one of Formula/${entry}.rb, Casks/${entry}.rb and ${shard} exists"
   read_entry
 
   for t in gh git perl

@@ -126,7 +126,10 @@ jobs:
             echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
             exit 1
           fi
-          for path in Casks/*.rb; do
+          # A cask in Casks/<first character>/ too (Casks/i/idavoll.rb): Homebrew
+          # reads Casks/**/*.rb. A glob with no match stays as its pattern.
+          for path in Casks/*.rb Casks/*/*.rb; do
+            [[ -f "$path" ]] || continue
             name="${path##*/}"
             name="${name%.rb}"
             cask="21StarkCom/tap/${name}"

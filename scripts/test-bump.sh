@@ -492,6 +492,11 @@ cp "${R}/tap/Formula/demo.rb" "${R}/tap/Casks/demo.rb"
 bump_bare demo v1.2.3 --dry-run
 check "Formula/demo.rb beside Casks/demo.rb is ambiguous" eval 'is_code 1 && stderr_has "ambiguous" && no_tools'
 rm "${R}/tap/Casks/demo.rb"
+mkdir -p "${R}/tap/Casks/d"
+cp "${R}/tap/Casks/democask.rb" "${R}/tap/Casks/d/democask.rb"
+bump_bare democask v1.2.3 --dry-run
+check "Casks/democask.rb beside Casks/d/democask.rb is ambiguous" eval 'is_code 1 && stderr_has "ambiguous" && stderr_has "Casks/d/democask.rb" && no_tools'
+rm -r "${R}/tap/Casks/d"
 
 begin "I1: --dry-run prints the diff to stderr and writes nothing"
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
@@ -550,6 +555,11 @@ check "--asset-suffix picks the tarball, with -- before the positionals" eval 'i
 add_release 21StarkCom/democask desktop-v0.2.0 701 Democask-0.2.0.zip
 bump democask desktop-v0.2.0 --asset-suffix .zip --dry-run
 check "a cask, and a tag prefix other than v" eval 'is_code 0 && stderr_has "+  version \"0.2.0\"" && stderr_has "democask/releases/assets/701\","'
+mkdir -p "${R}/tap/Casks/d"
+git -C "${R}/tap" mv Casks/democask.rb Casks/d/democask.rb
+bump democask desktop-v0.2.0 --asset-suffix .zip --dry-run
+check "a cask in Casks/<first character>/, as Homebrew shards casks" eval 'is_code 0 && stderr_has "==> Casks/d/democask.rb:" && stderr_has "+  version \"0.2.0\""'
+git -C "${R}/tap" mv Casks/d/democask.rb Casks/democask.rb
 
 begin "I2: --no-pr edits this checkout's entry, with no commit and no PR"
 add_release 21StarkCom/demo v1.2.3 501 demo_v1.2.3_darwin_arm64.zip
@@ -821,8 +831,9 @@ BUDGET=10 bump demo v1.2.3 --merge
 check "a head that moves to a human's edit is never merged unattended" eval 'is_code 1 && stderr_has "not merging a human" && [ "$(gh_calls "pr merge")" = 0 ] && [ "$(gh_calls "pr view")" = 2 ]'
 
 begin "every entry in this tap has the bumper's three lines, once each"
-for path in "${root}"/Formula/*.rb "${root}"/Casks/*.rb
+for path in "${root}"/Formula/*.rb "${root}"/Casks/*.rb "${root}"/Casks/*/*.rb
 do
+  [[ -f "${path}" ]] || continue # a glob with no match stays as its pattern
   entry_rel="${path#"${root}"/}"
   result="$(cd "${root}" && ENTRY_REL="${entry_rel}" OUT="${work}/rewritten.rb" bash -c '
     . scripts/bump.sh

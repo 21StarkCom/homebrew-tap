@@ -22,8 +22,10 @@ fi
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
 # Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
-# alfred stays here by the operator's request of 2026-10-29.
-EXCLUDED="alfred"
+# alfred stays here by the operator's request of 2026-10-29. idavoll's .pkg holds
+# its app's readable JavaScript (STARK-13891); its cask is in Casks/i/, which this
+# script does not read, and the entry here keeps it out if that ever changes.
+EXCLUDED="alfred idavoll"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
