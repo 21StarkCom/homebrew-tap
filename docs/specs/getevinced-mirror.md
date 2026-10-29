@@ -211,8 +211,8 @@ runner as in `formulae.yml`, links the GetEvinced tap in with a read-only App
 token and trusts it, styles the changed copies (every copy on a daily or
 manual run; not `FormulaAudit/DependencyOrder`, since rule 3 of the copy can
 move a `depends_on` out of sort order), and fetches each with that token,
-which checks its `sha256`. A
-`-linux` copy must hold a Linux x86-64 `<tool>`. A failed run sends GitHub's
+which checks its `sha256`. A `-linux` copy must hold a Linux x86-64
+`<tool>`. A failed run sends GitHub's
 failure email to the operator; the spec adds no other alert.
 
 ### Setup in GetEvinced and here
