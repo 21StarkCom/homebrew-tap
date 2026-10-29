@@ -1,9 +1,10 @@
 # frozen_string_literal: true
 
 # macOS arm64 build of lucius — a terminal brainstorming partner on the Claude
-# Agent SDK. Bun runs the TypeScript directly (no build step), so the zip ships
-# the source tree + vendored prod node_modules. Its one Mach-O is the SDK's own
-# Anthropic-signed `claude` binary (@anthropic-ai/claude-agent-sdk-darwin-arm64).
+# Agent SDK. The zip ships minified Bun bundles at the .ts paths this formula
+# names, plus their run-time files and the vendored prod node_modules. Its one
+# Mach-O is the SDK's own Anthropic-signed `claude` binary
+# (@anthropic-ai/claude-agent-sdk-darwin-arm64).
 class Lucius < Formula
   desc "Brainstorming partner with the capabilities of a second brain"
   homepage "https://github.com/21StarkCom/lucius"
@@ -13,10 +14,10 @@ class Lucius < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/661403988",
+  url "https://api.github.com/repos/21StarkCom/lucius/releases/assets/687752727",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.12.0"
-  sha256 "ffc8a8c4d6497772125b8fb131a64795fb9b1aff1b7a6f5c8513c0b2aad5e828"
+  version "0.13.0"
+  sha256 "469889fd8f4f147c12601b4c9cc712aa3b16a352d5971e9e8b5709d9671cf235"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -26,14 +27,17 @@ class Lucius < Formula
   end
 
   depends_on arch: :arm64 # the vendored SDK `claude` binary is an arm64 Mach-O
-  depends_on "bun" # Bun runs the TypeScript directly; lucius has no build step
+  depends_on "bun" # Bun runs the minified bundles that lucius's release builds
   depends_on :macos # vault publication compiles a Darwin-only C shim through bun:ffi
 
   def install
-    # The zip is the runnable tree (bin/, src/, package.json, bun.lock, vendored
-    # node_modules). src/vault/publication.ts compiles ./publication.c beside it,
-    # and the SDK resolves its `claude` binary from node_modules, so the layout
-    # must be kept intact: install the whole tree into libexec and wrap the entry.
+    # The zip is the runnable tree: minified bundles at bin/lucius.ts,
+    # src/session/runtime.ts and src/vault/publication.ts, their run-time files
+    # (package.json, bun.lock, src/personas/, src/web/dist/, the src/vault/*.c
+    # shims) and the vendored prod node_modules. The bundles find those files
+    # from the package root, which holds package.json, and the SDK resolves its
+    # `claude` binary from node_modules, so the layout must be kept intact:
+    # install the whole tree into libexec and wrap the entry.
     libexec.install Dir["*"]
     # Keep the caller's working directory out of the runtime: by default Bun
     # loads its .env into process.env and runs its bunfig.toml preloads in-process.
