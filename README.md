@@ -606,7 +606,8 @@ inline source map in either place. Extensions match in any case. A refused entry
 copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
 check on a local zip or `.tar.gz`, with no token, so a release can run it before it ships.
 The check cannot judge readable JS (an unminified bundle, or the JS inside a compiled
-binary). `lucius` stays out until a release of it passes the check (spec D11). A new entry
+binary). `alfred` stays out by the operator's request, and `lucius` stays out until a
+release of it passes the check (spec D11). A new entry
 goes there unless its PR adds it to `EXCLUDED` in `scripts/mirror.sh`.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
