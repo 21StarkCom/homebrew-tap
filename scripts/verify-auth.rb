@@ -7,14 +7,15 @@ require "open3"
 require "tmpdir"
 
 root = Pathname.new(__dir__).parent
-paths = root.glob("{Formula,Casks}/*.rb")
+# A cask can also sit in Casks/<first character>/ (Casks/i/idavoll.rb).
+paths = root.glob("{Formula,Casks}/*.rb") + root.glob("Casks/*/*.rb")
 invalid_tokens = [nil, " \t\n"]
 # Entries fall back to `gh auth token`, then a keychain token, when the env
 # var is unset or blank. An empty HOME hides gh's login, so a signed-in box
 # still exercises the no-token path.
 Dir.mktmpdir("verify-auth-home") do |home|
   paths.each do |path|
-    kind = (path.parent.basename.to_s == "Casks") ? "--cask" : "--formula"
+    kind = path.relative_path_from(root).to_s.start_with?("Casks/") ? "--cask" : "--formula"
     name = "21StarkCom/tap/#{path.basename(".rb")}"
     asset_url = path.read[/^  url "([^"]+)"/, 1]
     invalid_tokens.each do |token|

@@ -83,6 +83,7 @@ does not record GitHub's host key.
 | `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, from 0.8.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
+| `idavoll` (cask) | cask | [idavoll](https://github.com/21StarkCom/idavoll) | `Idavoll.app`, `/usr/local/bin/idavoll`, from the release's `.pkg` | Go CLI in an Electron app | Developer ID + notarized + stapled `.pkg` | 13 (Ventura) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
 "any" means the entry declares no macOS floor beyond Apple Silicon.
@@ -538,6 +539,26 @@ remove Goldfinger in System Settings → Privacy & Security, or run
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
 
+## idavoll (workspace installer — cask)
+
+The 21Stark workspace installer from [`idavoll`](https://github.com/21StarkCom/idavoll):
+`Idavoll.app` and its `idavoll` CLI. The cask installs the release's own `.pkg`, the package
+a bare Mac installs from the GitHub release, so both routes write the same files:
+`/Applications/Idavoll.app` and `/usr/local/bin/idavoll`, under the package id
+`com.21stark.idavoll`. The package installs as root, so the install and each upgrade ask for
+the `sudo` password. A bare Mac has no Homebrew yet (idavoll installs it), so it still takes
+the `.pkg` from the release.
+
+```sh
+brew install --cask 21StarkCom/tap/idavoll
+```
+
+The file is `Casks/i/idavoll.rb`, not `Casks/idavoll.rb`. idavoll's Fleet CLIs step installs
+each `Casks/*.rb` of this tap, so it would install idavoll's own `.pkg` in the middle of its
+own run, and the package's preinstall quits a running Idavoll.app. Homebrew reads
+`Casks/**/*.rb`; idavoll reads `Casks/*.rb` only. The GetEvinced mirror does not copy this
+cask: `scripts/mirror.sh` lists it in `EXCLUDED`, since the app's JavaScript is readable.
+
 ## mimir (credential vault — cask)
 
 [`mimir`](https://github.com/21StarkCom/mimir) — a personal macOS credential vault
@@ -569,7 +590,7 @@ loads only when named in full.
 | Path | What it holds |
 |---|---|
 | `Formula/` | One Ruby formula per CLI, plus `hermod-linux` and `frigg-linux`, their tools' Linux builds. |
-| `Casks/` | One cask per GUI app, each with an initialization-only download adapter. |
+| `Casks/` | One cask per GUI app, each with an initialization-only download adapter. The idavoll cask is in `Casks/i/`, which idavoll's installer does not read. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
 | `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`. `--help` is its reference. |
@@ -607,12 +628,15 @@ copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs th
 check on a local zip or `.tar.gz`, with no token, so a release can run it before it ships.
 The check cannot judge readable JS (an unminified bundle, or the JS inside a compiled
 binary). `alfred` stays out by the operator's request (spec D11). A new entry goes there
-unless its PR adds it to `EXCLUDED` in `scripts/mirror.sh`.
+unless its PR adds it to `EXCLUDED` in `scripts/mirror.sh`. `idavoll` is there too: its
+`.pkg` holds the app's readable JavaScript (and the mirror, which reads `Casks/*.rb` only,
+does not read its cask in `Casks/i/`).
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
 next rebuilt machine with no change to the installer. It leaves out every formula that
-declares `depends_on :linux` (`hermod-linux`, `frigg-linux`). idavoll's devbox profile
+declares `depends_on :linux` (`hermod-linux`, `frigg-linux`), and it does not read the
+folders inside `Casks/`, so it never installs the idavoll cask (`Casks/i/idavoll.rb`). idavoll's devbox profile
 works the other way: it installs, builds or skips each entry as idavoll's
 `config/linux-clis.json` says, and reports a failure for an entry that file does not
 list, so a new entry needs its line there too (STARK-11780 places `frigg-linux`).
@@ -648,6 +672,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `valkyrie` | idun | `scripts/release-darwin.sh valkyrie`, for a `valkyrie-v*` tag | the signing Mac |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
+| `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
 agent-seats', idun's (`idun`, `njord` and `valkyrie`) and alfred's releases and plume's and frigg's `release.yml` merge their
