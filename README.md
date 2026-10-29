@@ -443,10 +443,11 @@ notarized. For the live capabilities, use `frigg`.
 
 ## valkyrie
 
-The [`valkyrie`](https://github.com/21StarkCom/idun) agent launchers — `klod`, `kodx`,
-`bob`, `agnes`, `gru` and `minion`, which start Claude Code and Codex sessions in cmux
-tabs, worktrees and tickets. It is the third app of the `idun` repo, and takes over the
-launch commands from `idun` (idun's `docs/specs/launcher-app.md`).
+The [`valkyrie`](https://github.com/21StarkCom/idun) agent launchers — the subcommands
+`valkyrie klod`, `kodx`, `bob`, `agnes`, `gru` and `minion`, which start Claude Code and
+Codex sessions in cmux tabs, worktrees and tickets. The formula puts only `valkyrie` on
+`PATH`. It is the third app of the `idun` repo, and takes over the launch commands from
+`idun` (idun's `docs/specs/launcher-app.md`).
 
 ```sh
 brew install 21StarkCom/tap/valkyrie
