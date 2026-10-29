@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 17 formulae for the CLIs and 3 casks for the GUI apps, each a signed
+`brew install`: 18 formulae for the CLIs and 3 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux` and
 `frigg-linux`, hermod's and frigg's Linux x86_64 builds for the devbox. The tap builds
 nothing. It only pins each entry to a published release, and each source repo's release
 re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 20 of the 22 are re-pinned on each release
+**Status:** active. Every entry installs today; 21 of the 23 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -80,6 +80,7 @@ does not record GitHub's host key.
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
+| `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, from 0.8.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
@@ -440,6 +441,23 @@ the vendor-integration capabilities that `frigg` drives, and it ships no binary.
 bumps this formula, so it stays on the last CLI build, v0.109.0, Developer-ID signed +
 notarized. For the live capabilities, use `frigg`.
 
+## valkyrie
+
+The [`valkyrie`](https://github.com/21StarkCom/idun) agent launchers — `klod`, `kodx`,
+`bob`, `agnes`, `gru` and `minion`, which start Claude Code and Codex sessions in cmux
+tabs, worktrees and tickets. It is the third app of the `idun` repo, and takes over the
+launch commands from `idun` (idun's `docs/specs/launcher-app.md`).
+
+```sh
+brew install 21StarkCom/tap/valkyrie
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
+a `valkyrie-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
+checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
+`apps/idun/setup.sh`, which steps aside when this formula is installed.
+
 ## atlas (desktop app — cask)
 
 The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
@@ -609,11 +627,12 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `stark-statusline` | idavoll | `statusline/release.sh` (`make statusline-release STATUSLINE_VERSION=X.Y.Z`), for a `statusline-v*` tag | the operator's Mac |
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
+| `valkyrie` | idun | `scripts/release-darwin.sh valkyrie`, for a `valkyrie-v*` tag | the signing Mac |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun` and `njord`) and alfred's releases and plume's and frigg's `release.yml` merge their
+agent-seats', idun's (`idun`, `njord` and `valkyrie`) and alfred's releases and plume's and frigg's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
