@@ -27,7 +27,7 @@ EXCLUDED="lucius"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
-FIRST_PARTY_SCOPES="@21starkcom @atlas @sleipnir"
+FIRST_PARTY_SCOPES="@21starkcom @atlas @idun @sleipnir"
 # A .ts file an entry names under libexec passes only as minified output: a mean
 # line of this many bytes or more. Source runs at about 40.
 MINIFIED_LINE_BYTES=200
@@ -76,10 +76,11 @@ it passes the source check.
 The source check runs on each asset before its upload, and an asset that fails
 it is not copied. It refuses, outside node_modules/: a .ts, .tsx, .mts or .cts
 file that is not a declaration file (.d.ts), unless the entry names its path
-under libexec and it holds minified output; and a .map file. In a package of a
-first-party scope under node_modules/ (FIRST_PARTY_SCOPES: @21starkcom, @atlas,
-@sleipnir), it refuses those files with no exception, and a file that holds
-"sourcesContent". Anywhere outside node_modules/ or in such a package, it
+under libexec and it holds minified output; a .map file; and a .json file that
+holds "sourcesContent". In a package of a first-party scope under node_modules/
+(FIRST_PARTY_SCOPES: @21starkcom, @atlas, @idun, @sleipnir), it refuses those
+files with no exception, and any file that holds "sourcesContent". Extensions
+match in any case. Anywhere outside node_modules/ or in such a package, it
 refuses a JS, TS or CSS file with an inline source map (sourceMappingURL=data:).
 It cannot judge readable JS: an unminified bundle, or the JS inside a binary.
 
@@ -320,9 +321,11 @@ scan_asset() { # <entry> <archive> <entry file>
     use warnings;
     my %named = map { $_ => 1 } split /\n/, $ENV{NAMED};
     my %scope = map { $_ => 1 } split " ", $ENV{SCOPES};
-    my $ts = qr/\.(?:ts|tsx|mts|cts)\z/;
-    my $decl = qr/\.d\.(?:ts|mts|cts)\z/;
-    my $text = qr/\.(?:js|mjs|cjs|jsx|ts|tsx|mts|cts|css)\z/;
+    # Extensions match in any case: a .TS or .Map on a case-blind disk is the same file.
+    my $ts = qr/\.(?:ts|tsx|mts|cts)\z/i;
+    my $decl = qr/\.d\.(?:ts|mts|cts)\z/i;
+    my $text = qr/\.(?:js|mjs|cjs|jsx|ts|tsx|mts|cts|css)\z/i;
+    my $json = qr/\.json\z/i;
     # The bytes of a regular file; undef for a link or a directory.
     sub body {
       my $f = "$ENV{ROOT}/$_[0]";
@@ -340,13 +343,14 @@ scan_asset() { # <entry> <archive> <entry file>
       my $source = $p =~ $ts && $p !~ $decl;
       my $bundle = $source && !$ours && $named{$p};
       return "TypeScript source$in" if $source && !$bundle;
-      return "a source map$in" if $p =~ /\.map\z/;
-      return "" unless $ours || $p =~ $text;
+      return "a source map$in" if $p =~ /\.map\z/i;
+      return "" unless $ours || $p =~ $text || $p =~ $json;
       my $b = body($p);
       return $bundle ? "a named TypeScript path that is not a plain file" : "" unless defined $b;
       my $mean = int(length($b) / (($b =~ tr/\n//) + ($b =~ /[^\n]\z/ ? 1 : 0) || 1));
       return "TypeScript source, not minified (a mean line of $mean bytes)" if $bundle && $mean < $ENV{MINLINE};
-      return "holds sourcesContent$in" if $ours && index($b, "sourcesContent") >= 0;
+      # A .json outside node_modules/ that holds sourcesContent is a source map by another name.
+      return "holds sourcesContent$in" if ($ours || $p =~ $json) && index($b, "sourcesContent") >= 0;
       return "an inline source map$in" if $p =~ $text && $b =~ /sourceMappingURL=data:/;
       return "";
     }

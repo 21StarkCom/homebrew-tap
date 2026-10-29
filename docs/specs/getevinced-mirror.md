@@ -18,7 +18,7 @@ job refuses an asset that holds source (D12).
 - The operator asked for a full replica: whatever this tap holds, the
   GetEvinced tap holds too.
 
-## Today
+## Before the mirror (2026-10-28)
 
 - `GetEvinced/homebrew-tap` is private. It holds two formulae, `aac` and
   `evinced`, that build from source. The release workflows of
@@ -27,24 +27,11 @@ job refuses an asset that holds source (D12).
 - A ruleset, `main: release-bot-only direct push` (id `17658502`), blocks
   every update, deletion and force push of `main` except by its one bypass
   actor, the `evinced-infra-cloud` GitHub App (app id `2877550`). It guards
-  no other branch and no tag. That App has `administration: write` and
-  `contents: write` on every GetEvinced repo.
-- The GetEvinced tap has no releases, no tags, and no Actions secrets or
-  variables. Immutable releases are off.
-- This tap holds 19 formulae and 3 casks. Each one pins one asset by its API
-  URL (`https://api.github.com/repos/21StarkCom/<repo>/releases/assets/<id>`),
-  its `version` and its `sha256`. Each starts with
-  `# frozen_string_literal: true`.
-- Each source asset reports its SHA-256 in the API (`digest`), and it equals
-  the `sha256` the entry pins. The 22 assets total 2.47 GB. The largest are
-  Atlas (492 MB), `frigg-linux` (425 MB) and `frigg` (416 MB).
-- Entries name this tap in their text: `librarian` has
-  `depends_on "21starkcom/tap/brain"`, and the `sleipnir`, `mimir` and
-  `goldfinger` texts tell the user to run `brew … 21StarkCom/tap/<entry>`.
-  The three casks say that installing needs "read access to 21StarkCom
-  private repos".
-- Releases here are frequent: `idun` shipped 10 releases between 2026-10-26
-  and 2026-10-28.
+  no other branch and no tag. Immutable releases are off.
+- Each entry here pins one asset by its API URL, its `version` and its
+  `sha256`, which equals the asset's `digest` in the API. The 22 assets
+  totaled 2.47 GB (Atlas 492 MB, `frigg-linux` 425 MB, `frigg` 416 MB), and
+  `idun` shipped 10 releases in two days.
 
 ## Decisions
 
@@ -61,7 +48,7 @@ job refuses an asset that holds source (D12).
 | D9 | The replica copies `Formula/` and `Casks/` only. `scripts/`, the workflows, `CLAUDE.md` and the bumper stay here. |
 | D10 | The App key lives in the Actions Environment `getevinced-mirror` of this repo, which only `main` can use. A run on any other ref gets no key. |
 | D11 | An entry in `EXCLUDED` (`scripts/mirror.sh`) is never copied, and a marked copy of one is deleted. Any entry that names an excluded one fails until it is excluded too. On 2026-10-28 the operator excluded `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose assets held source or readable JS with source maps, after the first proof run had copied `brain`; that release was deleted by hand. Their build tickets (epic STARK-13647) removed the source. `atlas`, `brain`, `librarian` and `odinctl` passed D12 on 2026-10-29 and are copied. `lucius` stays excluded until a release of it passes D12: its 0.13.0 zip still vendors `@21starkcom/stark-tui` with its TypeScript and source maps. |
-| D12 | Before an upload, the job unpacks the asset (`.zip` or `.tar.gz`) and fails the entry when a file in it is source. Outside `node_modules/`: a `.ts`, `.tsx`, `.mts` or `.cts` file that is no `.d.ts`, unless the entry names its path under `libexec` and its mean line is 200 bytes or more (minified: the `lucius` and `sleipnir` bundles); a `.map` file. In a package under `node_modules/` whose scope is first-party (`@21starkcom`, `@atlas`, `@sleipnir`; the package after the last `node_modules/` of the path): such a TypeScript file or `.map` file with no exception, and a file that holds `sourcesContent`. In both places: a JS, TS or CSS file with an inline source map. Third-party packages are not read. The check cannot judge readable JS, in a bundle or inside a compiled binary; the build tickets and a red-team audit cover those. A copy uploaded before the check came in is checked by hand once (D7). |
+| D12 | Before an upload, the job unpacks the asset (`.zip` or `.tar.gz`) and fails the entry when a file in it is source. Outside `node_modules/`: a `.ts`, `.tsx`, `.mts` or `.cts` file that is no `.d.ts`, unless the entry names its path under `libexec` and its mean line is 200 bytes or more (minified: the `lucius` and `sleipnir` bundles); a `.map` file; a `.json` file that holds `sourcesContent`. Extensions match in any case. In a package under `node_modules/` whose scope is first-party (`@21starkcom`, `@atlas`, `@idun`, `@sleipnir`; the package after the last `node_modules/` of the path): such a TypeScript file or `.map` file with no exception, and a file that holds `sourcesContent`. In both places: a JS, TS or CSS file with an inline source map. Third-party packages are not read. The check cannot judge readable JS, in a bundle or inside a compiled binary; the build tickets and a red-team audit cover those. A copy uploaded before the check came in is checked by hand once (D7). |
 
 ## Design
 
@@ -215,148 +202,53 @@ The rest of the README stays as the Evinced team wrote it.
 
 ### `.github/workflows/mirror.yml`
 
-- Triggers: `push` to `main`, `workflow_dispatch`, and one `schedule` run a
-  day. The daily run heals a run that failed.
-- Each job has `if: github.ref == 'refs/heads/main'`.
-- `concurrency`: one group, `mirror`, with `cancel-in-progress: false`.
-  GitHub keeps one pending run, and a newer run replaces it.
-- Job `sync`, on `ubuntu-latest`, `environment: getevinced-mirror`,
-  `timeout-minutes: 90`:
-  1. Check out this repo with `persist-credentials: false`.
-  2. Mint an App token with `actions/create-github-app-token`, pinned by
-     SHA: `client-id` from `GETEVINCED_TAP_APP_CLIENT_ID`, `owner: GetEvinced`,
-     `repositories: homebrew-tap`. The action marks its `app-id` input as
-     deprecated (v3.3.0), so the spec uses the Client ID.
-  3. Run `scripts/mirror.sh` with `MIRROR_SOURCE_TOKEN` from
-     `HOMEBREW_RELEASE_READ_TOKEN` and `MIRROR_TARGET_TOKEN` from the App
-     token. Commit as the App's bot user.
-- Job `verify`, on `ubuntu-24.04-arm`, `environment: getevinced-mirror`,
-  `timeout-minutes: 60`, after `sync`, when `sync` changed an entry. The
-  daily run checks every entry:
-  1. Put Homebrew on `PATH` and run `brew update`, as `formulae.yml` does.
-  2. Mint an App token with `permission-contents: read`.
-  3. Check out `GetEvinced/homebrew-tap` with that token and
-     `persist-credentials: false`. Link it in as the tap `getevinced/tap`
-     and trust it, as `formulae.yml` does for this repo.
-  4. Run `brew style` on the changed copies.
-  5. Run `brew fetch` on each changed formula and `brew fetch --cask` on
-     each changed cask, with the App token as `HOMEBREW_GITHUB_API_TOKEN`.
-     Each fetch checks the download against the pinned `sha256`.
-  6. For a changed `-linux` formula, check that the download holds a
-     Linux x86-64 `<tool>`, as `formulae.yml` does.
-
-A failed run sends GitHub's failure email to the operator: the operator
-merges to `main` and wrote the cron line. The spec adds no other alert.
+It runs on each push to `main`, once a day (which heals a failed run) and by
+hand, never on another ref, one run at a time (`concurrency: mirror`, no
+cancel). Job `sync` runs `scripts/mirror.sh` with `HOMEBREW_RELEASE_READ_TOKEN`
+as the source token and an App token (Client ID, not the deprecated app id) as
+the target token, and commits as the App's bot user. Job `verify`, on an arm
+runner as in `formulae.yml`, links the GetEvinced tap in with a read-only App
+token and trusts it, styles the changed copies (every copy on a daily or
+manual run), and fetches each with that token, which checks its `sha256`. A
+`-linux` copy must hold a Linux x86-64 `<tool>`. A failed run sends GitHub's
+failure email to the operator; the spec adds no other alert.
 
 ### Setup in GetEvinced and here
 
-1. Create the App `21stark-tap-mirror` in the GetEvinced organization:
-   private, no webhook, `contents: write`, `metadata: read`.
-2. Install it on `GetEvinced/homebrew-tap` only.
-3. Add it to the bypass list of ruleset `17658502`, mode `always`.
-4. Make one private key. Store it in Mimir.
-5. Make the Environment `getevinced-mirror` in this repo, with a deployment
-   branch policy of `main` only.
-6. Set its variable `GETEVINCED_TAP_APP_CLIENT_ID` (the App's Client ID)
-   and its secret `GETEVINCED_TAP_APP_KEY`.
-
-Steps 1, 2 and 4 need a browser session of a GetEvinced owner. Steps 4 and 6
-handle a secret value, so they need the operator's GO.
+Done once, before the first run: the App `21stark-tap-mirror` in the
+GetEvinced organization (private, no webhook, `contents: write`,
+`metadata: read`), installed on `GetEvinced/homebrew-tap` only and added to
+the bypass list of ruleset `17658502` (mode `always`); its one private key in
+Mimir; and the Environment `getevinced-mirror` here (deployment branch policy
+`main` only), with the variable `GETEVINCED_TAP_APP_CLIENT_ID` and the secret
+`GETEVINCED_TAP_APP_KEY`.
 
 ## Testing
 
 `scripts/test-mirror.sh` uses fixture entries only: `bump.yml` is the gate
-of every bump PR, so a change to a real entry must never turn it red. Its
-copy of `mirror.sh` gets its own `EXCLUDED`, for the same reason, and each
-fixture asset is a real zip. It covers:
+of every bump PR, so a change to a real entry must never turn it red. For the
+same reason its copy of `mirror.sh` gets its own `EXCLUDED`. Each fixture
+asset is a real zip, against a bare git remote and a stubbed `gh`. Each
+`begin` line of the script names one case: together they cover each step and
+error of `mirror.sh` above, each copy rule (checked apart from the script, by
+`sed`), `aac.rb` and `evinced.rb` left byte for byte, no token in the work
+directory, the `gh` log or the output, and each D12 rule, by `--check` on
+fixture archives and by one run whose asset holds source.
 
-- a first run into an empty tap: all entries, releases and the README block;
-- the excluded entries (D11): not copied, no `gh` call, a marked copy deleted;
-- the D12 check, by `--check` on fixture archives: each rule refuses its
-  file (TypeScript of each extension, a minified `.ts` the entry does not
-  name, a named `.ts` that is not minified, a `.map` outside `node_modules/`
-  and in a first-party package of the npm, pnpm and bun layouts, TypeScript
-  and `sourcesContent` in a first-party package, an inline source map in
-  both places, and a `.ts` in a `.tar.gz`); a clean `.zip` and `.tar.gz`
-  pass, with a `.d.ts`, the named minified bundles, third-party maps and
-  TypeScript, a third-party package inside a first-party one, and a link;
-  another kind of archive, a broken zip and bad arguments fail;
-- an asset that holds source in a run: no release, no upload, no copy, the
-  others push, and the exit is non-zero;
-- an entry that names an excluded one (`21StarkCom/tap/<excluded>`): it fails
-  before any read or upload, since its copy would name an entry GetEvinced
-  lacks;
-- an entry moved from `Formula/` to `Casks/`: the old copy goes;
-- a formula and a cask with one name: both fail;
-- a source checkout with uncommitted entries, or not at `origin/main`: exit 2;
-- an upload another run has in progress (under an hour old): that entry
-  fails, and nothing is deleted;
-- a release that the listing misses: the script asks for its tag;
-- two releases with one tag: that entry fails;
-- a push that loses a race (a commit lands on `main` first): a fresh clone and
-  a second push; a push the remote refuses: no retry, exit 1;
-- a README whose END line has no newline after it;
-- a second run with no change: no upload, no commit;
-- a version bump of one entry: one upload, one changed file;
-- a reused asset: the release has a matching digest, so no download;
-- the same version with new bytes: a `<sha12>-` asset name, and the old
-  asset stays;
-- a SHA-256 mismatch on download: that entry fails, the others push, and
-  the exit is non-zero;
-- an incomplete upload left by a failed run: the script deletes and
-  replaces it;
-- an entry removed here: its marked file goes, its releases stay;
-- an unmarked GetEvinced file with an entry's name: that entry fails, the
-  file stays;
-- `aac.rb` and `evinced.rb` stay byte for byte the same;
-- the copy rules on fixtures that have a `depends_on "21starkcom/tap/…"`,
-  caveats with `21StarkCom/tap` (with and without a slash after it) and
-  `21STARKCOM/tap`, a `21StarkCom/homebrew-tap` that stays, and a cask with
-  "21StarkCom private repos";
-- `--branch` with a branch that does not exist yet;
-- `--only`: other entries and step 6 untouched;
-- no token and no base64 git credential in the work directory, the stub's
-  argument log or the output;
-- `--dry-run`: no write of any kind, with no git identity and no source token.
-
-The live proof and `mirror.yml`'s `verify` job check the copies of the real
-entries.
+`mirror.yml`'s `verify` job checks the copies of the real entries, and
+`scripts/mirror.sh --check` checks a real asset.
 
 ## Live proof
 
-Before merge, after the setup:
+Before the first merge (epic STARK-13601), a run on the scratch branch
+`mirror-proof` wrote real releases, a token that read GetEvinced only fetched
+every copy from that branch, and `tyr` was installed and tested from it, then
+put back. The branch was deleted.
 
-1. Run `scripts/mirror.sh --branch mirror-proof` from this checkout with
-   the operator's `gh` login as both tokens. This writes real releases,
-   which the first run on `main` reuses, and the scratch branch
-   `mirror-proof`, which the ruleset does not guard.
-2. On the operator's Mac, set `HOMEBREW_NO_AUTO_UPDATE=1` for steps 2 to
-   7. Without it, `brew install` runs `brew update`, which checks the
-   scratch tap back out to `main`. Tap the scratch tap
-   `getevinced/mirror-proof` from `GetEvinced/homebrew-tap`, check out
-   `mirror-proof` in it, and trust it.
-3. Mint an App token with `permission-contents: read`. It can read
-   `GetEvinced/homebrew-tap` only, so it proves that a user needs no
-   21StarkCom access. Use it as `HOMEBREW_GITHUB_API_TOKEN` for steps 4
-   and 5.
-4. Run `brew fetch` of every copied formula and `brew fetch --cask` of every
-   copied cask from the scratch tap: 15 formulae and 2 casks (D11 leaves out 5
-   of the 22 entries).
-5. Run `brew uninstall 21starkcom/tap/tyr`, then
-   `brew install getevinced/mirror-proof/tyr` and
-   `brew test getevinced/mirror-proof/tyr`.
-6. Put the Mac back: `brew uninstall getevinced/mirror-proof/tyr`, then
-   `brew install 21starkcom/tap/tyr`.
-7. Clean up: untap `getevinced/mirror-proof` while it is still trusted
-   (`brew untap` refuses an untrusted tap), then untrust it by its remote.
-   Delete the branch `mirror-proof`.
-
-After merge: the push run of `mirror.yml` copies every entry to GetEvinced
-`main`. A manual run on `main` then makes no GetEvinced commit. The ticket
-gets the run links, the GetEvinced commit, and the output of
-`brew tap GetEvinced/tap`, `brew trust --tap GetEvinced/tap` and
-`brew fetch GetEvinced/tap/idun` on the operator's Mac. Homebrew 7 loads
-no formula from a tap that is not trusted.
+After a merge, the push run of `mirror.yml` copies each changed entry to
+GetEvinced `main`, and a manual run checks every copy (`verify`). Homebrew 7
+loads no formula from a tap that is not trusted, so a user runs
+`brew trust --tap GetEvinced/tap` after `brew tap GetEvinced/tap`.
 
 ## Risks
 

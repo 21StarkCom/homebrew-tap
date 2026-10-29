@@ -599,10 +599,11 @@ line and its own block of the README there, so the Evinced team's own `aac` and 
 stay theirs, and it deletes no release.
 Before each upload it unpacks the asset and refuses one that holds source (spec D12):
 outside `node_modules`, a `.ts`, `.tsx`, `.mts` or `.cts` file (but a `.d.ts`, and a
-minified bundle at a path the entry names under `libexec`) or a `.map` file; in a package
-of a first-party scope (`@21starkcom`, `@atlas`, `@sleipnir`) under `node_modules`, those
-files or a `sourcesContent`; and an inline source map in either place. A refused entry is
-not copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
+minified bundle at a path the entry names under `libexec`), a `.map` file, or a `.json`
+that holds `sourcesContent`; in a package of a first-party scope (`@21starkcom`, `@atlas`,
+`@idun`, `@sleipnir`) under `node_modules`, those files or any `sourcesContent`; and an
+inline source map in either place. Extensions match in any case. A refused entry is not
+copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
 check on a local zip or `.tar.gz`, with no token, so a release can run it before it ships.
 The check cannot judge readable JS (an unminified bundle, or the JS inside a compiled
 binary). `lucius` stays out until a release of it passes the check (spec D11). A new entry

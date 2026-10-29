@@ -893,6 +893,12 @@ refuses "an inline source map outside node_modules" case.zip dist/bin.js "an inl
 refuses "an inline source map in a first-party package" case.zip node_modules/@21starkcom/kit/index.mjs \
   "an inline source map in a first-party package" "//# sourceMappingURL=data:application/json;base64,e30="
 refuses "a .ts in a .tar.gz" case.tar.gz src/app.ts "TypeScript source" "const a: number = 1"
+refuses "an upper-case .TS" case.zip src/App.TS "TypeScript source" "const a: number = 1"
+refuses "an upper-case .MAP" case.zip dist/bin.js.MAP "a source map" '{"version":3}'
+refuses "sourcesContent in a .json outside node_modules" case.zip dist/sources.json \
+  "holds sourcesContent" '{"version":3,"sourcesContent":["x"]}'
+refuses "a .map in an @idun package" case.zip node_modules/@idun/core/dist/index.js.map \
+  "a source map in a first-party package" '{"version":3}'
 
 begin "the source check: archives it cannot read, and usage"
 bundled_rig
