@@ -18,7 +18,7 @@ set -uo pipefail
 
 here="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)"
 root="${here%/*}"
-for tool in git jq perl mktemp base64
+for tool in git jq perl mktemp base64 zip unzip tar
 do
   command -v "${tool}" >/dev/null || {
     echo "test-mirror.sh: ${tool} is required" >&2
@@ -121,7 +121,19 @@ formula_text() { # <name> <version> <asset id> <sha256>
         '    EOS' \
         '  end'
       ;;
-    needsbrain) printf '%s\n' '  depends_on "21StarkCom/tap/brain"' ;;
+    needssecret) printf '%s\n' '  depends_on "21StarkCom/tap/secret"' ;;
+    bundled)
+      printf '%s\n' \
+        '  def install' \
+        '    libexec.install Dir["*"]' \
+        "    (bin/\"bundled\").write \"exec bun #{libexec}/bin/bundled.ts\"" \
+        '  end' \
+        '' \
+        '  test do' \
+        "    system \"bun\", \"#{opt_libexec}/lib/run.mts\"" \
+        '    assert_path_exists libexec/"src/data.tsx"' \
+        '  end'
+      ;;
     *) printf '%s\n' '  def install' "    bin.install \"$1\"" '  end' ;;
   esac
   printf '%s\n' 'end'
@@ -317,7 +329,12 @@ rig() {
   rigs=$((rigs + 1))
   R="${work}/rig${rigs}"
   mkdir -p "${R}/src/scripts" "${R}/src/Formula" "${R}/src/Casks" "${R}/bin" "${R}/gh/src" "${R}/tmp"
-  cp "${root}/scripts/mirror.sh" "${R}/src/scripts/mirror.sh"
+  # The rig's own exclusion list, so a change to the real one never turns this red.
+  perl -pe 's/^EXCLUDED=.*/EXCLUDED="secret"/' "${root}/scripts/mirror.sh" >"${R}/src/scripts/mirror.sh"
+  grep -qx 'EXCLUDED="secret"' "${R}/src/scripts/mirror.sh" || {
+    echo "test-mirror.sh: cannot set EXCLUDED in the copy of mirror.sh" >&2
+    exit 1
+  }
   echo '[]' >"${R}/gh/releases.json"
   echo 9000 >"${R}/gh/next_id"
   : >"${R}/gh/log"
@@ -348,10 +365,31 @@ rig() {
   EVINCED_SHA="$(tgt rev-parse main:Formula/evinced.rb)"
 }
 
-source_asset() { # <repo> <id> <bytes> [asset name]
+source_asset() { # <repo> <id> <bytes> [asset name]: a zip of bin/<repo> holding <bytes>
+  rm -rf "${R}/stage"
+  stage_file "bin/$1" "$3"
+  served_asset "$1" "$2" "${4:-$1-$2.zip}"
+}
+# Writes $R/stage/<path>, one line per argument after it: the tree of an archive.
+stage_file() { # <path> <line>...
+  local path="$1"
+  shift
+  mkdir -p "${R}/stage/${path%/*}"
+  printf '%s\n' "$@" >"${R}/stage/${path}"
+}
+# Packs $R/stage into <archive>, as a .tar.gz or a .zip by <name>.
+pack() { # <archive> <name>
+  rm -f "$1"
+  case "$2" in
+    *.tar.gz) tar -czf "$1" -C "${R}/stage" . ;;
+    *) (cd "${R}/stage" && zip -qry "$1" .) ;;
+  esac
+}
+# Serves $R/stage, packed, as source asset <id> of 21StarkCom/<repo>.
+served_asset() { # <repo> <id> <asset name>
   mkdir -p "${R}/gh/src/21StarkCom_$1"
-  printf '%s\n' "$3" >"${R}/gh/src/21StarkCom_$1/$2.bin"
-  printf '%s' "${4:-$1-$2.zip}" >"${R}/gh/src/21StarkCom_$1/$2.name"
+  pack "${R}/gh/src/21StarkCom_$1/$2.bin" "$3"
+  printf '%s' "$3" >"${R}/gh/src/21StarkCom_$1/$2.name"
 }
 asset_sha() { hash_of "${R}/gh/src/21StarkCom_$1/$2.bin"; }
 set_formula() { # <name> <version> <asset id> [sha256]
@@ -376,6 +414,13 @@ seed_release() { # <entry> <version> <sha256> <asset id> <asset name> <draft> <s
     --argjson draft "$6" --arg s "$7" --arg u "${8:-${OLD_TIME}}" \
     '. += [{id: $rid, tag_name: $t, name: $t, draft: $draft, assets: [{id: $aid, name: $n, state: $s, digest: (if $s == "uploaded" then $d else null end), updated_at: $u}]}]' \
     "${R}/gh/releases.json" >"${R}/gh/releases.new" && mv "${R}/gh/releases.new" "${R}/gh/releases.json"
+}
+
+run_check() { # [--check args]: mirror.sh --check, with no token
+  out="$(cd "${R}" && env -u MIRROR_SOURCE_TOKEN -u MIRROR_TARGET_TOKEN TMPDIR="${R}/tmp" \
+    "${sut_bash}" "${R}/src/scripts/mirror.sh" --check "$@" 2>"${R}/stderr")"
+  code=$?
+  err="$(cat "${R}/stderr")"
 }
 
 run_mirror() { # [mirror.sh args]; FAKE_* and MIRROR_KEEP_TMP from the caller's environment
@@ -408,6 +453,7 @@ copy_id() { # <path in target> → the asset id its url names
 }
 rels() { jq "$@" "${R}/gh/releases.json"; }
 release_exists() { rels -e --arg t "$1" 'any(.[]; .tag_name == $t)' >/dev/null; }
+release_absent() { ! release_exists "$1"; }
 releases_with_tag() { [[ "$(rels --arg t "$1" '[.[] | select(.tag_name == $t)] | length')" == "$2" ]]; }
 no_drafts() { rels -e 'all(.[]; .draft == false)' >/dev/null; }
 is_draft() { rels -e --arg t "$1" 'any(.[]; .tag_name == $t and .draft)' >/dev/null; }
@@ -546,34 +592,30 @@ check "the block appears once" bash -c '[[ $(grep -c "BEGIN 21stark-mirror" <<<"
 
 begin "excluded entries"
 rig
-printf '# frozen_string_literal: true\n\nclass Lucius < Formula\nend\n' >"${R}/src/Formula/lucius.rb"
-printf '# frozen_string_literal: true\n\ncask "atlas" do\nend\n' >"${R}/src/Casks/atlas.rb"
+printf '# frozen_string_literal: true\n\nclass Secret < Formula\nend\n' >"${R}/src/Formula/secret.rb"
 commit_src
 mkdir -p "${R}/seed/Formula"
-printf '# frozen_string_literal: true\n\n%s\n\nclass Brain < Formula\nend\n' "${MARKER}" >"${R}/seed/Formula/brain.rb"
+printf '# frozen_string_literal: true\n\n%s\n\nclass Secret < Formula\nend\n' "${MARKER}" >"${R}/seed/Formula/secret.rb"
 push_seed "a copy made before the exclusion"
 run_mirror
 check "exit 0" is_code 0
-check "says lucius is excluded" out_has "lucius: excluded; not copied"
-check "says atlas is excluded" out_has "atlas: excluded; not copied"
-check "no gh call names lucius or atlas" log_lacks "lucius|atlas"
-check "no lucius copy" tgt_lacks Formula/lucius.rb
-check "no atlas copy" tgt_lacks Casks/atlas.rb
-check "deletes the marked brain copy" tgt_lacks Formula/brain.rb
-check "says why" out_has "brain: is excluded from the mirror; deleting Formula/brain.rb"
-run_mirror --only lucius
+check "says secret is excluded" out_has "secret: excluded; not copied"
+check "no gh call names secret" log_lacks "secret"
+check "deletes the marked secret copy" tgt_lacks Formula/secret.rb
+check "says why" out_has "secret: is excluded from the mirror; deleting Formula/secret.rb"
+run_mirror --only secret
 check "--only an excluded entry exits 2" is_code 2
 
 begin "an entry that names an excluded one"
 rig
-source_asset needsbrain 501 "needsbrain 1.0.0"
-set_formula needsbrain 1.0.0 501
+source_asset needssecret 501 "needssecret 1.0.0"
+set_formula needssecret 1.0.0 501
 commit_src
 run_mirror
 check "exit 1" is_code 1
-check "says it names an excluded entry" err_has "it names 21StarkCom/tap/brain, which the mirror excludes"
-check "no copy of it" tgt_lacks Formula/needsbrain.rb
-check "nothing of it is read or uploaded" log_lacks needsbrain
+check "says it names an excluded entry" err_has "it names 21StarkCom/tap/secret, which the mirror excludes"
+check "no copy of it" tgt_lacks Formula/needssecret.rb
+check "nothing of it is read or uploaded" log_lacks needssecret
 check "the others are pushed" tgt_has Formula/demo.rb
 
 begin "an entry moved from Formula/ to Casks/"
@@ -779,6 +821,122 @@ check "no download" no_calls "application/octet-stream"
 check "no push" head_is "${before}"
 check "says what it would push" out_has "dry run: would commit and push"
 
+# A minified line: 320 bytes, over mirror.sh's MINIFIED_LINE_BYTES.
+MIN="$(printf 'let a=1;%.0s' {1..40})"
+# bundled names bin/bundled.ts, lib/run.mts and src/data.tsx under libexec.
+bundled_rig() {
+  rig
+  formula_text bundled 1.0.0 601 "$(printf '%064d' 6)" >"${R}/src/Formula/bundled.rb"
+  rm -rf "${R}/stage"
+}
+
+begin "the source check: what passes"
+bundled_rig
+stage_file bin/bundled.ts "// @bun" "${MIN}${MIN}"
+stage_file lib/run.mts "${MIN}"
+stage_file src/data.tsx "${MIN}"
+stage_file types/index.d.ts "export declare const a: number;"
+stage_file dist/bin.js "console.log(1)"
+stage_file node_modules/lodash/index.js.map '{"version":3,"sourcesContent":["x"]}'
+stage_file node_modules/@types/node/index.ts "export {}"
+stage_file node_modules/@21starkcom/kit/dist/index.js "export const a = 1"
+stage_file node_modules/@21starkcom/kit/dist/index.d.ts "export declare const a: number;"
+stage_file node_modules/@21starkcom/kit/node_modules/dep/index.js.map '{"sourcesContent":[]}'
+stage_file node_modules/.pnpm/@atlas+cli@1.0.0/node_modules/@atlas/cli/package.json '{"name":"@atlas/cli"}'
+ln -s .pnpm/@atlas+cli@1.0.0/node_modules/@atlas/cli "${R}/stage/node_modules/cli-link"
+pack "${R}/clean.zip" clean.zip
+run_check bundled "${R}/clean.zip"
+check "exit 0" is_code 0
+check "says it passes" out_has "bundled: clean.zip passes the source check"
+check "says nothing on stderr" bash -c '[[ -z $1 ]]' _ "${err}"
+pack "${R}/clean.tar.gz" clean.tar.gz
+run_check bundled "${R}/clean.tar.gz"
+check "a .tar.gz: exit 0" is_code 0
+
+# Runs the check of bundled on an archive of a minified bin/bundled.ts and one
+# more file, <path> with each <line>; asserts that it refuses that file.
+refuses() { # <what> <archive name> <path> <reason> <line>...
+  local what="$1" archive="$2" path="$3" why="$4"
+  shift 4
+  rm -rf "${R}/stage"
+  stage_file bin/bundled.ts "${MIN}"
+  stage_file "${path}" "$@"
+  pack "${R}/${archive}" "${archive}"
+  run_check bundled "${R}/${archive}"
+  check "${what}: exit 1" is_code 1
+  check "${what}: names the file and why" err_has "bundled: ${path}: ${why}"
+  check "${what}: says it is not copied" err_has "bundled: ${archive} holds source in 1 file(s), so it is not copied"
+}
+
+begin "the source check: what it refuses"
+bundled_rig
+refuses "a .ts outside node_modules" case.zip src/app.ts "TypeScript source" "const a: number = 1"
+refuses "a .tsx" case.zip src/view.tsx "TypeScript source" "export const v = <div />"
+refuses "a .mts" case.zip src/mod.mts "TypeScript source" "export {}"
+refuses "a .cts" case.zip src/mod.cts "TypeScript source" "export {}"
+refuses "a minified .ts the entry does not name" case.zip bin/other.ts "TypeScript source" "${MIN}"
+refuses "a named .ts that is not minified" case.zip lib/run.mts "TypeScript source, not minified" \
+  "const a = 1" "const b = 2" "export { a, b }"
+refuses "a .map outside node_modules" case.zip dist/bin.js.map "a source map" '{"version":3}'
+refuses "a .map in a first-party package" case.zip node_modules/@21starkcom/kit/dist/index.js.map \
+  "a source map in a first-party package" '{"version":3}'
+refuses "a .map in a first-party package of the bun layout" case.zip \
+  node_modules/.bun/@sleipnir+core@1.0.0/node_modules/@sleipnir/core/dist/index.js.map \
+  "a source map in a first-party package" '{"version":3}'
+refuses "a .ts in a first-party package" case.zip node_modules/@atlas/cli/src/index.ts \
+  "TypeScript source in a first-party package" "export {}"
+refuses "sourcesContent in a first-party package" case.zip \
+  node_modules/.pnpm/@atlas+cli@1.0.0/node_modules/@atlas/cli/dist/bin.js \
+  "holds sourcesContent in a first-party package" 'const m = {"sourcesContent": ["x"]}'
+refuses "an inline source map outside node_modules" case.zip dist/bin.js "an inline source map" \
+  "console.log(1)" "//# sourceMappingURL=data:application/json;base64,e30="
+refuses "an inline source map in a first-party package" case.zip node_modules/@21starkcom/kit/index.mjs \
+  "an inline source map in a first-party package" "//# sourceMappingURL=data:application/json;base64,e30="
+refuses "a .ts in a .tar.gz" case.tar.gz src/app.ts "TypeScript source" "const a: number = 1"
+refuses "an upper-case .TS" case.zip src/App.TS "TypeScript source" "const a: number = 1"
+refuses "an upper-case .MAP" case.zip dist/bin.js.MAP "a source map" '{"version":3}'
+refuses "sourcesContent in a .json outside node_modules" case.zip dist/sources.json \
+  "holds sourcesContent" '{"version":3,"sourcesContent":["x"]}'
+refuses "a .map in an @idun package" case.zip node_modules/@idun/core/dist/index.js.map \
+  "a source map in a first-party package" '{"version":3}'
+
+begin "the source check: archives it cannot read, and usage"
+bundled_rig
+printf 'not an archive\n' >"${R}/asset.dmg"
+run_check bundled "${R}/asset.dmg"
+check "an archive of another kind: exit 1" is_code 1
+check "says what it reads" err_has "reads only a .zip or a .tar.gz, not asset.dmg"
+printf 'not a zip\n' >"${R}/broken.zip"
+run_check bundled "${R}/broken.zip"
+check "a broken zip: exit 1" is_code 1
+check "says it cannot unpack it" err_has "cannot unpack broken.zip"
+run_check nosuch "${R}/broken.zip"
+check "an unknown entry: exit 2" is_code 2
+run_check bundled "${R}/missing.zip"
+check "a missing archive: exit 2" is_code 2
+run_check bundled
+check "no archive: exit 2" is_code 2
+run_mirror --dry-run --check bundled "${R}/broken.zip"
+check "with another option: exit 2" is_code 2
+
+begin "an asset that holds source is not copied"
+rig
+rm -rf "${R}/stage"
+stage_file bin/demo "demo 1.0.0"
+stage_file src/main.ts "const a: number = 1"
+served_asset demo 101 demo-101.zip
+set_formula demo 1.0.0 101
+commit_src
+run_mirror
+check "exit 1" is_code 1
+check "says demo holds source" err_has "demo: demo-101.zip holds source in 1 file(s), so it is not copied"
+check "names the file" err_has "demo: src/main.ts: TypeScript source"
+check "makes no demo release" release_absent demo-v1.0.0
+check "uploads nothing for demo" log_lacks "release upload demo-v"
+check "demo is not written" tgt_lacks Formula/demo.rb
+check "the others are pushed" tgt_has Formula/libdemo.rb
+check "names the failed entry" err_has "FAILED demo"
+
 begin "usage"
 run_mirror --bogus
 check "an unknown flag exits 2" is_code 2
@@ -789,7 +947,7 @@ out="$("${sut_bash}" "${R}/src/scripts/mirror.sh" --help)"
 code=$?
 check "--help exits 0" is_code 0
 check "--help names the environment" out_has "MIRROR_TARGET_TOKEN"
-check "--help names the excluded entries" out_has "atlas, brain, librarian, lucius and odinctl"
+check "--help names the source check" out_has "--check <entry> <archive>"
 
 printf '\n%s passed, %s failed\n' "${passed}" "${failed}"
 ((failed == 0))

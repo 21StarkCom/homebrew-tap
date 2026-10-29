@@ -72,12 +72,12 @@ does not record GitHub's host key.
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
-| `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | Bun source tree | none of its own; its one Mach-O is Anthropic-signed | any |
+| `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | minified Bun bundles | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
-| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | Bun source tree | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
+| `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
@@ -304,9 +304,11 @@ recalls from `brain` and keeps its own vault.
 brew install 21StarkCom/tap/lucius
 ```
 
-Same shape as `sleipnir`: Bun runs the TypeScript directly, so the release zip is the
-runnable tree (`bin/`, `src/`, `package.json`, `bun.lock`) plus a vendored prod
-`node_modules`. The formula installs it into `libexec` and wraps `lucius` over Homebrew's
+Same shape as `sleipnir`: the release zip is the runnable tree, with no TypeScript source.
+It holds minified Bun bundles at the `.ts` paths the formula names (`bin/lucius.ts`,
+`src/session/runtime.ts`, `src/vault/publication.ts`), their run-time files
+(`package.json`, `bun.lock`, `src/personas/`, `src/web/dist/`, the `src/vault/*.c` shims)
+and a vendored prod `node_modules`. The formula installs it into `libexec` and wraps `lucius` over Homebrew's
 `bun` (a formula dependency), which must be **1.4.2 or newer** — lucius refuses to start on
 an older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that floor
 on a formula dependency, so `brew install` succeeds and the refusal only shows on the first
@@ -393,8 +395,11 @@ brew install 21StarkCom/tap/sleipnir
 ```
 
 sleipnir drives system Chrome on macOS, so there is no Linux build.
-sleipnir has **no build step** — Bun runs its TypeScript directly — so the release zip is
-the runnable tree (source + a vendored prod `node_modules`), whose only Mach-O are the
+sleipnir's release builds each launcher (`apps/*/bin/*.mjs`) as one minified Bun bundle,
+and minified bundles at `packages/huginn/src/chat.ts` and
+`apps/huginn-bridge/src/journey-script.ts`, the only `.ts` files outside `node_modules`.
+The release zip is that runnable tree (the bundles, their run-time files and a vendored
+prod `node_modules`), whose only Mach-O are the
 Developer-ID-signed darwin-arm64 `bare-fs`, `bare-path` and `bare-url` prebuilds, in a
 notarized zip. The copies in the keg carry an ad hoc signature: as it installs each
 prebuild, Homebrew rewrites its dylib install name and re-signs it ad hoc. The caps
@@ -592,9 +597,17 @@ copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
 ([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
 line and its own block of the README there, so the Evinced team's own `aac` and `evinced`
 stay theirs, and it deletes no release.
-Five entries never go there: `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose
-assets hold source or readable JS (spec D11). A new entry goes there unless its PR adds it
-to `EXCLUDED` in `scripts/mirror.sh`.
+Before each upload it unpacks the asset and refuses one that holds source (spec D12):
+outside `node_modules`, a `.ts`, `.tsx`, `.mts` or `.cts` file (but a `.d.ts`, and a
+minified bundle at a path the entry names under `libexec`), a `.map` file, or a `.json`
+that holds `sourcesContent`; in a package of a first-party scope (`@21starkcom`, `@atlas`,
+`@idun`, `@sleipnir`) under `node_modules`, those files or any `sourcesContent`; and an
+inline source map in either place. Extensions match in any case. A refused entry is not
+copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
+check on a local zip or `.tar.gz`, with no token, so a release can run it before it ships.
+The check cannot judge readable JS (an unminified bundle, or the JS inside a compiled
+binary). `lucius` stays out until a release of it passes the check (spec D11). A new entry
+goes there unless its PR adds it to `EXCLUDED` in `scripts/mirror.sh`.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the

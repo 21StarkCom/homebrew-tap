@@ -21,10 +21,16 @@ fi
 
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
-# Entries that never reach GetEvinced: their assets hold the operator's source
-# or readable JS (the atlas repo's atlas, brain and librarian; lucius; odinctl).
-# The operator's decision of 2026-10-28 (spec D11). A marked copy of one is deleted.
-EXCLUDED="atlas brain librarian lucius odinctl"
+# Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
+# lucius stays here until a release of it passes the source check (STARK-13671).
+EXCLUDED="lucius"
+# The package scopes of the operator's own code. A package under node_modules/
+# in one of them is held to the source check (spec D12). Add a fleet repo's new
+# scope here.
+FIRST_PARTY_SCOPES="@21starkcom @atlas @idun @sleipnir"
+# A .ts file an entry names under libexec passes only as minified output: a mean
+# line of this many bytes or more. Source runs at about 40.
+MINIFIED_LINE_BYTES=200
 MARKER='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
 FROZEN='# frozen_string_literal: true'
 BEGIN_MARK='<!-- BEGIN 21stark-mirror -->'
@@ -40,7 +46,7 @@ HOMEPAGE_RE='^[[:space:]]*homepage[[:space:]]+"([^"]+)"'
 ENTRY_RE='^[A-Za-z0-9][A-Za-z0-9@+._-]*$'
 NL=$'\n'
 
-dry_run=false branch=main
+dry_run=false branch=main check_entry="" check_file=""
 declare -a only=() names=() changed_formulae=() changed_casks=()
 declare -A kind=() rel=() src_repo=() src_id=() ver=() sha=() new_id=() failed=() wanted=() excluded=()
 tmp="" clone="" src_root="" src_rev="" created_branch=false auth_header=""
@@ -49,18 +55,34 @@ changed="" pushed=false rejected=false attempt=0
 usage() {
   cat <<'EOF'
 Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
+       scripts/mirror.sh --check <entry> <archive>
 
 Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
 each entry's release asset is copied into a GetEvinced release, and each entry
 is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md). atlas, brain, librarian, lucius and odinctl
-are never copied: their assets hold source or readable JS.
+(docs/specs/getevinced-mirror.md). lucius is never copied, until a release of
+it passes the source check.
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist
   --only <entry>    copy only this entry (repeatable), and delete no file
   --dry-run         print the plan; upload, delete, commit and push nothing
+  --check <entry> <archive>
+                    run the source check of <entry> on a local .zip or
+                    .tar.gz, print each file it refuses, and exit; needs no
+                    token and no network
   -h, --help        this text
+
+The source check runs on each asset before its upload, and an asset that fails
+it is not copied. It refuses, outside node_modules/: a .ts, .tsx, .mts or .cts
+file that is not a declaration file (.d.ts), unless the entry names its path
+under libexec and it holds minified output; a .map file; and a .json file that
+holds "sourcesContent". In a package of a first-party scope under node_modules/
+(FIRST_PARTY_SCOPES: @21starkcom, @atlas, @idun, @sleipnir), it refuses those
+files with no exception, and any file that holds "sourcesContent". Extensions
+match in any case. Anywhere outside node_modules/ or in such a package, it
+refuses a JS, TS or CSS file with an inline source map (sourceMappingURL=data:).
+It cannot judge readable JS: an unminified bundle, or the JS inside a binary.
 
 Run it from a checkout whose Formula/ and Casks/ have no uncommitted change.
 To push main, HEAD must be origin/main (git fetch first).
@@ -73,17 +95,20 @@ Environment:
   GITHUB_OUTPUT        when set, gets formulae=, casks= (the changed entries) and pushed=
 
 For each entry, in this order: find the release <entry>-v<version> and its asset
-whose digest is the pinned sha256; else download the source asset, check it,
-make the release as a draft, upload, and publish it. Then write the entry with
-the marker line, the copy's asset URL, 21starkcom/tap renamed to getevinced/tap,
-and "21StarkCom private repos" renamed. Then delete marked files whose entry left
-this tap, moved, or is excluded; rewrite the README block; commit once and push.
+whose digest is the pinned sha256; else download the source asset, check its
+sha256 and its files, make the release as a draft, upload, and publish it. Then
+write the entry with the marker line, the copy's asset URL, 21starkcom/tap
+renamed to getevinced/tap, and "21StarkCom private repos" renamed. A reused copy
+is not checked again. Then delete marked files whose entry left this tap, moved,
+or is excluded; rewrite the README block; commit once and push.
 A push that loses a race clones again and writes again, up to three times. Files
 without the marker line (aac, evinced) are never changed. No release and no
 uploaded asset is ever deleted; an upload a dead run left (an hour old) is.
 
 Exit: 0 every entry copied; 1 an entry failed (the others still pushed) or the
-run failed; 2 usage. Needs bash 4.4+, git, gh, jq, perl and sha256sum or shasum.
+run failed; 2 usage. --check exits 0 when the archive passes, 1 when it does
+not. Needs bash 4.4+, git, gh, jq, perl, tar, unzip and sha256sum or shasum
+(--check: perl, tar and unzip only).
 EOF
 }
 
@@ -134,6 +159,7 @@ fail_entry() { # <entry> <reason>
 }
 
 parse_args() {
+  local others=0
   while (($# > 0))
   do
     case "$1" in
@@ -141,22 +167,33 @@ parse_args() {
         usage
         exit 0
         ;;
-      --dry-run) dry_run=true ;;
+      --dry-run)
+        dry_run=true
+        others=1
+        ;;
       --branch)
         [[ $# -ge 2 && -n $2 ]] || usage_error "--branch needs a name"
         branch="$2"
+        others=1
         shift
         ;;
       --only)
         [[ $# -ge 2 && $2 =~ ${ENTRY_RE} ]] || usage_error "--only needs an entry name"
         only+=("$2")
+        others=1
         shift
+        ;;
+      --check)
+        [[ $# -ge 3 && $2 =~ ${ENTRY_RE} && -n $3 ]] || usage_error "--check needs an entry name and an archive"
+        check_entry="$2" check_file="$3"
+        shift 2
         ;;
       *) usage_error "unknown argument: $1" ;;
     esac
     shift
   done
   [[ ${branch} =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || usage_error "bad branch name: ${branch}"
+  [[ -z ${check_entry} || ${others} == 0 ]] || usage_error "--check takes no other option"
 }
 
 # The copy is of what this checkout holds, so it must hold what main holds.
@@ -246,6 +283,122 @@ read_entries() {
 
 selected() { ((${#only[@]} == 0)) || [[ -n ${wanted[$1]:-} ]]; }
 active() { selected "$1" && [[ -z ${failed[$1]:-} ]]; }
+
+# Prints each TypeScript path that entry file $1 names under libexec, one per
+# line: the minified bundles its wrappers and tests run (lucius, sleipnir).
+named_ts() {
+  perl -ne 'print "$1\n" while m{(?:#\{(?:opt_)?libexec\}/|(?:opt_)?libexec/")([^"\s#{}]+?\.(?:ts|tsx|mts|cts))(?![A-Za-z0-9_])}g' "$1"
+}
+
+# The source check (spec D12): unpacks archive $2 of entry $1, whose file is $3,
+# and fails the entry when a file in it is source (usage names the rules).
+# Returns 1 when it fails the entry.
+scan_asset() { # <entry> <archive> <entry file>
+  local name="$1" archive="$2" dir="${tmp}/scan" named n first rc=0
+  rm -rf "${dir}"
+  mkdir -p "${dir}"
+  case "${archive}" in
+    *.zip)
+      { unzip -Z1 "${archive}" >"${tmp}/scan.list" && unzip -qq -o "${archive}" -d "${dir}"; } 2>"${tmp}/scan.err" || rc=$?
+      ;;
+    *.tar.gz | *.tgz)
+      { tar -tzf "${archive}" >"${tmp}/scan.list" && tar -xzf "${archive}" -C "${dir}"; } 2>"${tmp}/scan.err" || rc=$?
+      ;;
+    *)
+      fail_entry "${name}" "the source check reads only a .zip or a .tar.gz, not ${archive##*/}"
+      return 1
+      ;;
+  esac
+  if ((rc != 0))
+  then
+    fail_entry "${name}" "the source check cannot unpack ${archive##*/}: $(<"${tmp}/scan.err")"
+    rm -rf "${dir}"
+    return 1
+  fi
+  named="$(named_ts "$3")" || named=""
+  ROOT="${dir}" NAMED="${named}" SCOPES="${FIRST_PARTY_SCOPES}" MINLINE="${MINIFIED_LINE_BYTES}" perl -e '
+    use strict;
+    use warnings;
+    my %named = map { $_ => 1 } split /\n/, $ENV{NAMED};
+    my %scope = map { $_ => 1 } split " ", $ENV{SCOPES};
+    # Extensions match in any case: a .TS or .Map on a case-blind disk is the same file.
+    my $ts = qr/\.(?:ts|tsx|mts|cts)\z/i;
+    my $decl = qr/\.d\.(?:ts|mts|cts)\z/i;
+    my $text = qr/\.(?:js|mjs|cjs|jsx|ts|tsx|mts|cts|css)\z/i;
+    my $json = qr/\.json\z/i;
+    # The bytes of a regular file; undef for a link or a directory.
+    sub body {
+      my $f = "$ENV{ROOT}/$_[0]";
+      return undef if -l $f || !-f $f;
+      open my $h, "<:raw", $f or die "cannot read $_[0]: $!\n";
+      local $/;
+      return scalar <$h>;
+    }
+    # Why the file at path $_[0] is source, or "" when it is not; $_[1] is true
+    # in a first-party package. (Postfix conditions only: brew style misreads a
+    # line in a string that starts with an if.)
+    sub why {
+      my ($p, $ours) = @_;
+      my $in = $ours ? " in a first-party package" : "";
+      my $source = $p =~ $ts && $p !~ $decl;
+      my $bundle = $source && !$ours && $named{$p};
+      return "TypeScript source$in" if $source && !$bundle;
+      return "a source map$in" if $p =~ /\.map\z/i;
+      return "" unless $ours || $p =~ $text || $p =~ $json;
+      my $b = body($p);
+      return $bundle ? "a named TypeScript path that is not a plain file" : "" unless defined $b;
+      my $mean = int(length($b) / (($b =~ tr/\n//) + ($b =~ /[^\n]\z/ ? 1 : 0) || 1));
+      return "TypeScript source, not minified (a mean line of $mean bytes)" if $bundle && $mean < $ENV{MINLINE};
+      # A .json outside node_modules/ that holds sourcesContent is a source map by another name.
+      return "holds sourcesContent$in" if ($ours || $p =~ $json) && index($b, "sourcesContent") >= 0;
+      return "an inline source map$in" if $p =~ $text && $b =~ /sourceMappingURL=data:/;
+      return "";
+    }
+    while (my $p = <STDIN>) {
+      chomp $p;
+      $p =~ s{\A(?:\./)+}{};
+      next if $p eq "" || $p =~ m{/\z};
+      # Under node_modules/, only a package of a first-party scope is read: the
+      # package after the last node_modules/ in the path.
+      my ($rest) = $p =~ m{.*(?:\A|/)node_modules/(.*)\z};
+      my $ours = defined $rest && $rest =~ m{\A(@[^/]+)/[^/]+/} && $scope{$1} ? 1 : 0;
+      next if defined $rest && !$ours;
+      my $why = why($p, $ours);
+      print "$p: $why\n" if $why ne "";
+    }
+  ' <"${tmp}/scan.list" >"${tmp}/scan.hits" 2>"${tmp}/scan.err" || rc=$?
+  rm -rf "${dir}"
+  if ((rc != 0))
+  then
+    fail_entry "${name}" "the source check of ${archive##*/} did not run: $(<"${tmp}/scan.err")"
+    return 1
+  fi
+  n="$(wc -l <"${tmp}/scan.hits")"
+  n=$((n))
+  ((n > 0)) || return 0
+  head -n 20 "${tmp}/scan.hits" | sed "s|^|mirror.sh: ${name}: |" >&2
+  ((n <= 20)) || warn "${name}: and $((n - 20)) more"
+  first="$(head -n 1 "${tmp}/scan.hits")"
+  fail_entry "${name}" "${archive##*/} holds source in ${n} file(s), so it is not copied; the first is ${first}"
+  return 1
+}
+
+# --check: the source check of one entry on a local archive, with no token.
+check_archive() {
+  local f tool
+  for tool in perl tar unzip
+  do
+    command -v "${tool}" >/dev/null || die "${tool} is required"
+  done
+  [[ -f ${check_file} ]] || usage_error "--check: no such archive: ${check_file}"
+  f="${src_root}/Formula/${check_entry}.rb"
+  [[ -f ${f} ]] || f="${src_root}/Casks/${check_entry}.rb"
+  [[ -f ${f} ]] || usage_error "--check ${check_entry}: no such entry in this tap"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/mirror.XXXXXX")"
+  trap cleanup EXIT
+  scan_asset "${check_entry}" "${check_file}" "${f}" || exit 1
+  say "${check_entry}: ${check_file##*/} passes the source check"
+}
 
 # Clones the GetEvinced branch into $clone, from main when the branch is new.
 clone_target() {
@@ -379,6 +532,11 @@ ensure_asset() {
   if [[ ${got} != "${sha[${name}]}" ]]
   then
     fail_entry "${name}" "${src_repo[${name}]} asset ${src_id[${name}]} does not match the pinned sha256 ${sha[${name}]}"
+    rm -f "${file}"
+    return 0
+  fi
+  if ! scan_asset "${name}" "${file}" "${src_root}/${rel[${name}]}"
+  then
     rm -f "${file}"
     return 0
   fi
@@ -622,8 +780,14 @@ write_and_push() {
 
 main() {
   parse_args "$@"
+  src_root="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
+  if [[ -n ${check_entry} ]]
+  then
+    check_archive
+    return 0
+  fi
   local tool
-  for tool in git gh jq perl
+  for tool in git gh jq perl tar unzip
   do
     command -v "${tool}" >/dev/null || die "${tool} is required"
   done
@@ -632,7 +796,6 @@ main() {
   ${dry_run} || [[ -n ${MIRROR_SOURCE_TOKEN:-} ]] || usage_error "MIRROR_SOURCE_TOKEN is not set"
   auth_header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "${MIRROR_TARGET_TOKEN}" | base64 | tr -d '\n')"
 
-  src_root="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
   check_source
   src_rev="$(git -C "${src_root}" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/mirror.XXXXXX")"
