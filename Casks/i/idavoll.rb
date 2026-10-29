@@ -56,4 +56,14 @@ cask "idavoll" do
   # receipt lists /Applications/Idavoll.app and /usr/local/bin/idavoll.
   uninstall quit:    "com.21stark.idavoll.app",
             pkgutil: "com.21stark.idavoll"
+
+  # `brew uninstall --zap` only. A packaged Idavoll.app registers itself as a login item with
+  # `SMAppService.mainApp` on its first start, which outlives the bundle, so the zap deletes that
+  # login item by its display name through System Events (macOS asks for the terminal's
+  # Automation access). Electron names the userData folder after package.json's `name`.
+  zap login_item: "Idavoll",
+      trash:      [
+        "~/Library/Application Support/idavoll-app",
+        "~/Library/Preferences/com.21stark.idavoll.app.plist",
+      ]
 end
