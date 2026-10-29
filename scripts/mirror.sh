@@ -22,8 +22,9 @@ fi
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
 # Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
-# lucius stays here until a release of it passes the source check (STARK-13671).
-EXCLUDED="lucius"
+# alfred stays here by the operator's request of 2026-10-29. lucius stays here
+# until a release of it passes the source check (STARK-13671).
+EXCLUDED="alfred lucius"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
@@ -60,8 +61,8 @@ Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
 each entry's release asset is copied into a GetEvinced release, and each entry
 is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md). lucius is never copied, until a release of
-it passes the source check.
+(docs/specs/getevinced-mirror.md). alfred is never copied. lucius is never
+copied, until a release of it passes the source check.
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist
