@@ -1,9 +1,11 @@
 # frozen_string_literal: true
 
 # macOS build of sleipnir — a CLI that drives dedicated, persistent Chrome profiles
-# for ad-hoc agent tasks. Bun runs the TypeScript directly (no build step), so the zip
-# ships the source tree + vendored prod node_modules; its only compiled artifacts are the
-# darwin-arm64 bare-* prebuilds, signed (Developer ID) + notarized in the release zip.
+# for ad-hoc agent tasks. Bun runs its minified bundles: the zip ships one at each launcher
+# (apps/*/bin/*.mjs) and at packages/huginn/src/chat.ts and apps/huginn-bridge/src/journey-script.ts,
+# with the run-time files (package.json, the extension folders, skills/) + vendored prod
+# node_modules. Its only native code is the darwin-arm64 bare-* prebuilds, signed
+# (Developer ID) + notarized in the release zip.
 # The copies installed in the keg carry an ad hoc signature: as it installs each prebuild,
 # Homebrew rewrites its dylib install name to the opt path and re-signs it ad hoc.
 class Sleipnir < Formula
@@ -15,10 +17,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/687479598",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/687844047",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.42.2"
-  sha256 "4f1f9355165242ab71c10662e66584ce75774a90ac2da8c5418c93a8aed47573"
+  version "0.43.0"
+  sha256 "e94fa7cbd4a79f745bbad3b94c75f999b3d77f5752b1d949cfe94e1e44f712a8"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -28,7 +30,7 @@ class Sleipnir < Formula
   end
 
   depends_on arch: :arm64 # the zip ships only the darwin-arm64 bare-fs, bare-path and bare-url prebuilds
-  depends_on "bun" # Bun runs the TypeScript directly; sleipnir has no build step
+  depends_on "bun" # Bun runs the zip's minified bundles, which Bun's bundler built for Bun
   depends_on :macos # drives system Chrome
 
   def install
@@ -42,10 +44,11 @@ class Sleipnir < Formula
       odie "sleipnir is already installed from its pkg. Remove it first: #{remove}"
     end
 
-    # The zip is the runnable tree (apps/, packages/ and vendored node_modules).
-    # packages/core/src/install-origin.ts finds the tree root by climbing from
-    # packages/core/src, so the layout must be kept intact — install the whole
-    # tree into libexec and wrap each command's launcher.
+    # The zip is the runnable tree (apps/, packages/, skills/ and vendored node_modules).
+    # Each bundle lies three folders below the tree root and finds that root by climbing
+    # three folders from its own (apps/<app>/bin, packages/huginn/src, apps/huginn-bridge/src),
+    # so the layout must be kept intact — install the whole tree into libexec and wrap each
+    # command's launcher.
     libexec.install Dir["*"]
     # `huginn` is the browser extension's CLI (`huginn <action>` = `slp huginn <action>`), and
     # `sleipnir-mcp` the stdio MCP server an agent client starts from its own working directory.
