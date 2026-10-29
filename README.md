@@ -459,6 +459,10 @@ a `valkyrie-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac'
 checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
 `apps/idun/setup.sh`, which steps aside when this formula is installed.
 
+Name it in full — `brew upgrade 21StarkCom/tap/valkyrie` — since a bare `valkyrie` is also
+homebrew/cask's Valkyrie, a game master app for board games: `brew uninstall valkyrie`
+warns that it treats the name as a formula, and `--formula` silences that.
+
 ## atlas (desktop app — cask)
 
 The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
