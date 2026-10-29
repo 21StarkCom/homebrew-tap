@@ -1,12 +1,12 @@
 # Mirror this tap to `GetEvinced/homebrew-tap`
 
-Every entry of this tap (`21StarkCom/tap`) but five also lives in the Evinced
-tap, `GetEvinced/homebrew-tap` (`GetEvinced/tap`), with its release asset copied
-into GetEvinced. A job in this repo keeps the copy in step after each push to
-`main`, with no hand work. An Evinced engineer with read access to the
-GetEvinced tap installs those entries with `brew install GetEvinced/tap/<entry>`
-and needs no access to 21StarkCom. The five that stay here hold the operator's
-source or readable JS (D11).
+Every entry of this tap (`21StarkCom/tap`) but the excluded ones (D11) also
+lives in the Evinced tap, `GetEvinced/homebrew-tap` (`GetEvinced/tap`), with its
+release asset copied into GetEvinced. A job in this repo keeps the copy in step
+after each push to `main`, with no hand work. An Evinced engineer with read
+access to the GetEvinced tap installs those entries with
+`brew install GetEvinced/tap/<entry>` and needs no access to 21StarkCom. The
+job refuses an asset that holds source (D12).
 
 ## Why
 
@@ -60,7 +60,8 @@ source or readable JS (D11).
 | D8 | The job reads 21StarkCom with the existing `HOMEBREW_RELEASE_READ_TOKEN`. It adds no 21StarkCom credential. |
 | D9 | The replica copies `Formula/` and `Casks/` only. `scripts/`, the workflows, `CLAUDE.md` and the bumper stay here. |
 | D10 | The App key lives in the Actions Environment `getevinced-mirror` of this repo, which only `main` can use. A run on any other ref gets no key. |
-| D11 | `atlas`, `brain`, `librarian`, `lucius` and `odinctl` are never copied, and a marked copy of one is deleted. Their assets hold the operator's source (`lucius`: 112 `.ts` files) or readable JS with source maps (the atlas repo's `atlas`, `brain` and `librarian`; `odinctl`). The operator picked them on 2026-10-28, after the first proof run had copied `brain`; that release was deleted by hand. `librarian` also depends on `brain`, and any entry that names an excluded one fails until it is excluded too. `sleipnir` (its TypeScript tree), `agent-seats` (an unminified bundle) and the minified bundles of `idun`, `njord` and `hermod` stay in the mirror: the operator saw what each holds and did not name them. `valkyrie`, added on 2026-10-29 (STARK-13674), stays too: it is idun's launch code moved into its own app, built by the same `release-darwin.sh`, and idun's mirrored binary holds the same code until idun's launcher spec reaches phase 5. |
+| D11 | An entry in `EXCLUDED` (`scripts/mirror.sh`) is never copied, and a marked copy of one is deleted. Any entry that names an excluded one fails until it is excluded too. On 2026-10-28 the operator excluded `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose assets held source or readable JS with source maps, after the first proof run had copied `brain`; that release was deleted by hand. Their build tickets (epic STARK-13647) removed the source. `atlas`, `brain`, `librarian` and `odinctl` passed D12 on 2026-10-29 and are copied. `lucius` stays excluded until a release of it passes D12: its 0.13.0 zip still vendors `@21starkcom/stark-tui` with its TypeScript and source maps. |
+| D12 | Before an upload, the job unpacks the asset (`.zip` or `.tar.gz`) and fails the entry when a file in it is source. Outside `node_modules/`: a `.ts`, `.tsx`, `.mts` or `.cts` file that is no `.d.ts`, unless the entry names its path under `libexec` and its mean line is 200 bytes or more (minified: the `lucius` and `sleipnir` bundles); a `.map` file. In a package under `node_modules/` whose scope is first-party (`@21starkcom`, `@atlas`, `@sleipnir`; the package after the last `node_modules/` of the path): such a TypeScript file or `.map` file with no exception, and a file that holds `sourcesContent`. In both places: a JS, TS or CSS file with an inline source map. Third-party packages are not read. The check cannot judge readable JS, in a bundle or inside a compiled binary; the build tickets and a red-team audit cover those. A copy uploaded before the check came in is checked by hand once (D7). |
 
 ## Design
 
@@ -99,6 +100,9 @@ scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
   It skips step 6, so a partial run deletes no file.
 - The script writes the changed entries to `$GITHUB_OUTPUT` when that file
   is set, as `formulae` and `casks`, one space-separated list each.
+- `--check <entry> <archive>` runs the D12 check of that entry on a local
+  `.zip` or `.tar.gz` and exits (0 passes, 1 fails), with no token and no
+  network, so a release can check its asset before it ships.
 - `--help` is its reference, as for `bump.sh`.
 - It needs bash 4.4 or later (older bash aborts on an empty array under
   `set -u`), and it checks this at its start. CI runs it on
@@ -128,12 +132,14 @@ Steps, in this order:
    1. Download the source asset with `MIRROR_SOURCE_TOKEN`.
    2. Compare its SHA-256 with the pinned `sha256`. The entry fails when
       they differ.
-   3. Delete each incomplete upload in the release, by D7.
-   4. When the release does not exist, create it as a draft: target `main`,
+   3. Run the D12 source check. The entry fails when a file is source, and
+      no release is made for it.
+   4. Delete each incomplete upload in the release, by D7.
+   5. When the release does not exist, create it as a draft: target `main`,
       not marked latest, and a body that names the source repo, the source
       asset id and the SHA-256.
-   5. Upload the asset under its D5 name. Delete the download.
-   6. Publish the draft.
+   6. Upload the asset under its D5 name. Delete the download.
+   7. Publish the draft.
 5. Write the entry's file in the GetEvinced clone. The file is this tap's
    file with the changes in "The copy of an entry" below.
 6. Delete each marked GetEvinced file whose entry is no longer in this
@@ -260,11 +266,24 @@ handle a secret value, so they need the operator's GO.
 ## Testing
 
 `scripts/test-mirror.sh` uses fixture entries only: `bump.yml` is the gate
-of every bump PR, so a change to a real entry must never turn it red. It covers:
+of every bump PR, so a change to a real entry must never turn it red. Its
+copy of `mirror.sh` gets its own `EXCLUDED`, for the same reason, and each
+fixture asset is a real zip. It covers:
 
 - a first run into an empty tap: all entries, releases and the README block;
 - the excluded entries (D11): not copied, no `gh` call, a marked copy deleted;
-- an entry that names an excluded one (`21StarkCom/tap/brain`): it fails
+- the D12 check, by `--check` on fixture archives: each rule refuses its
+  file (TypeScript of each extension, a minified `.ts` the entry does not
+  name, a named `.ts` that is not minified, a `.map` outside `node_modules/`
+  and in a first-party package of the npm, pnpm and bun layouts, TypeScript
+  and `sourcesContent` in a first-party package, an inline source map in
+  both places, and a `.ts` in a `.tar.gz`); a clean `.zip` and `.tar.gz`
+  pass, with a `.d.ts`, the named minified bundles, third-party maps and
+  TypeScript, a third-party package inside a first-party one, and a link;
+  another kind of archive, a broken zip and bad arguments fail;
+- an asset that holds source in a run: no release, no upload, no copy, the
+  others push, and the exit is non-zero;
+- an entry that names an excluded one (`21StarkCom/tap/<excluded>`): it fails
   before any read or upload, since its copy would name an entry GetEvinced
   lacks;
 - an entry moved from `Formula/` to `Casks/`: the old copy goes;
@@ -343,13 +362,13 @@ no formula from a tap that is not trusted.
 
 - **Reach:** every member of GetEvinced, and each outside collaborator of
   its tap, can download every mirrored asset, Mimir and Heimdall included.
-  This is the outcome the operator asked for. Some copied assets are still
-  readable: `sleipnir` ships its TypeScript tree, and the `bun build
-  --compile` binaries embed their JS bundle (`agent-seats` unminified). D11
-  lists what the operator left out.
+  This is the outcome the operator asked for. D12 refuses TypeScript and
+  source maps, but the copied JS stays readable to a determined reader: the
+  `bun build --compile` binaries embed their JS bundle, which D12 cannot
+  read. D11 lists what stays out.
 - **A new entry is copied by default.** The exclusion is a list in
   `scripts/mirror.sh`; an entry added to this tap reaches GetEvinced unless
-  its PR adds it there.
+  its PR adds it there, or D12 refuses its asset.
 - **Key leak:** a leaked key of `21stark-tap-mirror` reaches one repo. It can
   still push to that repo's `main`, `aac` and `evinced` included, and the
   Ruby in those files runs on the Macs that install them. D10 keeps the key
