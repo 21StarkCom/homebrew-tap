@@ -61,7 +61,7 @@ does not record GitHub's host key.
 
 | Entry | Kind | Source repo | Installs | Build | Signing | macOS |
 |---|---|---|---|---|---|---|
-| `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login` | `bun build --compile` | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
+| `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login`, the Seat login extension | `bun build --compile`, Vite | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
 | `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules in the zip; lancedb ad hoc once installed | any |
@@ -108,6 +108,16 @@ every build, would not. They are compiled with the release Mac's Homebrew `bun`,
 build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). On Linux
 x86_64, install `agent-seats` from the release's `linux_x64` tarball or build it from
 source, as the `agent-seats` repo's `apps/agent-seats/README.md` says.
+
+The zip also holds the Seat login Chrome extension, unpacked and minified, as
+`seat-login-extension/`. The formula installs it in `libexec`, which brew does not link into
+the prefix, and its `post_install_steps` copy it to `$(brew --prefix)/var/seat-login/extension`
+on each install and upgrade. Chrome keeps an unpacked extension's real path, so a folder in
+the keg would break when `brew cleanup` deletes the old version. Load that folder once in
+`chrome://extensions` (Developer mode, **Load unpacked**), and click Reload on its card
+after each upgrade. For the `seat-login` CLI and Codex sign-in, run `seat-login install`
+once, then reload the extension. A packed `.crx` is not possible: Chrome on a Mac with no
+MDM installs one only from the Chrome Web Store.
 
 ## alfred
 
