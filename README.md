@@ -110,13 +110,14 @@ x86_64, install `agent-seats` from the release's `linux_x64` tarball or build it
 source, as the `agent-seats` repo's `apps/agent-seats/README.md` says.
 
 The zip also holds the Seat login Chrome extension, unpacked and minified, as
-`seat-login-extension/`. The formula installs it in `pkgshare`, and its
-`post_install_steps` copy it to `$(brew --prefix)/var/seat-login/extension` on each install
-and upgrade. Chrome keeps an unpacked extension's real path, so a folder in the keg would
-break when `brew cleanup` deletes the old version. Load that folder once in
+`seat-login-extension/`. The formula installs it in `libexec`, which brew does not link into
+the prefix, and its `post_install_steps` copy it to `$(brew --prefix)/var/seat-login/extension`
+on each install and upgrade. Chrome keeps an unpacked extension's real path, so a folder in
+the keg would break when `brew cleanup` deletes the old version. Load that folder once in
 `chrome://extensions` (Developer mode, **Load unpacked**), and click Reload on its card
-after each upgrade. A packed `.crx` is not possible: Chrome on a Mac with no MDM installs
-one only from the Chrome Web Store.
+after each upgrade. For the `seat-login` CLI and Codex sign-in, run `seat-login install`
+once, then reload the extension. A packed `.crx` is not possible: Chrome on a Mac with no
+MDM installs one only from the Chrome Web Store.
 
 ## alfred
 
