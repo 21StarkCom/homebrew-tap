@@ -29,6 +29,15 @@ class AgentSeats < Formula
 
   def install
     bin.install "agent-seats", "seat-login"
+    pkgshare.install "seat-login-extension"
+  end
+
+  # Chrome keeps an unpacked extension's real path, symlinks resolved, and `brew cleanup`
+  # deletes each old keg. So the extension goes to a folder outside the Cellar. The remove
+  # comes first: cp_r into a folder that exists copies into it, and old files would stay.
+  post_install_steps do
+    remove "seat-login/extension", base: :var, recursive: true
+    copy "seat-login-extension", "seat-login/extension", source_base: :pkgshare, target_base: :var, recursive: true
   end
 
   def caveats
@@ -37,11 +46,22 @@ class AgentSeats < Formula
         agent-seats daemon install
       After an upgrade, restart the daemon so it runs the new binary:
         agent-seats daemon restart
+
+      The Seat login Chrome extension is in #{var}/seat-login/extension.
+      Load it once: chrome://extensions, turn on Developer mode, Load unpacked, that folder.
+      After an upgrade, click Reload on the extension's card.
     EOS
   end
 
   test do
+    require "digest"
+    require "json"
+
     assert_equal version.to_s, shell_output("#{bin}/agent-seats --version").strip
     assert_match "seat-login", shell_output("#{bin}/seat-login --help")
+    # Chrome derives the ID from the key, and the extension's Google sign-in accepts only this ID.
+    key = JSON.parse((pkgshare/"seat-login-extension/manifest.json").read).fetch("key")
+    assert_equal "aebjndckmgdgcaonijggcimahgkkfdfd",
+                 Digest::SHA256.hexdigest(key.unpack1("m"))[0, 32].tr("0-9a-f", "a-p")
   end
 end
