@@ -23,6 +23,9 @@ class Hermod < Formula
     )
   end
 
+  # hermod finds a repo's checkout with `urd repos get`. Tap-qualified: a bare name resolves
+  # to homebrew/core first, and is ambiguous when another tap ships a `urd`.
+  depends_on "21starkcom/tap/urd"
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
 

@@ -133,7 +133,8 @@ alfredd install      # once: write the daemon's LaunchAgent plist and load it
 ```
 
 The plist pins Homebrew's stable `opt` path, so an upgrade never orphans the daemon. Both
-binaries are Developer-ID signed + notarized Go builds.
+binaries are Developer-ID signed + notarized Go builds. The formula depends on this tap's
+[`urd`](#urd) formula, by its full name, because alfred reads the cache through `urd`.
 
 ## bragi
 
@@ -257,7 +258,8 @@ The release zip is a `bun build --compile` binary carrying bun's linker-signed *
 signature, not a Developer ID. It is compiled with the release Mac's Homebrew `bun`, whose
 build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). `hermod` reaches its
 cmux app over the inherited `CMUX_SOCKET_PATH`, so run it from inside a cmux surface (or
-set the socket env yourself).
+set the socket env yourself). The formula depends on this tap's [`urd`](#urd) formula, by
+its full name, because hermod finds a repo's checkout with `urd repos get`.
 
 On Linux x86_64 (the devbox), where hermod drives tmux instead:
 
@@ -268,7 +270,8 @@ brew install 21StarkCom/tap/hermod-linux
 `hermod-linux` installs the same `hermod`, cross-compiled by the release Mac with
 `bun build --compile --target=bun-linux-x64`. It is a formula of its own because a
 formula cannot pin a url inside `on_macos`/`on_linux` blocks (`brew style` refuses it),
-as hermod's ADR 0013 records. The binary is unsigned; Linux has no Gatekeeper.
+as hermod's ADR 0013 records. The binary is unsigned; Linux has no Gatekeeper. It depends
+on `urd-linux` for the same reason `hermod` depends on `urd`.
 
 ## idun
 
