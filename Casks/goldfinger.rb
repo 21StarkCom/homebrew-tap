@@ -69,17 +69,22 @@ cask "goldfinger" do
   # usage files from 0.10.0 on (Application Support/goldfinger/usage/<UTC day>/<epoch>-<k>.json,
   # the daemon's content-free counts, one file a generation and day, kept 30 days), the
   # Vision and Core ML model cache macOS compiles under the daemon's bundle id from 0.9.0 on
-  # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), and
-  # Goldfinger Control's login item and preferences. The helper registers itself with
-  # `SMAppService.mainApp`, which owns no launchd job while it is quit and outlives its bundle
-  # (goldfinger PR 124, P1), so no `launchctl:`: the zap deletes the item by its display name
-  # through System Events, which asks the terminal for Automation access. The grants stay until
-  # System Settings or `tccutil reset {Accessibility,ScreenCapture} <bundle id>` drops them.
+  # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), the
+  # app group container of goldfinger's Safari extension from 0.13.0 on (its replies folder holds
+  # the extension's answers, which can hold a page's text; dev builds share it), and Goldfinger
+  # Control's login item and preferences. Homebrew zaps by the list the install recorded, so an
+  # install from before the tap named the container keeps it until a reinstall or an upgrade.
+  # The helper registers itself with `SMAppService.mainApp`, which owns no launchd job while it
+  # is quit and outlives its bundle (goldfinger PR 124, P1), so no `launchctl:`: the zap deletes
+  # the item by its display name through System Events, which asks the terminal for Automation
+  # access. The grants stay until System Settings or
+  # `tccutil reset {Accessibility,ScreenCapture} <bundle id>` drops them.
   zap login_item: "Goldfinger Control",
       trash:      [
         "~/Library/Application Support/goldfinger",
         "~/Library/Caches/com.21stark.goldfinger",
         "~/Library/Caches/goldfinger",
+        "~/Library/Group Containers/MG9J2XF9Q3.com.21stark.goldfinger",
         "~/Library/Preferences/com.21stark.goldfinger.control.plist",
       ]
 
@@ -109,6 +114,6 @@ cask "goldfinger" do
       brew uninstall --zap --cask 21StarkCom/tap/goldfinger
     which deletes it through System Events (allow your terminal's Automation access when
     macOS asks; add `--force` once a plain uninstall has run) and trashes goldfinger's
-    caches, preferences and recordings.
+    caches, preferences, recordings and Safari extension data.
   EOS
 end

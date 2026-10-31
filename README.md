@@ -543,9 +543,14 @@ registration owns no launchd job, so there is no `launchctl:`), and trashes
 `~/Library/Caches/com.21stark.goldfinger` (from 0.9.0 on, the model cache macOS compiles for
 Vision text recognition and Core ML icon detection, which dev daemons share),
 `~/Library/Application Support/goldfinger` (the snapshot epoch and every recording: the
-trajectories and videos under `recordings/`) and the helper's
-`~/Library/Preferences/com.21stark.goldfinger.control.plist`. Neither revokes the grants:
-remove Goldfinger in System Settings → Privacy & Security, or run
+trajectories and videos under `recordings/`),
+`~/Library/Group Containers/MG9J2XF9Q3.com.21stark.goldfinger` (from 0.13.0 on, the app group
+container of the Safari extension, whose `replies/` folder can hold a page's text; dev builds
+share it) and the helper's `~/Library/Preferences/com.21stark.goldfinger.control.plist`.
+Homebrew zaps by the list the install recorded, so an install made before the tap named that
+container keeps it: run `brew reinstall --cask 21StarkCom/tap/goldfinger` before the zap, or
+trash the container by hand. Neither the uninstall nor `--zap` revokes the grants: remove
+Goldfinger in System Settings → Privacy & Security, or run
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
 
