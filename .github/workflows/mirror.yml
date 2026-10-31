@@ -30,8 +30,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: getevinced-mirror
-    # The first run copies 1.54 GB (D11 leaves out 0.93 GB); a frigg release
-    # (frigg and frigg-linux) copies ~0.85 GB.
+    # The first run copied 1.54 GB. A frigg release (frigg and
+    # frigg-linux) copies ~0.85 GB, and an idavoll release ~0.14 GB.
     timeout-minutes: 90
     outputs:
       formulae: ${{ steps.mirror.outputs.formulae }}
@@ -154,6 +154,7 @@ jobs:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
           FORMULAE: ${{ steps.pick.outputs.formulae }}
           CASKS: ${{ steps.pick.outputs.casks }}
+          MARKER: "# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it."
         # Not FormulaAudit/DependencyOrder: the copy renames 21starkcom/tap/<x> to
         # getevinced/tap/<x>, which sorts after `arch` where the source sorted
         # before it (librarian), and the order changes no install.
@@ -161,9 +162,13 @@ jobs:
           paths=()
           for f in $FORMULAE; do paths+=("getevinced-tap/Formula/$f.rb"); done
           for c in $CASKS; do
-            # Casks/<name>.rb, or in a subfolder (Casks/i/idavoll.rb).
-            p="$(find getevinced-tap/Casks -name "$c.rb" -print -quit)"
-            [[ -n "$p" ]] || { echo "getevinced-tap holds no copy of the cask $c" >&2; exit 1; }
+            # The marked Casks/<name>.rb, or one in a subfolder (Casks/i/idavoll.rb):
+            # the two places scripts/mirror.sh writes.
+            p=""
+            for f in getevinced-tap/Casks/"$c".rb getevinced-tap/Casks/*/"$c".rb; do
+              [[ -f "$f" ]] && grep -qxF -- "$MARKER" "$f" && { p="$f"; break; }
+            done
+            [[ -n "$p" ]] || { echo "getevinced-tap holds no marked copy of the cask $c" >&2; exit 1; }
             paths+=("$p")
           done
           ((${#paths[@]} == 0)) || brew style --except-cops FormulaAudit/DependencyOrder "${paths[@]}"

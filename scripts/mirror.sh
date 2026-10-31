@@ -84,7 +84,8 @@ refuses a JS, TS or CSS file with an inline source map (sourceMappingURL=data:).
 It cannot judge readable JS: an unminified bundle, the JS inside a binary, or an
 Electron app.asar, which it reads as one file. A .pkg is a xar archive: bsdtar
 unpacks it, and each member that is itself an archive (each Payload and Scripts),
-and the check reads the tree.
+and the check reads the tree. A .pkg fails when a member named *Payload does not
+unpack (Apple's pbzx, say), or when it holds no Payload.
 
 It reads Formula/*.rb, Casks/*.rb and Casks/*/*.rb (Casks/i/idavoll.rb), and a
 copy keeps its path. Run it from a checkout whose Formula/ and Casks/ have no
@@ -302,31 +303,50 @@ named_ts() {
 # an archive (a Payload or a Scripts, each a cpio archive) is unpacked in its place.
 # bsdtar finds them by their bytes, not by their names: libarchive joins a name
 # that the table of contents gives twice, and idavoll's .pkg gives each name twice
-# (PayloadPayload). Says why on stderr and returns 1 when it cannot.
+# (PayloadPayload). A member whose name ends in Payload must unpack: a Payload
+# left as one file would pass unread. Says why on stderr and returns 1 when it cannot.
 unpack_pkg() { # <pkg> <dir> <list>
   local m n=0
+  # Only the bytes count. Ubuntu's bsdtar cannot write the macOS extended
+  # attributes of idavoll's members (com.apple.provenance) and fails on them.
+  local -a plain=(--no-xattrs --no-acls --no-fflags)
   local -a members=()
   if ! command -v bsdtar >/dev/null
   then
     echo "bsdtar (libarchive) is required to read a .pkg" >&2
     return 1
   fi
-  bsdtar -xf "$1" -C "$2" || return 1
+  bsdtar -xf "$1" -C "$2" "${plain[@]}" || return 1
   # Every member first, so the tree unpacked in a member's place is not read again.
   find "$2" -type f -print0 >"${tmp}/members" || return 1
   mapfile -d '' members <"${tmp}/members"
   for m in "${members[@]}"
   do
-    bsdtar -tf "${m}" >/dev/null 2>&1 || continue
-    mv "${m}" "${tmp}/member" || return 1
-    mkdir "${m}" || return 1
-    bsdtar -xf "${tmp}/member" -C "${m}" || return 1
-    rm -f "${tmp}/member"
-    n=$((n + 1))
+    : >"${tmp}/member.err"
+    # libarchive reads an empty file as an empty archive; it is no Payload.
+    if [[ -s ${m} ]]
+    then
+      mv "${m}" "${tmp}/member" || return 1
+      mkdir "${m}" || return 1
+      # One pass: a member that does not unpack goes back in its place, as a file.
+      if bsdtar -xf "${tmp}/member" -C "${m}" "${plain[@]}" 2>"${tmp}/member.err"
+      then
+        rm -f "${tmp}/member"
+        [[ ${m##*/} != *Payload ]] || n=$((n + 1))
+        continue
+      fi
+      rm -rf "${m}"
+      mv "${tmp}/member" "${m}" || return 1
+    fi
+    if [[ ${m##*/} == *Payload ]]
+    then
+      echo "its ${m#"$2"/} is no archive that bsdtar reads, so it cannot be checked. $(<"${tmp}/member.err")" >&2
+      return 1
+    fi
   done
   if ((n == 0))
   then
-    echo "no member of it is an archive, so it holds no Payload to check" >&2
+    echo "it holds no Payload to check" >&2
     return 1
   fi
   (cd "$2" && find . ! -type d) >"$3"
@@ -432,7 +452,7 @@ scan_asset() { # <entry> <archive> <entry file>
 check_archive() {
   local f tool
   local -a files=("${src_root}/Formula/${check_entry}.rb" "${src_root}/Casks/${check_entry}.rb"
-    "${src_root}"/Casks/*/"${check_entry}.rb")
+    "${src_root}"/Casks/*/"${check_entry}.rb") found=()
   for tool in perl tar unzip
   do
     command -v "${tool}" >/dev/null || die "${tool} is required"
@@ -440,9 +460,12 @@ check_archive() {
   [[ -f ${check_file} ]] || usage_error "--check: no such archive: ${check_file}"
   for f in "${files[@]}"
   do
-    [[ -f ${f} ]] && break
+    [[ ! -f ${f} ]] || found+=("${f#"${src_root}"/}")
   done
-  [[ -f ${f} ]] || usage_error "--check ${check_entry}: no such entry in this tap"
+  ((${#found[@]} > 0)) || usage_error "--check ${check_entry}: no such entry in this tap"
+  # As read_entries does: the mirror copies neither of two files with one name.
+  ((${#found[@]} == 1)) || die "${check_entry}: is both ${found[0]} and ${found[1]}; the mirror copies neither"
+  f="${src_root}/${found[0]}"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/mirror.XXXXXX")"
   trap cleanup EXIT
   scan_asset "${check_entry}" "${check_file}" "${f}" || exit 1

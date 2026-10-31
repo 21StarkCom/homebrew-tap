@@ -724,6 +724,10 @@ run_mirror
 check "exit 1" is_code 1
 check "says it is both" err_has "is both Casks/democask.rb and Casks/i/democask.rb"
 check "copies neither" bash -c '! git --git-dir="$1" cat-file -e main:Casks/democask.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Casks/i/democask.rb 2>/dev/null' _ "${R}/target.git"
+cp "${R}/gh/src/21StarkCom_democask/301.bin" "${R}/democask.zip"
+run_check democask "${R}/democask.zip"
+check "--check refuses it too: exit 1" is_code 1
+check "--check says it is both" err_has "democask: is both Casks/democask.rb and Casks/i/democask.rb"
 
 begin "the source checkout must be what main holds"
 rig
@@ -1009,10 +1013,22 @@ check "says it is not copied" err_has "bundled: case.pkg holds source in 2 file(
 rm -rf "${R}/pkgroot"
 mkdir -p "${R}/pkgroot"
 printf '<pkg-info/>\n' >"${R}/pkgroot/PackageInfo"
+# An empty member: libarchive reads it as an empty archive, but it is no Payload.
+: >"${R}/pkgroot/Empty"
 bsdtar --format xar -cf "${R}/nopayload.pkg" -C "${R}/pkgroot" .
 run_check bundled "${R}/nopayload.pkg"
 check "a .pkg with no Payload: exit 1" is_code 1
-check "a .pkg with no Payload: says so" err_has "cannot unpack nopayload.pkg: no member of it is an archive"
+check "a .pkg with no Payload: says so" err_has "cannot unpack nopayload.pkg: it holds no Payload to check"
+# A Payload bsdtar cannot read (as Apple's pbzx), beside a Scripts archive it can.
+rm -f "${R}/pkgroot/Empty"
+mkdir -p "${R}/pkgscripts"
+printf '#!/bin/sh\n' >"${R}/pkgscripts/postinstall"
+bsdtar --format odc -czf "${R}/pkgroot/Scripts" -C "${R}/pkgscripts" .
+printf 'pbzx not a cpio archive\n' >"${R}/pkgroot/Payload"
+bsdtar --format xar -cf "${R}/pbzx.pkg" -C "${R}/pkgroot" .
+run_check bundled "${R}/pbzx.pkg"
+check "an unreadable Payload: exit 1" is_code 1
+check "an unreadable Payload: names it" err_has "cannot unpack pbzx.pkg: its Payload is no archive that bsdtar reads"
 printf 'not a xar archive\n' >"${R}/broken.pkg"
 run_check bundled "${R}/broken.pkg"
 check "a broken .pkg: exit 1" is_code 1
