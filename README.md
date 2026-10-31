@@ -546,10 +546,16 @@ Vision text recognition and Core ML icon detection, which dev daemons share),
 trajectories and videos under `recordings/`),
 `~/Library/Group Containers/MG9J2XF9Q3.com.21stark.goldfinger` (from 0.13.0 on, the app group
 container of the Safari extension, whose `replies/` folder can hold a page's text; dev builds
-share it) and the helper's `~/Library/Preferences/com.21stark.goldfinger.control.plist`.
-Homebrew zaps by the list the install recorded, so an install made before the tap named that
+share it), `~/Library/Containers/com.21stark.goldfinger.SafariExtension` (the extension's own
+sandbox container; a dev build's `.dev` container stays) and the helper's
+`~/Library/Preferences/com.21stark.goldfinger.control.plist`.
+Homebrew zaps by the list the install recorded, so an install made before the tap named a
 container keeps it: run `brew reinstall --cask 21StarkCom/tap/goldfinger` before the zap, or
-trash the container by hand. Neither the uninstall nor `--zap` revokes the grants: remove
+trash the container by hand. macOS can refuse to remove another app's sandbox container
+([homebrew/cask#201201](https://github.com/Homebrew/homebrew-cask/issues/201201) reports
+`Operation not permitted` on one): the zap then warns that the path "could not be trashed",
+and you trash it by hand from a terminal that has Full Disk Access. Neither the uninstall nor
+`--zap` revokes the grants: remove
 Goldfinger in System Settings → Privacy & Security, or run
 `tccutil reset Accessibility com.21stark.goldfinger` and
 `tccutil reset ScreenCapture com.21stark.goldfinger`.
