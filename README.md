@@ -469,6 +469,7 @@ GitHub, ClickUp, Atlassian, PagerDuty, GCP) and read by people and tools with
 `docs/specs/2026-10-31-cache-extraction-spec.md`). The release zip's `README.md` gives
 the one-time setup of a machine, which the formula does not do: the credential profiles
 in `~/.config/urd/config.yaml`, and on macOS the 6h sync agent (`urd schedule install`).
+Homebrew does not own that agent, so run `urd schedule uninstall` before `brew uninstall urd`.
 
 ```sh
 brew install 21StarkCom/tap/urd

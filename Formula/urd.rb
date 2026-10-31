@@ -34,6 +34,15 @@ class Urd < Formula
     bin.install "urd"
   end
 
+  def caveats
+    <<~EOS
+      urd syncs every 6 hours only after you install its launchd agent:
+        urd schedule install
+      Homebrew does not remove that agent. Before `brew uninstall urd`, run:
+        urd schedule uninstall
+    EOS
+  end
+
   test do
     # `urd version` prints "urd v<version>", its commit and its build date.
     assert_match "urd v#{version}", shell_output("#{bin}/urd version")
