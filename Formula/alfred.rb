@@ -13,10 +13,10 @@ class Alfred < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/695237092",
+  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/695652505",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.57.0"
-  sha256 "918b0259d5d25eb1828c004f3b9d8c70fb44ca2d522012defbc23682996fd7b1"
+  version "0.58.0"
+  sha256 "d155fd7ca545e3a409c3743e29024b00da8ad78c8575548fa80367d6d2e01cbe"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
