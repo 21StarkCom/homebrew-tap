@@ -69,8 +69,10 @@ cask "goldfinger" do
   # usage files from 0.10.0 on (Application Support/goldfinger/usage/<UTC day>/<epoch>-<k>.json,
   # the daemon's content-free counts, one file a generation and day, kept 30 days), the
   # Vision and Core ML model cache macOS compiles under the daemon's bundle id from 0.9.0 on
-  # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), and
-  # Goldfinger Control's login item and preferences. The helper registers itself with
+  # (Caches/com.21stark.goldfinger/com.apple.e5rt.e5bundlecache, shared with dev daemons), the
+  # app group container of goldfinger's Safari extension from 0.13.0 on (its replies folder holds
+  # the extension's answers, which can hold a page's text), and Goldfinger Control's login item
+  # and preferences. The helper registers itself with
   # `SMAppService.mainApp`, which owns no launchd job while it is quit and outlives its bundle
   # (goldfinger PR 124, P1), so no `launchctl:`: the zap deletes the item by its display name
   # through System Events, which asks the terminal for Automation access. The grants stay until
@@ -80,6 +82,7 @@ cask "goldfinger" do
         "~/Library/Application Support/goldfinger",
         "~/Library/Caches/com.21stark.goldfinger",
         "~/Library/Caches/goldfinger",
+        "~/Library/Group Containers/MG9J2XF9Q3.com.21stark.goldfinger",
         "~/Library/Preferences/com.21stark.goldfinger.control.plist",
       ]
 
