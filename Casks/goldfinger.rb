@@ -73,11 +73,12 @@ cask "goldfinger" do
   # app group container of goldfinger's Safari extension from 0.13.0 on (its replies folder holds
   # the extension's answers, which can hold a page's text; dev builds share it), the extension's
   # own sandbox container (Containers/com.21stark.goldfinger.SafariExtension; a dev build's `.dev`
-  # container stays), and Goldfinger Control's login item and preferences. Homebrew zaps by the
-  # list the install recorded, so an install from before the tap named a container keeps it until
-  # a reinstall or an upgrade. macOS can refuse to remove another app's sandbox container
-  # (homebrew/cask#201201, `Operation not permitted`); Homebrew then warns that the path "could
-  # not be trashed", and the caveats name the fix.
+  # container stays), the empty Application Scripts folders macOS makes for both containers, and
+  # Goldfinger Control's login item and preferences. Homebrew zaps by the list the install
+  # recorded, so an install from before the tap named a container keeps it until a reinstall or an
+  # upgrade. A terminal without Full Disk Access can meet `Operation not permitted` on another
+  # app's sandbox container, even under sudo (homebrew/cask#201201); Homebrew then stops and asks
+  # for Full Disk Access, or warns that the path "could not be trashed". The caveats say what to do.
   # The helper registers itself with `SMAppService.mainApp`, which owns no launchd job while it
   # is quit and outlives its bundle (goldfinger PR 124, P1), so no `launchctl:`: the zap deletes
   # the item by its display name through System Events, which asks the terminal for Automation
@@ -85,6 +86,8 @@ cask "goldfinger" do
   # `tccutil reset {Accessibility,ScreenCapture} <bundle id>` drops them.
   zap login_item: "Goldfinger Control",
       trash:      [
+        "~/Library/Application Scripts/com.21stark.goldfinger.SafariExtension",
+        "~/Library/Application Scripts/MG9J2XF9Q3.com.21stark.goldfinger",
         "~/Library/Application Support/goldfinger",
         "~/Library/Caches/com.21stark.goldfinger",
         "~/Library/Caches/goldfinger",
@@ -119,8 +122,9 @@ cask "goldfinger" do
       brew uninstall --zap --cask 21StarkCom/tap/goldfinger
     which deletes it through System Events (allow your terminal's Automation access when
     macOS asks; add `--force` once a plain uninstall has run) and trashes goldfinger's
-    caches, preferences, recordings and Safari extension data. If it warns that a path
-    "could not be trashed" (macOS can refuse another app's sandbox container), trash that
-    path by hand from a terminal that has Full Disk Access.
+    caches, preferences, recordings and Safari extension data. If macOS refuses the
+    extension's sandbox container, the zap stops with "Please enable Full Disk Access for
+    your terminal" or warns that a path "could not be trashed": give your terminal Full Disk
+    Access (System Settings › Privacy & Security), then run the zap again with `--force`.
   EOS
 end
