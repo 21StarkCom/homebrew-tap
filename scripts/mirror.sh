@@ -22,10 +22,8 @@ fi
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
 # Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
-# alfred stays here by the operator's request of 2026-10-29. idavoll's .pkg holds
-# its app's readable JavaScript (STARK-13891); its cask is in Casks/i/, which this
-# script does not read, and the entry here keeps it out if that ever changes.
-EXCLUDED="alfred idavoll"
+# alfred stays here by the operator's request of 2026-10-29.
+EXCLUDED="alfred"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
@@ -69,9 +67,9 @@ is written there with its asset URL pointed at that copy
   --only <entry>    copy only this entry (repeatable), and delete no file
   --dry-run         print the plan; upload, delete, commit and push nothing
   --check <entry> <archive>
-                    run the source check of <entry> on a local .zip or
-                    .tar.gz, print each file it refuses, and exit; needs no
-                    token and no network
+                    run the source check of <entry> on a local .zip,
+                    .tar.gz or .pkg, print each file it refuses, and exit;
+                    needs no token and no network
   -h, --help        this text
 
 The source check runs on each asset before its upload, and an asset that fails
@@ -83,9 +81,14 @@ holds "sourcesContent". In a package of a first-party scope under node_modules/
 files with no exception, and any file that holds "sourcesContent". Extensions
 match in any case. Anywhere outside node_modules/ or in such a package, it
 refuses a JS, TS or CSS file with an inline source map (sourceMappingURL=data:).
-It cannot judge readable JS: an unminified bundle, or the JS inside a binary.
+It cannot judge readable JS: an unminified bundle, the JS inside a binary, or an
+Electron app.asar, which it reads as one file. A .pkg is a xar archive: bsdtar
+unpacks it, and each member that is itself an archive (each Payload and Scripts),
+and the check reads the tree.
 
-Run it from a checkout whose Formula/ and Casks/ have no uncommitted change.
+It reads Formula/*.rb, Casks/*.rb and Casks/*/*.rb (Casks/i/idavoll.rb), and a
+copy keeps its path. Run it from a checkout whose Formula/ and Casks/ have no
+uncommitted change.
 To push main, HEAD must be origin/main (git fetch first).
 
 Environment:
@@ -109,7 +112,7 @@ uploaded asset is ever deleted; an upload a dead run left (an hour old) is.
 Exit: 0 every entry copied; 1 an entry failed (the others still pushed) or the
 run failed; 2 usage. --check exits 0 when the archive passes, 1 when it does
 not. Needs bash 4.4+, git, gh, jq, perl, tar, unzip and sha256sum or shasum
-(--check: perl, tar and unzip only).
+(--check: perl, tar and unzip only), and bsdtar (libarchive) for a .pkg.
 EOF
 }
 
@@ -212,11 +215,13 @@ check_source() {
     usage_error "HEAD ${head:0:7} is not origin/main ${main:0:7}: copy main only from a checkout of it (git fetch first)"
 }
 
-# Reads every Formula/ and Casks/ entry of this checkout into the arrays.
+# Reads every Formula/ and Casks/ entry of this checkout into the arrays. Homebrew
+# reads Casks/**/*.rb; idavoll's cask is in Casks/i/, which idavoll's own installer
+# does not read, so the copy keeps that path too.
 read_entries() {
   local f name line first n_url n_ver n_sha e
   for e in ${EXCLUDED}; do excluded[${e}]=1; done
-  for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb
+  for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb "${src_root}"/Casks/*/*.rb
   do
     [[ -f ${f} ]] || continue
     name="${f##*/}"
@@ -228,7 +233,8 @@ read_entries() {
     fi
     if [[ -n ${kind[${name}]:-} ]]
     then
-      # Homebrew keeps formula and cask names apart; the copy keys by name.
+      # Homebrew keeps formula and cask names apart, and one cask name to one
+      # file; the copy keys by name.
       fail_entry "${name}" "is both ${rel[${name}]} and ${f#"${src_root}"/}; the mirror copies neither"
       continue
     fi
@@ -291,6 +297,41 @@ named_ts() {
   perl -ne 'print "$1\n" while m{(?:#\{(?:opt_)?libexec\}/|(?:opt_)?libexec/")([^"\s#{}]+?\.(?:ts|tsx|mts|cts))(?![A-Za-z0-9_])}g' "$1"
 }
 
+# Unpacks the flat .pkg $1, a xar archive, into the empty folder $2, and lists the
+# files and links of the tree in $3, one per line. Each member that bsdtar reads as
+# an archive (a Payload or a Scripts, each a cpio archive) is unpacked in its place.
+# bsdtar finds them by their bytes, not by their names: libarchive joins a name
+# that the table of contents gives twice, and idavoll's .pkg gives each name twice
+# (PayloadPayload). Says why on stderr and returns 1 when it cannot.
+unpack_pkg() { # <pkg> <dir> <list>
+  local m n=0
+  local -a members=()
+  if ! command -v bsdtar >/dev/null
+  then
+    echo "bsdtar (libarchive) is required to read a .pkg" >&2
+    return 1
+  fi
+  bsdtar -xf "$1" -C "$2" || return 1
+  # Every member first, so the tree unpacked in a member's place is not read again.
+  find "$2" -type f -print0 >"${tmp}/members" || return 1
+  mapfile -d '' members <"${tmp}/members"
+  for m in "${members[@]}"
+  do
+    bsdtar -tf "${m}" >/dev/null 2>&1 || continue
+    mv "${m}" "${tmp}/member" || return 1
+    mkdir "${m}" || return 1
+    bsdtar -xf "${tmp}/member" -C "${m}" || return 1
+    rm -f "${tmp}/member"
+    n=$((n + 1))
+  done
+  if ((n == 0))
+  then
+    echo "no member of it is an archive, so it holds no Payload to check" >&2
+    return 1
+  fi
+  (cd "$2" && find . ! -type d) >"$3"
+}
+
 # The source check (spec D12): unpacks archive $2 of entry $1, whose file is $3,
 # and fails the entry when a file in it is source (usage names the rules).
 # Returns 1 when it fails the entry.
@@ -305,8 +346,11 @@ scan_asset() { # <entry> <archive> <entry file>
     *.tar.gz | *.tgz)
       { tar -tzf "${archive}" >"${tmp}/scan.list" && tar -xzf "${archive}" -C "${dir}"; } 2>"${tmp}/scan.err" || rc=$?
       ;;
+    *.pkg)
+      unpack_pkg "${archive}" "${dir}" "${tmp}/scan.list" 2>"${tmp}/scan.err" || rc=$?
+      ;;
     *)
-      fail_entry "${name}" "the source check reads only a .zip or a .tar.gz, not ${archive##*/}"
+      fail_entry "${name}" "the source check reads only a .zip, a .tar.gz or a .pkg, not ${archive##*/}"
       return 1
       ;;
   esac
@@ -387,13 +431,17 @@ scan_asset() { # <entry> <archive> <entry file>
 # --check: the source check of one entry on a local archive, with no token.
 check_archive() {
   local f tool
+  local -a files=("${src_root}/Formula/${check_entry}.rb" "${src_root}/Casks/${check_entry}.rb"
+    "${src_root}"/Casks/*/"${check_entry}.rb")
   for tool in perl tar unzip
   do
     command -v "${tool}" >/dev/null || die "${tool} is required"
   done
   [[ -f ${check_file} ]] || usage_error "--check: no such archive: ${check_file}"
-  f="${src_root}/Formula/${check_entry}.rb"
-  [[ -f ${f} ]] || f="${src_root}/Casks/${check_entry}.rb"
+  for f in "${files[@]}"
+  do
+    [[ -f ${f} ]] && break
+  done
   [[ -f ${f} ]] || usage_error "--check ${check_entry}: no such entry in this tap"
   tmp="$(mktemp -d "${TMPDIR:-/tmp}/mirror.XXXXXX")"
   trap cleanup EXIT
@@ -625,11 +673,11 @@ write_copy() {
   printf '%s\n' "${out}" >"${clone}/${rel[${name}]}"
 }
 
-# Deletes each marked GetEvinced file whose entry left this tap, moved between
-# Formula/ and Casks/, or is excluded.
+# Deletes each marked GetEvinced file whose entry left this tap, moved (between
+# Formula/ and Casks/, or into or out of a Casks/ subfolder), or is excluded.
 remove_departed() {
   local f name path why
-  for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb
+  for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb "${clone}"/Casks/*/*.rb
   do
     marked "${f}" || continue
     name="${f##*/}"
@@ -677,7 +725,7 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
 
 | Entry | Kind | Version | Source |
 |---|---|---|---|"
-  for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb
+  for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb "${clone}"/Casks/*/*.rb
   do
     marked "${f}" || continue
     name="${f##*/}"

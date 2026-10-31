@@ -63,6 +63,9 @@ jobs:
           id="$(gh api "users/${SLUG}%5Bbot%5D" --jq .id)"
           echo "name=${SLUG}[bot]" >>"$GITHUB_OUTPUT"
           echo "email=${id}+${SLUG}[bot]@users.noreply.github.com" >>"$GITHUB_OUTPUT"
+      - name: Install bsdtar
+        # The source check unpacks a .pkg (idavoll's) with bsdtar (libarchive).
+        run: command -v bsdtar || { sudo apt-get update -qq && sudo apt-get install -y -qq libarchive-tools; }
       - name: Mirror
         id: mirror
         env:
@@ -123,7 +126,16 @@ jobs:
           CASKS: ${{ needs.sync.outputs.casks }}
         run: |
           marker='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
-          marked() { grep -lxF -- "$marker" getevinced-tap/"$1"/*.rb 2>/dev/null | sed -E 's#.*/##; s#\.rb$##' | tr '\n' ' '; }
+          # A copy in a subfolder too (Casks/i/idavoll.rb). A glob with no match
+          # stays as its pattern, which -f skips.
+          marked() {
+            local f
+            for f in getevinced-tap/"$1"/*.rb getevinced-tap/"$1"/*/*.rb; do
+              [[ -f "$f" ]] && grep -qxF -- "$marker" "$f" || continue
+              f="${f##*/}"
+              printf '%s ' "${f%.rb}"
+            done
+          }
           if [[ "$EVENT" != push ]]; then
             FORMULAE="$(marked Formula)"
             CASKS="$(marked Casks)"
@@ -148,7 +160,12 @@ jobs:
         run: |
           paths=()
           for f in $FORMULAE; do paths+=("getevinced-tap/Formula/$f.rb"); done
-          for c in $CASKS; do paths+=("getevinced-tap/Casks/$c.rb"); done
+          for c in $CASKS; do
+            # Casks/<name>.rb, or in a subfolder (Casks/i/idavoll.rb).
+            p="$(find getevinced-tap/Casks -name "$c.rb" -print -quit)"
+            [[ -n "$p" ]] || { echo "getevinced-tap holds no copy of the cask $c" >&2; exit 1; }
+            paths+=("$p")
+          done
           ((${#paths[@]} == 0)) || brew style --except-cops FormulaAudit/DependencyOrder "${paths[@]}"
       - name: Fetch the copies with a token that reads GetEvinced only
         env:
