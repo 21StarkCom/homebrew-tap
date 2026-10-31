@@ -81,6 +81,7 @@ does not record GitHub's host key.
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `utgard` | formula | [idun](https://github.com/21StarkCom/idun) | `utgard` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
 | `goldfinger` (cask) | cask | [goldfinger](https://github.com/21StarkCom/goldfinger) | `Goldfinger.app` (nesting Goldfinger Control, the menu bar helper, from 0.8.0), `goldfinger` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 | `idavoll` (cask) | cask | [idavoll](https://github.com/21StarkCom/idavoll) | `Idavoll.app`, `/usr/local/bin/idavoll`, from the release's `.pkg` | Go CLI in an Electron app | Developer ID + notarized + stapled `.pkg` | 13 (Ventura) |
@@ -479,6 +480,23 @@ Name it in full — `brew upgrade 21StarkCom/tap/valkyrie` — since a bare `val
 homebrew/cask's Valkyrie, a game master app for board games: `brew uninstall valkyrie`
 warns that it treats the name as a formula, and `--formula` silences that.
 
+## utgard
+
+The [`utgard`](https://github.com/21StarkCom/idun) remote VMs — the subcommands
+`utgard devbox` and `utgard winbox`, which run the devbox and the winbox VMs from the Mac.
+The formula puts only `utgard` on `PATH`. It is the fourth app of the `idun` repo, and
+takes over `devbox` and `winbox` from `idun` (idun's `docs/specs/vm-app.md`).
+
+```sh
+brew install 21StarkCom/tap/utgard
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
+a `utgard-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
+checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
+`apps/idun/setup.sh`, which steps aside when this formula is installed.
+
 ## atlas (desktop app — cask)
 
 The **Atlas** desktop app — the GUI companion to the `brain` CLI (same
@@ -693,12 +711,13 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `stark-statusline` | idavoll | `statusline/release.sh` (`make statusline-release STATUSLINE_VERSION=X.Y.Z`), for a `statusline-v*` tag | the operator's Mac |
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `valkyrie` | idun | `scripts/release-darwin.sh valkyrie`, for a `valkyrie-v*` tag | the signing Mac |
+| `utgard` | idun | `scripts/release-darwin.sh utgard`, for a `utgard-v*` tag | the signing Mac |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
 | `goldfinger` (cask) | goldfinger | `macos/scripts/release-darwin.sh` | the signing Mac |
 | `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun`, `njord` and `valkyrie`) and alfred's releases and plume's and frigg's `release.yml` merge their
+agent-seats', idun's (`idun`, `njord`, `valkyrie` and `utgard`) and alfred's releases and plume's and frigg's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
