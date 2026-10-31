@@ -24,6 +24,8 @@ class HermodLinux < Formula
     )
   end
 
+  # hermod finds a repo's checkout with `urd repos get`; urd-linux installs that `urd`.
+  depends_on "21starkcom/tap/urd-linux"
   depends_on arch: :x86_64 # bun build --compile --target=bun-linux-x64
   depends_on :linux
 

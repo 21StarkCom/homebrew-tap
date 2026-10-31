@@ -25,6 +25,9 @@ class Alfred < Formula
     )
   end
 
+  # alfred reads people, identity and org data through `urd`. Tap-qualified: a bare name
+  # resolves to homebrew/core first, and is ambiguous when another tap ships a `urd`.
+  depends_on "21starkcom/tap/urd"
   depends_on arch: :arm64
   depends_on :macos
 
