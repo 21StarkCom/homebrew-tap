@@ -47,8 +47,8 @@ job refuses an asset that holds source (D12).
 | D8 | The job reads 21StarkCom with the existing `HOMEBREW_RELEASE_READ_TOKEN`. It adds no 21StarkCom credential. |
 | D9 | The replica copies `Formula/` and `Casks/` only. `scripts/`, the workflows, `CLAUDE.md` and the bumper stay here. |
 | D10 | The App key lives in the Actions Environment `getevinced-mirror` of this repo, which only `main` can use. A run on any other ref gets no key. |
-| D11 | An entry in `EXCLUDED` (`scripts/mirror.sh`) is never copied, and a marked copy of one is deleted. Any entry that names an excluded one fails until it is excluded too. On 2026-10-28 the operator excluded `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose assets held source or readable JS with source maps, after the first proof run had copied `brain`; that release was deleted by hand. Their build tickets (epic STARK-13647) removed the source. `atlas`, `brain`, `librarian` and `odinctl` passed D12 on 2026-10-29 and are copied. `lucius` stayed excluded until a release of it passed D12: its 0.13.0 zip still vendored `@21starkcom/stark-tui` with its TypeScript and source maps, and 0.14.0 (STARK-13791) is the first one copied. On 2026-10-29 the operator also excluded `alfred`, by request; it holds no source. The mirror run deleted its copy, and its release `alfred-v0.56.0` was deleted by hand (STARK-13795). On 2026-10-29 the `idavoll` cask was added excluded (STARK-13891): its `.pkg` holds the app's readable JavaScript, and the cask sits in `Casks/i/`, which the mirror does not read. |
-| D12 | Before an upload, the job unpacks the asset (`.zip` or `.tar.gz`) and fails the entry when a file in it is source. Outside `node_modules/`: a `.ts`, `.tsx`, `.mts` or `.cts` file that is no `.d.ts`, unless the entry names its path under `libexec` and its mean line is 200 bytes or more (minified: the `lucius` and `sleipnir` bundles); a `.map` file; a `.json` file that holds `sourcesContent`. Extensions match in any case. In a package under `node_modules/` whose scope is first-party (`@21starkcom`, `@atlas`, `@idun`, `@sleipnir`; the package after the last `node_modules/` of the path): such a TypeScript file or `.map` file with no exception, and a file that holds `sourcesContent`. In both places: a JS, TS or CSS file with an inline source map. Third-party packages are not read. The check cannot judge readable JS, in a bundle or inside a compiled binary; the build tickets and a red-team audit cover those. A copy uploaded before the check came in is checked by hand once (D7). |
+| D11 | An entry in `EXCLUDED` (`scripts/mirror.sh`) is never copied, and a marked copy of one is deleted. Any entry that names an excluded one fails until it is excluded too. On 2026-10-28 the operator excluded `atlas`, `brain`, `librarian`, `lucius` and `odinctl`, whose assets held source or readable JS with source maps, after the first proof run had copied `brain`; that release was deleted by hand. Their build tickets (epic STARK-13647) removed the source. `atlas`, `brain`, `librarian` and `odinctl` passed D12 on 2026-10-29 and are copied. `lucius` stayed excluded until a release of it passed D12: its 0.13.0 zip still vendored `@21starkcom/stark-tui` with its TypeScript and source maps, and 0.14.0 (STARK-13791) is the first one copied. On 2026-10-29 the operator also excluded `alfred`, by request; it holds no source. The mirror run deleted its copy, and its release `alfred-v0.56.0` was deleted by hand (STARK-13795). On 2026-10-29 the `idavoll` cask was added excluded (STARK-13891): its `.pkg` holds the app's readable JavaScript. On 2026-10-31 the operator let it go (STARK-14490), that JavaScript included, so idavoll's users reach either tap. The first copy is `mac-v0.18.1`, a release after K6 (STARK-14348) took the operator's data out of the binary. |
+| D12 | Before an upload, the job unpacks the asset (`.zip`, `.tar.gz` or `.pkg`) and fails the entry when a file in it is source. A `.pkg` is a xar archive: `bsdtar` unpacks it, and each member that is itself an archive (each `Payload` and `Scripts`) in its place. It finds them by their bytes, since libarchive joins a name that the table of contents gives twice (idavoll's `PayloadPayload`). The entry fails when a member whose name ends in `Payload` does not unpack, or when no such member does. An Electron `app.asar` is one file to the check. Outside `node_modules/`: a `.ts`, `.tsx`, `.mts` or `.cts` file that is no `.d.ts`, unless the entry names its path under `libexec` and its mean line is 200 bytes or more (minified: the `lucius` and `sleipnir` bundles); a `.map` file; a `.json` file that holds `sourcesContent`. Extensions match in any case. In a package under `node_modules/` whose scope is first-party (`@21starkcom`, `@atlas`, `@idun`, `@sleipnir`; the package after the last `node_modules/` of the path): such a TypeScript file or `.map` file with no exception, and a file that holds `sourcesContent`. In both places: a JS, TS or CSS file with an inline source map. Third-party packages are not read. The check cannot judge readable JS, in a bundle or inside a compiled binary; the build tickets and a red-team audit cover those. A copy uploaded before the check came in is checked by hand once (D7). |
 
 ## Design
 
@@ -88,8 +88,9 @@ scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 - The script writes the changed entries to `$GITHUB_OUTPUT` when that file
   is set, as `formulae` and `casks`, one space-separated list each.
 - `--check <entry> <archive>` runs the D12 check of that entry on a local
-  `.zip` or `.tar.gz` and exits (0 passes, 1 fails), with no token and no
-  network, so a release can check its asset before it ships.
+  `.zip`, `.tar.gz` or `.pkg` and exits (0 passes, 1 fails), with no token
+  and no network, so a release can check its asset before it ships. A
+  `.pkg` needs `bsdtar`; `mirror.yml` and `bump.yml` install it.
 - `--help` is its reference, as for `bump.sh`.
 - It needs bash 4.4 or later (older bash aborts on an empty array under
   `set -u`), and it checks this at its start. CI runs it on
@@ -105,8 +106,9 @@ scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Steps, in this order:
 
 1. Clone the GetEvinced branch.
-2. For each `Formula/*.rb` and `Casks/*.rb` in this checkout but the D11
-   entries, read the asset URL, `version` and `sha256`. Use the bumper's
+2. For each `Formula/*.rb`, `Casks/*.rb` and `Casks/*/*.rb` (Homebrew reads
+   `Casks/**/*.rb`; idavoll's is `Casks/i/idavoll.rb`) in this checkout but
+   the D11 entries, read the asset URL, `version` and `sha256`. Use the bumper's
    anchored URL pattern (`URL_RE` in `scripts/bump.sh`). An entry fails when
    it has other than one `url`, `version` or `sha256` stanza, when its first
    line is not `# frozen_string_literal: true`, or when a formula and a cask
@@ -127,10 +129,10 @@ Steps, in this order:
       asset id and the SHA-256.
    6. Upload the asset under its D5 name. Delete the download.
    7. Publish the draft.
-5. Write the entry's file in the GetEvinced clone. The file is this tap's
-   file with the changes in "The copy of an entry" below.
+5. Write the entry's file in the GetEvinced clone, at its path here. The
+   file is this tap's file with the changes in "The copy of an entry" below.
 6. Delete each marked GetEvinced file whose entry is no longer in this
-   checkout, is a D11 entry, or moved between `Formula/` and `Casks/`.
+   checkout, is a D11 entry, or moved to another path.
    Leave the releases of that entry in place.
 7. Write the README block (below).
 8. Commit all changes in one commit and push it. When the push loses a race
@@ -230,7 +232,8 @@ Mimir; and the Environment `getevinced-mirror` here (deployment branch policy
 `scripts/test-mirror.sh` uses fixture entries only: `bump.yml` is the gate
 of every bump PR, so a change to a real entry must never turn it red. For the
 same reason its copy of `mirror.sh` gets its own `EXCLUDED`. Each fixture
-asset is a real zip, against a bare git remote and a stubbed `gh`. Each
+asset is a real zip, `.tar.gz` or `.pkg` (made with `bsdtar`), against a bare
+git remote and a stubbed `gh`. Each
 `begin` line of the script names one case: together they cover each step and
 error of `mirror.sh` above, each copy rule (checked apart from the script, by
 `sed`), `aac.rb` and `evinced.rb` left byte for byte, no token in the work
@@ -277,6 +280,9 @@ loads no formula from a tap that is not trusted, so a user runs
   `frigg` release. A later ticket can prune by age, if the size matters.
 - **Immutable releases:** if GetEvinced turns them on, a second asset for a
   published version fails. That entry fails until its next version.
+- **A renamed `.pkg`:** the idavoll cask's `pkg` stanza names
+  `idavoll-<version>.pkg`. A rebuild under the same version gets a D5 name
+  (`<sha>-idavoll-<version>.pkg`), so that copy fetches but does not install.
 - **Source loss:** the copies do not depend on 21StarkCom after upload. A
   deleted 21StarkCom release does not break a GetEvinced install.
 

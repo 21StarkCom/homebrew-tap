@@ -30,9 +30,9 @@ end
 # This file is in Casks/i/, not in Casks/. idavoll's Fleet CLIs step (0.10.0 and older)
 # installs each Casks/*.rb of this tap, so it would install idavoll's own .pkg in the
 # middle of its own run, and the package's preinstall quits a running Idavoll.app.
-# Homebrew reads Casks/**/*.rb; idavoll reads Casks/*.rb only. The GetEvinced mirror does
-# not copy this cask: scripts/mirror.sh lists it in EXCLUDED, since the app's JavaScript
-# is readable.
+# Homebrew reads Casks/**/*.rb; idavoll reads Casks/*.rb only. The GetEvinced mirror copies
+# this cask to the same path in GetEvinced/tap, .pkg included: the operator accepted the
+# app's readable JavaScript there on 2026-10-31.
 cask "idavoll" do
   # version / asset id / sha256 are release-specific and rewritten when idavoll's release
   # calls the bumper (the README's caller table) — do not hand-edit them.

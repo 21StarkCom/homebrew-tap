@@ -18,7 +18,7 @@ set -uo pipefail
 
 here="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}" && pwd -P)"
 root="${here%/*}"
-for tool in git jq perl mktemp base64 zip unzip tar
+for tool in git jq perl mktemp base64 zip unzip tar bsdtar
 do
   command -v "${tool}" >/dev/null || {
     echo "test-mirror.sh: ${tool} is required" >&2
@@ -153,6 +153,23 @@ cask_text() { # <version> <asset id> <sha256>
     '  homepage "https://github.com/21StarkCom/democask"' \
     '' \
     '  caveats "Installing needs GitHub read access to 21StarkCom private repos."' \
+    'end'
+}
+
+pkgcask_text() { # <version> <asset id> <sha256>: a cask whose asset is a .pkg, as idavoll's
+  printf '%s\n' \
+    '# frozen_string_literal: true' \
+    '' \
+    'cask "pkgcask" do' \
+    "  version \"$1\"" \
+    "  sha256 \"$3\"" \
+    '' \
+    "  url \"https://api.github.com/repos/21StarkCom/pkgcask/releases/assets/$2\"," \
+    '      using: PkgcaskStrategy' \
+    '  name "Pkgcask"' \
+    '  homepage "https://github.com/21StarkCom/pkgcask"' \
+    '' \
+    '  pkg "pkgcask-#{version}.pkg"' \
     'end'
 }
 
@@ -377,11 +394,20 @@ stage_file() { # <path> <line>...
   mkdir -p "${R}/stage/${path%/*}"
   printf '%s\n' "$@" >"${R}/stage/${path}"
 }
-# Packs $R/stage into <archive>, as a .tar.gz or a .zip by <name>.
+# Packs $R/stage into <archive>, as a .tar.gz, a .pkg or a .zip by <name>.
 pack() { # <archive> <name>
   rm -f "$1"
   case "$2" in
     *.tar.gz) tar -czf "$1" -C "${R}/stage" . ;;
+    *.pkg)
+      # A flat .pkg, as pkgbuild makes one: a xar archive of a Payload (a gzip odc
+      # cpio archive of the tree) and a PackageInfo, which is no archive.
+      rm -rf "${R}/pkgroot"
+      mkdir -p "${R}/pkgroot"
+      bsdtar --format odc -czf "${R}/pkgroot/Payload" -C "${R}/stage" .
+      printf '<pkg-info/>\n' >"${R}/pkgroot/PackageInfo"
+      bsdtar --format xar -cf "$1" -C "${R}/pkgroot" .
+      ;;
     *) (cd "${R}/stage" && zip -qry "$1" .) ;;
   esac
 }
@@ -397,6 +423,10 @@ set_formula() { # <name> <version> <asset id> [sha256]
 }
 set_cask() { # <version> <asset id> [sha256]
   cask_text "$1" "$2" "${3:-$(asset_sha democask "$2")}" >"${R}/src/Casks/democask.rb"
+}
+set_pkgcask() { # <version> <asset id>: Casks/i/pkgcask.rb, as idavoll's is in Casks/i/
+  mkdir -p "${R}/src/Casks/i"
+  pkgcask_text "$1" "$2" "$(asset_sha pkgcask "$2")" >"${R}/src/Casks/i/pkgcask.rb"
 }
 # Commits the source tap and makes that commit origin/main, as a fetched checkout has it.
 commit_src() {
@@ -638,6 +668,66 @@ check "exit 1" is_code 1
 check "says it is both" err_has "is both Formula/democask.rb and Casks/democask.rb"
 check "copies neither" bash -c '! git --git-dir="$1" cat-file -e main:Formula/democask.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Casks/democask.rb 2>/dev/null' _ "${R}/target.git"
 check "the others are pushed" tgt_has Formula/demo.rb
+
+# A rig whose tap also holds pkgcask: a cask in Casks/i/ whose asset is a .pkg.
+pkg_rig() {
+  rig
+  rm -rf "${R}/stage"
+  stage_file Applications/Pkgcask.app/Contents/Resources/app.asar "console.log('pkgcask 1.0.0')"
+  stage_file usr/local/bin/pkgcask "pkgcask 1.0.0"
+  served_asset pkgcask 701 pkgcask-1.0.0.pkg
+  set_pkgcask 1.0.0 701
+  commit_src
+}
+
+begin "a cask in Casks/i/ whose asset is a .pkg"
+pkg_rig
+run_mirror
+check "exit 0" is_code 0
+check "uploads the .pkg under its own name" asset_named pkgcask-v1.0.0 pkgcask-1.0.0.pkg uploaded
+check "writes Casks/i/pkgcask.rb" tgt_has Casks/i/pkgcask.rb
+check "writes no Casks/pkgcask.rb" tgt_lacks Casks/pkgcask.rb
+check "the copy rules hold" copy_is_expected Casks/i/pkgcask.rb "$(copy_id Casks/i/pkgcask.rb)"
+check "its url names a GetEvinced asset with its bytes" digest_is Casks/i/pkgcask.rb pkgcask-v1.0.0 "$(asset_sha pkgcask 701)"
+check "README block lists it" readme_has '| `pkgcask` | cask | 1.0.0 | [21StarkCom/pkgcask](https://github.com/21StarkCom/pkgcask) |'
+check "GITHUB_OUTPUT lists it" output_lists casks pkgcask
+cp "${R}/gh/src/21StarkCom_pkgcask/701.bin" "${R}/pkgcask-1.0.0.pkg"
+run_check pkgcask "${R}/pkgcask-1.0.0.pkg"
+check "--check finds it in Casks/i/: exit 0" is_code 0
+check "--check says it passes" out_has "pkgcask: pkgcask-1.0.0.pkg passes the source check"
+run_mirror
+check "a second run: exit 0" is_code 0
+check "a second run: no change" out_has "no change"
+git -C "${R}/src" rm -q Casks/i/pkgcask.rb && commit_src
+run_mirror
+check "removed here: exit 0" is_code 0
+check "removed here: its marked copy goes" tgt_lacks Casks/i/pkgcask.rb
+check "removed here: says why" out_has "pkgcask: left 21StarkCom/homebrew-tap; deleting Casks/i/pkgcask.rb"
+
+begin "a cask moved into Casks/i/"
+pkg_rig
+mkdir -p "${R}/seed/Casks"
+printf '# frozen_string_literal: true\n\n%s\n\ncask "pkgcask" do\nend\n' "${MARKER}" >"${R}/seed/Casks/pkgcask.rb"
+push_seed "pkgcask was in Casks/"
+run_mirror
+check "exit 0" is_code 0
+check "deletes the old copy" tgt_lacks Casks/pkgcask.rb
+check "writes the new one" tgt_has Casks/i/pkgcask.rb
+check "says it moved" out_has "pkgcask: moved to Casks/i/pkgcask.rb"
+
+begin "a cask in Casks/ and in Casks/i/ with one name"
+rig
+mkdir -p "${R}/src/Casks/i"
+cp "${R}/src/Casks/democask.rb" "${R}/src/Casks/i/democask.rb"
+commit_src
+run_mirror
+check "exit 1" is_code 1
+check "says it is both" err_has "is both Casks/democask.rb and Casks/i/democask.rb"
+check "copies neither" bash -c '! git --git-dir="$1" cat-file -e main:Casks/democask.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Casks/i/democask.rb 2>/dev/null' _ "${R}/target.git"
+cp "${R}/gh/src/21StarkCom_democask/301.bin" "${R}/democask.zip"
+run_check democask "${R}/democask.zip"
+check "--check refuses it too: exit 1" is_code 1
+check "--check says it is both" err_has "democask: is both Casks/democask.rb and Casks/i/democask.rb"
 
 begin "the source checkout must be what main holds"
 rig
@@ -900,12 +990,56 @@ refuses "sourcesContent in a .json outside node_modules" case.zip dist/sources.j
 refuses "a .map in an @idun package" case.zip node_modules/@idun/core/dist/index.js.map \
   "a source map in a first-party package" '{"version":3}'
 
+begin "the source check of a .pkg"
+bundled_rig
+# An Electron app: app.asar is read as one file, and third-party packages are not read.
+app=Applications/Demo.app/Contents/Resources
+stage_file "${app}/app.asar" "const a = require('./src/main.ts');"
+stage_file "${app}/app.asar.unpacked/node_modules/lodash/index.js.map" '{"sourcesContent":["x"]}'
+stage_file usr/local/bin/demo "demo 1.0.0"
+pack "${R}/clean.pkg" clean.pkg
+run_check bundled "${R}/clean.pkg"
+check "a clean .pkg: exit 0" is_code 0
+check "a clean .pkg: says it passes" out_has "bundled: clean.pkg passes the source check"
+stage_file "${app}/src/main.ts" "const a: number = 1"
+stage_file "${app}/app.asar.unpacked/node_modules/@21starkcom/kit/index.js.map" '{"version":3}'
+pack "${R}/case.pkg" case.pkg
+run_check bundled "${R}/case.pkg"
+check "source in the Payload: exit 1" is_code 1
+check "names the .ts by its path in the Payload" err_has "bundled: Payload/${app}/src/main.ts: TypeScript source"
+check "names the first-party .map" \
+  err_has "bundled: Payload/${app}/app.asar.unpacked/node_modules/@21starkcom/kit/index.js.map: a source map in a first-party package"
+check "says it is not copied" err_has "bundled: case.pkg holds source in 2 file(s), so it is not copied"
+rm -rf "${R}/pkgroot"
+mkdir -p "${R}/pkgroot"
+printf '<pkg-info/>\n' >"${R}/pkgroot/PackageInfo"
+# An empty member: libarchive reads it as an empty archive, but it is no Payload.
+: >"${R}/pkgroot/Empty"
+bsdtar --format xar -cf "${R}/nopayload.pkg" -C "${R}/pkgroot" .
+run_check bundled "${R}/nopayload.pkg"
+check "a .pkg with no Payload: exit 1" is_code 1
+check "a .pkg with no Payload: says so" err_has "cannot unpack nopayload.pkg: it holds no Payload to check"
+# A Payload bsdtar cannot read (as Apple's pbzx), beside a Scripts archive it can.
+rm -f "${R}/pkgroot/Empty"
+mkdir -p "${R}/pkgscripts"
+printf '#!/bin/sh\n' >"${R}/pkgscripts/postinstall"
+bsdtar --format odc -czf "${R}/pkgroot/Scripts" -C "${R}/pkgscripts" .
+printf 'pbzx not a cpio archive\n' >"${R}/pkgroot/Payload"
+bsdtar --format xar -cf "${R}/pbzx.pkg" -C "${R}/pkgroot" .
+run_check bundled "${R}/pbzx.pkg"
+check "an unreadable Payload: exit 1" is_code 1
+check "an unreadable Payload: names it" err_has "cannot unpack pbzx.pkg: its Payload is no archive that bsdtar reads"
+printf 'not a xar archive\n' >"${R}/broken.pkg"
+run_check bundled "${R}/broken.pkg"
+check "a broken .pkg: exit 1" is_code 1
+check "a broken .pkg: says it cannot unpack it" err_has "cannot unpack broken.pkg"
+
 begin "the source check: archives it cannot read, and usage"
 bundled_rig
 printf 'not an archive\n' >"${R}/asset.dmg"
 run_check bundled "${R}/asset.dmg"
 check "an archive of another kind: exit 1" is_code 1
-check "says what it reads" err_has "reads only a .zip or a .tar.gz, not asset.dmg"
+check "says what it reads" err_has "reads only a .zip, a .tar.gz or a .pkg, not asset.dmg"
 printf 'not a zip\n' >"${R}/broken.zip"
 run_check bundled "${R}/broken.zip"
 check "a broken zip: exit 1" is_code 1

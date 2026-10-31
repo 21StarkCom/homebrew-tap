@@ -626,13 +626,15 @@ the `.pkg` from the release.
 
 ```sh
 brew install --cask 21StarkCom/tap/idavoll
+brew install --cask getevinced/tap/idavoll   # with read access to GetEvinced/homebrew-tap only
 ```
 
 The file is `Casks/i/idavoll.rb`, not `Casks/idavoll.rb`. idavoll's Fleet CLIs step installs
 each `Casks/*.rb` of this tap, so it would install idavoll's own `.pkg` in the middle of its
 own run, and the package's preinstall quits a running Idavoll.app. Homebrew reads
-`Casks/**/*.rb`; idavoll reads `Casks/*.rb` only. The GetEvinced mirror does not copy this
-cask: `scripts/mirror.sh` lists it in `EXCLUDED`, since the app's JavaScript is readable.
+`Casks/**/*.rb`; idavoll reads `Casks/*.rb` only. The GetEvinced mirror copies this cask to
+the same path in `GetEvinced/tap`, `.pkg` included: on 2026-10-31 the operator accepted the
+readable JavaScript in its `app.asar` there (spec D11, STARK-14490).
 
 ## mimir (credential vault — cask)
 
@@ -700,12 +702,13 @@ that holds `sourcesContent`; in a package of a first-party scope (`@21starkcom`,
 `@idun`, `@sleipnir`) under `node_modules`, those files or any `sourcesContent`; and an
 inline source map in either place. Extensions match in any case. A refused entry is not
 copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
-check on a local zip or `.tar.gz`, with no token, so a release can run it before it ships.
-The check cannot judge readable JS (an unminified bundle, or the JS inside a compiled
-binary). `alfred` stays out by the operator's request (spec D11). A new entry goes there
-unless its PR adds it to `EXCLUDED` in `scripts/mirror.sh`. `idavoll` is there too: its
-`.pkg` holds the app's readable JavaScript (and the mirror, which reads `Casks/*.rb` only,
-does not read its cask in `Casks/i/`).
+check on a local zip, `.tar.gz` or `.pkg`, with no token, so a release can run it before it
+ships. A `.pkg` is a xar archive: `bsdtar` unpacks it and each `Payload` and `Scripts` in it,
+and the check reads the files. The check cannot judge readable JS (an unminified bundle,
+the JS inside a compiled binary, or an Electron `app.asar`, which it reads as one file).
+`alfred` stays out by the operator's request (spec D11). A new entry goes there unless its
+PR adds it to `EXCLUDED` in `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
+`Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
