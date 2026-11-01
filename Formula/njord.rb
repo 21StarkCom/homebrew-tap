@@ -10,10 +10,10 @@ class Njord < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/698269449",
+  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/698320794",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.12.0"
-  sha256 "b6c566cbcd11ca2c5085cc54314cdc3c97b9478c31e6e2027d5c8c97d03dfe5c"
+  version "0.13.0"
+  sha256 "2259a054a489222dd7a43bf8a898d85645972f0f1d987d7d4fafbadd8a9b3a6b"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
