@@ -15,10 +15,10 @@ class Frigg < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/696714764",
+  url "https://api.github.com/repos/21StarkCom/frigg/releases/assets/698525240",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.68.0"
-  sha256 "b1bf6848d9bdcdd556e9c398fbfe297140bbbc1655687584be468b96fc316dd4"
+  version "0.69.0"
+  sha256 "02ddb8456cee49f7186dfb031fea61d7c2feca10ebf560dffe033f2f9f6dfd1b"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
