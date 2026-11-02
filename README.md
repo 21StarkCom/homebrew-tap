@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 20 formulae for the CLIs and 4 casks for the GUI apps, each a signed
+`brew install`: 19 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus `hermod-linux`,
 `frigg-linux` and `urd-linux`, hermod's, frigg's and urd's Linux x86_64 builds for the
 devbox. The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 25 of the 27 are re-pinned on each release
+**Status:** active. Every entry installs today; 24 of the 26 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -72,7 +72,6 @@ does not record GitHub's host key.
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
-| `lucius` | formula | [lucius](https://github.com/21StarkCom/lucius) | `lucius` | minified Bun bundles | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
@@ -310,30 +309,6 @@ Homebrew does not restart a service on upgrade, and the upgrade's cleanup remove
 version, so restart the service after each upgrade. The package has no Mach-O of its own;
 its one Mach-O is the Agent SDK's Anthropic-signed `claude`, so it is not notarized.
 Released from `librarian-v*` tags by atlas's `scripts/release-librarian.sh`.
-
-## lucius
-
-The [`lucius`](https://github.com/21StarkCom/lucius) CLI — a terminal brainstorming
-partner on the Claude Agent SDK by default, with a selectable OpenAI backend, that
-recalls from `brain` and keeps its own vault.
-
-```sh
-brew install 21StarkCom/tap/lucius
-```
-
-Same shape as `sleipnir`: the release zip is the runnable tree, with no TypeScript source.
-It holds minified Bun bundles at the `.ts` paths the formula names (`bin/lucius.ts`,
-`src/session/runtime.ts`, `src/vault/publication.ts`), their run-time files
-(`package.json`, `bun.lock`, `src/personas/`, `src/web/dist/`, the `src/vault/*.c` shims)
-and a vendored prod `node_modules`. The formula installs it into `libexec` and wraps `lucius` over Homebrew's
-`bun` (a formula dependency), which must be **1.4.2 or newer** — lucius refuses to start on
-an older one, so `brew upgrade bun` if you are behind. Homebrew cannot express that floor
-on a formula dependency, so `brew install` succeeds and the refusal only shows on the first
-run. The tree's one Mach-O is the Agent SDK's own `claude` binary, signed by Anthropic;
-`src/vault/publication.c` ships beside its loader because `bun:ffi` compiles it at runtime.
-
-The wrapper runs `bun --no-env-file --config=/dev/null`, so the caller's working
-directory can't inject a `.env` or a `bunfig.toml` preload into lucius.
 
 ## lumiere
 
@@ -739,7 +714,6 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `hermod-linux` | hermod | `ts/scripts/release-darwin.sh` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `idun` | idun | `scripts/release-darwin.sh` | the signing Mac |
 | `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
-| `lucius` | lucius | `scripts/release-darwin.sh` | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |

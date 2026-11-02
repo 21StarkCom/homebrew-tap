@@ -293,7 +293,7 @@ selected() { ((${#only[@]} == 0)) || [[ -n ${wanted[$1]:-} ]]; }
 active() { selected "$1" && [[ -z ${failed[$1]:-} ]]; }
 
 # Prints each TypeScript path that entry file $1 names under libexec, one per
-# line: the minified bundles its wrappers and tests run (lucius, sleipnir).
+# line: the minified bundles its wrappers and tests run (sleipnir).
 named_ts() {
   perl -ne 'print "$1\n" while m{(?:#\{(?:opt_)?libexec\}/|(?:opt_)?libexec/")([^"\s#{}]+?\.(?:ts|tsx|mts|cts))(?![A-Za-z0-9_])}g' "$1"
 }
