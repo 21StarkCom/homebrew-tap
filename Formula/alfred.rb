@@ -6,17 +6,17 @@
 # opt path, so `brew upgrade alfred` never orphans the daemon.
 class Alfred < Formula
   desc "Manual-ticket CLI + always-on local daemon for the 21Stark work fleet"
-  homepage "https://github.com/21StarkCom/alfred"
+  homepage "https://github.com/21StarkCom/odin"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
   # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/alfred/releases/assets/697478252",
+  url "https://api.github.com/repos/21StarkCom/odin/releases/assets/708893239",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.61.0"
-  sha256 "afac3277536276f0d88738bea1a102a4604a98d03d41e8268f56838650d5b3b4"
+  version "0.62.0"
+  sha256 "8e414804f9b413b77baa4cd4850449b7259fae686b91ceebb45c6528a2f247a7"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,

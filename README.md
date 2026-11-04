@@ -62,7 +62,7 @@ does not record GitHub's host key.
 | Entry | Kind | Source repo | Installs | Build | Signing | macOS |
 |---|---|---|---|---|---|---|
 | `agent-seats` | formula | [agent-seats](https://github.com/21StarkCom/agent-seats) | `agent-seats`, `seat-login`, the Seat login extension | `bun build --compile`, Vite | Developer ID (team `MG9J2XF9Q3`), not notarized | 27 (Golden Gate) |
-| `alfred` | formula | [alfred](https://github.com/21StarkCom/alfred) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
+| `alfred` | formula | [odin](https://github.com/21StarkCom/odin) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules in the zip; lancedb ad hoc once installed | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
@@ -127,8 +127,10 @@ MDM installs one only from the Chrome Web Store.
 
 ## alfred
 
-The [`alfred`](https://github.com/21StarkCom/alfred) ops butler: the `alfred` ticket and
-ops CLI, plus `alfredd`, its always-on local daemon.
+The [`alfred`](https://github.com/21StarkCom/odin) ops butler: the `alfred` ticket and
+ops CLI, plus `alfredd`, its always-on local daemon. Released from `alfred-v*` tags by
+odin's `packages/toolbox/scripts/release-darwin.sh` since 0.62.0; earlier releases came
+from the `alfred` repo.
 
 ```sh
 brew install 21StarkCom/tap/alfred
@@ -752,7 +754,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | Entry | Source repo | Release step that calls the bumper | Runs on |
 |---|---|---|---|
 | `agent-seats` | agent-seats | `scripts/release-darwin.sh` | the signing Mac |
-| `alfred` | alfred | `scripts/release-darwin.sh` | the signing Mac |
+| `alfred` | odin | `packages/toolbox/scripts/release-darwin.sh` (run by `make -C packages/toolbox ship`), for an `alfred-v*` tag | the signing Mac |
 | `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
 | `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
