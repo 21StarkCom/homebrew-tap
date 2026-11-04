@@ -77,7 +77,7 @@ does not record GitHub's host key.
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
-| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face`; its `claude` is Anthropic-signed | any |
+| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
@@ -410,10 +410,11 @@ The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin languag
 Like `librarian`, the release zip is a node ESM tree (`dist/`, a vendored `node_modules` with
 no symlinks, and the `conformance/` fixtures) that the formula installs into `libexec` and
 wraps to run under the keg's `node`. It has no `service do` block: `odinctl schedule` writes
-its own launchd plists. The package's own Mach-O is `bin/odin-face`, the Go program that
-`odinctl ui` starts, signed with the operator's Developer ID and notarized; its other Mach-O
-is the Agent SDK's Anthropic-signed `claude`. Released from `odinctl-v*` tags by odin's
-`scripts/release-odinctl.sh`.
+its own launchd plists. The package's own Mach-O files are `bin/odin-face`, the Go program
+that `odinctl ui` starts, and from 0.30.0 `bin/desk`, odin's IT desk, the Go program that
+`odinctl desk` and its desk rows run; the release signs both with the operator's Developer ID
+and notarizes them. Its other Mach-O is the Agent SDK's Anthropic-signed `claude`. Released
+from `odinctl-v*` tags by odin's `scripts/release-odinctl.sh`.
 
 ## plume
 
