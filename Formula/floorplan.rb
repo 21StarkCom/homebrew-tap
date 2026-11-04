@@ -45,7 +45,11 @@ class Floorplan < Formula
     libexec.install Dir["*"]
     # `**` does not follow the pnpm symlinks, so each prebuild is found once, by its real path.
     libexec.glob("node_modules/.pnpm/**/*.node").each do |node|
-      macho = MachO.open(node)
+      macho = begin
+        MachO.open(node)
+      rescue MachO::NotAMachOError
+        next # another platform's prebuild (an ELF or PE `.node`), which node never loads here
+      end
       next if !macho.dylib? || macho.dylib_id.start_with?("@")
 
       macho.change_dylib_id("@rpath/#{File.basename(macho.dylib_id)}")
@@ -59,7 +63,18 @@ class Floorplan < Formula
     (bin/"floorplan").chmod 0755
   end
 
+  def caveats
+    <<~EOS
+      After each install or upgrade, register its MCP servers again: they name a path in this keg.
+        floorplan install
+    EOS
+  end
+
   test do
     assert_match version.to_s, shell_output("#{bin}/floorplan --version")
+    # `install` renamed and re-signed the native prebuilds; node must still load each one.
+    libexec.glob("node_modules/.pnpm/**/*.node").each do |node|
+      system formula_opt_bin("node")/"node", "-e", "require(process.argv[1])", node
+    end
   end
 end

@@ -65,7 +65,7 @@ does not record GitHub's host key.
 | `alfred` | formula | [odin](https://github.com/21StarkCom/odin) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules in the zip; lancedb ad hoc once installed | any |
-| `floorplan` | formula | [floorplan](https://github.com/21StarkCom/floorplan) | `floorplan` | node ESM tree | none of its own; its native npm prebuilds are ad-hoc (the linker's signature) | any |
+| `floorplan` | formula | [floorplan](https://github.com/21StarkCom/floorplan) | `floorplan` | node ESM tree | none of its own; its native npm prebuilds are ad-hoc (the linker's signature; the three it renames, re-signed ad hoc in the keg) | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
