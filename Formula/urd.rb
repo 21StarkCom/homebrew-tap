@@ -14,10 +14,10 @@ class Urd < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/urd/releases/assets/709625690",
+  url "https://api.github.com/repos/21StarkCom/urd/releases/assets/709934950",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.13.0"
-  sha256 "5ac404c53e42aea784e676b54c74bc05f262e54cf6e551c4ae72069184114a28"
+  version "0.14.0"
+  sha256 "90943f73e0332c951b36835a36a960e3ac05c5691cf4d7dd5c30b757febbbe8d"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
