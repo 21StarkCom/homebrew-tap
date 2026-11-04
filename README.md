@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 19 formulae for the CLIs and 4 casks for the GUI apps, each a signed
+`brew install`: 20 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build pulled from a private GitHub Release, plus seven `-linux` formulae,
 the Linux x86_64 builds for the devbox of hermod, frigg, urd and idun's four apps
 (`idun-linux`, `njord-linux`, `valkyrie-linux` and `utgard-linux`). The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 28 of the 30 are re-pinned on each release
+**Status:** active. Every entry installs today; 29 of the 31 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -65,6 +65,7 @@ does not record GitHub's host key.
 | `alfred` | formula | [odin](https://github.com/21StarkCom/odin) | `alfred`, `alfredd` | Go | Developer ID + notarized | any |
 | `bragi` | formula | [bragi](https://github.com/21StarkCom/bragi) | `bragi`, `bragi-audio` | Go + a Swift helper | Developer ID + notarized | 15 (Sequoia) |
 | `brain` | formula | [atlas](https://github.com/21StarkCom/atlas) | `brain` (and a `brew services` job) | node ESM tree | Developer ID + notarized native modules in the zip; lancedb ad hoc once installed | any |
+| `floorplan` | formula | [floorplan](https://github.com/21StarkCom/floorplan) | `floorplan` | node ESM tree | none of its own; its native npm prebuilds are ad-hoc (the linker's signature; the three it renames, re-signed ad hoc in the keg) | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
@@ -200,6 +201,32 @@ The job gets no shell environment and runs in `/`: it reads
 `~/.config/atlas/brain.config.yaml` and the Gemini key file or Keychain item, never an
 `ATLAS_*` variable (`ATLAS_CONFIG`, `ATLAS_GEMINI_API_KEY`) that your shell exports.
 `brew uninstall` does not stop a started service, so run `brew services stop brain` first.
+
+## floorplan
+
+The [`floorplan`](https://github.com/21StarkCom/floorplan) CLI (`packages/floorplan`): the
+fleet's C4 design tool, built on LikeC4. It writes, checks and builds a product's C4 model
+(`floorplan init`, `floorplan check`, `floorplan build`), serves it (`floorplan studio`), and
+runs an MCP server.
+
+```sh
+brew install 21StarkCom/tap/floorplan
+floorplan install    # register its MCP servers with Claude Code and Codex, and download the PNG export's Chromium
+```
+
+Run `floorplan install` again after each upgrade. Its `floorplan-likec4` entry names a path in
+the keg's pnpm store, and that path can change with a release.
+
+Like `librarian`, the release zip is a **`pnpm deploy` tree** (`bin/`, `kit/`, `dist/` and a
+vendored `node_modules`) that the formula installs into `libexec` and wraps to run
+`bin/floorplan.mjs` under the keg's `node`. It has no Mach-O of its own; its Mach-Os are the
+npm prebuilds of esbuild, rollup, rolldown, lightningcss and fsevents, each with its linker's
+ad hoc signature. On install, Homebrew renames each dylib to its long `opt` path, and the
+rollup prebuild has no header space for it. So the formula's `install` gives the three dylibs
+(rollup, rolldown, lightningcss) a short `@rpath` name and signs them ad hoc again, and
+`preserve_rpath` tells Homebrew to keep that name. The GetEvinced mirror does not copy it: its
+asset is a readable JS tree from a private repo. Released from `floorplan-v*` tags by floorplan's `scripts/release-floorplan.sh`,
+whose bump PR stays open for a hand merge.
 
 ## frigg
 
@@ -731,7 +758,8 @@ check on a local zip, `.tar.gz` or `.pkg`, with no token, so a release can run i
 ships. A `.pkg` is a xar archive: `bsdtar` unpacks it and each `Payload` and `Scripts` in it,
 and the check reads the files. The check cannot judge readable JS (an unminified bundle,
 the JS inside a compiled binary, or an Electron `app.asar`, which it reads as one file).
-`alfred` stays out by the operator's request (spec D11). A new entry goes there unless its
+`alfred` stays out by the operator's request (spec D11), and `floorplan` because its asset is
+a readable JS tree from a private repo. A new entry goes there unless its
 PR adds it to `EXCLUDED` in `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
 `Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
 
@@ -757,6 +785,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `alfred` | odin | `packages/toolbox/scripts/release-darwin.sh` (run by `make -C packages/toolbox ship`), for an `alfred-v*` tag | the signing Mac |
 | `bragi` | bragi | `scripts/release-darwin.sh` | the signing Mac |
 | `brain` | atlas | `scripts/release-darwin.sh`, for a `cli-v*` tag | the signing Mac |
+| `floorplan` | floorplan | `scripts/release-floorplan.sh`, for a `floorplan-v*` tag | the operator's Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `frigg-linux` | frigg | `.github/workflows/release.yml` `publish` (`--asset-suffix linux_amd64.zip`) | GitHub Actions |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
