@@ -4,10 +4,11 @@
 # that run a playbook on the odin agent kernel, from a terminal (`odinctl run`) or on a schedule
 # (`odinctl schedule`, which writes its own launchd plists, so this formula has no service block).
 # node ESM, like `librarian`: the zip ships an `npm install --install-links` tree (dist +
-# node_modules + conformance + bin). Two Mach-O files: the Agent SDK's Anthropic-signed `claude`,
-# and odin's face, `bin/odin-face`, the Go program `odinctl ui` starts, which the release builds
-# and signs with the operator's Developer ID (from 0.3.0). Released from `odinctl-v*` tags by
-# `scripts/release-odinctl.sh`.
+# node_modules + conformance + bin). Three Mach-O files: the Agent SDK's Anthropic-signed
+# `claude`; odin's face, `bin/odin-face`, the Go program `odinctl ui` starts (from 0.3.0); and
+# odin's IT desk, `bin/desk`, the Go program `odinctl desk` and its desk rows run (from 0.30.0).
+# The release builds the face and the desk and signs both with the operator's Developer ID.
+# Released from `odinctl-v*` tags by `scripts/release-odinctl.sh`.
 # The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
 class Odinctl < Formula
   desc "Doors that run a playbook on the odin agent kernel (terminal and schedule)"
