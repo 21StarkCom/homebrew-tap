@@ -10,10 +10,10 @@ class Valkyrie < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/714426191",
+  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/716913577",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.11.0"
-  sha256 "a56f017ed510a1340733d3274e700c0cdc5e79f1e9d859b2df81e86d14bdf27f"
+  version "0.12.0"
+  sha256 "ae49a22e2eaaf3d73eb5f7b8927cfdd6cb84bb6189db97cada345fa9e6b2767a"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
