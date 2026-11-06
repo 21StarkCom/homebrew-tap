@@ -11,10 +11,10 @@ class Hermod < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/718249044",
+  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/718429858",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.47.1"
-  sha256 "fe27f4a1068b553ef0e7986eaffbfc730c33d0228bee4f12b5dada1e319483fa"
+  version "0.47.2"
+  sha256 "e55082c4526286032b75dce19584e62e8c10d8b3bff677c4b0980010bfb8f20c"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
