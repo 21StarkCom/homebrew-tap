@@ -346,7 +346,8 @@ brew services restart librarian    # after each upgrade: the running daemon is t
 
 Like `brain`, the release zip is a **`pnpm deploy` tree** that the formula installs into
 `libexec` and wraps to run under the keg's `node`. It depends on this tap's `brain` formula,
-by its full name. Its `service do` block runs `librarian daemon` with `keep_alive` and
+by its full name, and on homebrew/core's `gitleaks`, which its harvest needs to scan each
+message for secrets. Its `service do` block runs `librarian daemon` with `keep_alive` and
 Homebrew's standard service `PATH`, because a LaunchAgent's default `PATH` lacks
 `/opt/homebrew/bin`. The daemon's log is `~/.local/state/atlas/librarian/logs/daemon.log`.
 Homebrew does not restart a service on upgrade, and the upgrade's cleanup removes the old
