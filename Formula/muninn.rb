@@ -30,7 +30,10 @@ class Muninn < Formula
   depends_on :macos
 
   def install
-    libexec.install Dir["*"]
+    # Copy, do not move: Homebrew takes CHANGELOG.md, LICENSE and README.md from a
+    # moved tree into the keg root, and install.sh reads CHANGELOG.md beside itself.
+    libexec.mkpath
+    cp_r Dir["*"], libexec
     (bin/"muninn-install").write <<~SH
       #!/bin/bash
       exec /usr/bin/env bash "#{libexec}/install.sh" "$@"
@@ -50,5 +53,7 @@ class Muninn < Formula
   test do
     assert_equal version.to_s, (libexec/"VERSION").read.strip
     assert_match "--cmd", shell_output("#{bin}/muninn-install --help")
+    system bin/"muninn-install", "--cmd", "brewtest"
+    assert_equal version.to_s, (testpath/".agents/skills/brewtest/VERSION").read.strip
   end
 end
