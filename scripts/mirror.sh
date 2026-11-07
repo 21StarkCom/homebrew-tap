@@ -62,7 +62,7 @@ Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
 each entry's release asset is copied into a GetEvinced release, and each entry
 is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md). alfred and floorplan are never copied.
+(docs/specs/getevinced-mirror.md). alfred, floorplan and muninn are never copied.
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist

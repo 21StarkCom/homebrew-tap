@@ -2,13 +2,13 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 20 formulae for the CLIs and 4 casks for the GUI apps, each a signed
-macOS arm64 build pulled from a private GitHub Release, plus seven `-linux` formulae,
+`brew install`: 21 formulae for the CLIs and 4 casks for the GUI apps, each a signed
+macOS arm64 build (muninn: an unsigned bash tree) pulled from a private GitHub Release, plus seven `-linux` formulae,
 the Linux x86_64 builds for the devbox of hermod, frigg, urd and idun's four apps
 (`idun-linux`, `njord-linux`, `valkyrie-linux` and `utgard-linux`). The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 29 of the 31 are re-pinned on each release
+**Status:** active. Every entry installs today; 30 of the 32 are re-pinned on each release
 of their source repo, and the other two are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
@@ -75,8 +75,8 @@ does not record GitHub's host key.
 | `idun-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | none | none: Linux x86_64 |
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
-| `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `muninn` | formula | [muninn](https://github.com/21StarkCom/muninn) | `muninn-install` | bash source tree | none (no Mach-O) | any |
+| `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
@@ -371,6 +371,19 @@ brew install 21StarkCom/tap/lumiere
 zip is a Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source
 in the `lumiere` repo (`make build`).
 
+## muninn
+
+The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill, the fleet copy of
+agmsg. The release asset is the tagged bash tree; `muninn-install` runs its `install.sh`, which
+copies the skill into `~/.agents/skills/<cmd>/`. It holds source, so `scripts/mirror.sh` excludes it.
+
+```sh
+brew install 21StarkCom/tap/muninn
+muninn-install --cmd agmsg
+```
+
+Its `release.yml` bumps it with `--asset-suffix .tar.gz`.
+
 ## njord
 
 The [`njord`](https://github.com/21StarkCom/idun) GitHub-work CLI — pull requests, CI,
@@ -397,19 +410,6 @@ brew install 21StarkCom/tap/njord-linux
 `scripts/release-darwin.sh njord` cross-compiles beside the macOS one from the
 `njord-vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
 is (see [hermod](#hermod)).
-
-## muninn
-
-The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill, the fleet copy of
-agmsg. The release asset is the tagged bash tree; `muninn-install` runs its `install.sh`, which
-copies the skill into `~/.agents/skills/<cmd>/`. It holds source, so `scripts/mirror.sh` excludes it.
-
-```sh
-brew install 21StarkCom/tap/muninn
-muninn-install --cmd agmsg
-```
-
-Its `release.yml` bumps it with `--asset-suffix .tar.gz`.
 
 ## odinctl
 
@@ -774,8 +774,8 @@ check on a local zip, `.tar.gz` or `.pkg`, with no token, so a release can run i
 ships. A `.pkg` is a xar archive: `bsdtar` unpacks it and each `Payload` and `Scripts` in it,
 and the check reads the files. The check cannot judge readable JS (an unminified bundle,
 the JS inside a compiled binary, or an Electron `app.asar`, which it reads as one file).
-`alfred` stays out by the operator's request (spec D11), and `floorplan` because its asset is
-a readable JS tree from a private repo. A new entry goes there unless its
+`alfred` stays out by the operator's request (spec D11), `floorplan` because its asset is
+a readable JS tree from a private repo, and `muninn` because its asset is its bash source tree. A new entry goes there unless its
 PR adds it to `EXCLUDED` in `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
 `Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
 
@@ -811,10 +811,10 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `idun-linux` | idun | `scripts/release-darwin.sh` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
+| `muninn` | muninn | `.github/workflows/release.yml` (`--asset-suffix .tar.gz`) | GitHub Actions |
 | `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
 | `njord-linux` | idun | `scripts/release-darwin.sh njord` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
-| `muninn` | muninn | `.github/workflows/release.yml` | GitHub Actions |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `stark-statusline` | idavoll | `statusline/release.sh` (`make statusline-release STATUSLINE_VERSION=X.Y.Z`), for a `statusline-v*` tag | the operator's Mac |
@@ -830,7 +830,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun`, `njord`, `valkyrie` and `utgard`, and each one's `-linux` formula), alfred's and urd's (`urd` and `urd-linux`) releases and plume's and frigg's `release.yml` merge their
+agent-seats', idun's (`idun`, `njord`, `valkyrie` and `utgard`, and each one's `-linux` formula), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's and muninn's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with

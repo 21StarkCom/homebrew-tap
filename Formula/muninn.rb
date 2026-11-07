@@ -33,19 +33,22 @@ class Muninn < Formula
     libexec.install Dir["*"]
     (bin/"muninn-install").write <<~SH
       #!/bin/bash
-      exec /bin/bash "#{libexec}/install.sh" "$@"
+      exec /usr/bin/env bash "#{libexec}/install.sh" "$@"
     SH
   end
 
   def caveats
     <<~EOS
-      Run `muninn-install --cmd agmsg` to install the skill into ~/.agents/skills/agmsg/,
-      and run it again after each `brew upgrade` (`muninn-install --cmd agmsg --update` keeps your teams).
+      First install: `muninn-install --cmd agmsg` copies the skill into ~/.agents/skills/agmsg/.
+      After each `brew upgrade`, run `muninn-install --cmd agmsg --update`: it stops agmsgd,
+      updates the scripts, keeps your teams and starts agmsgd again. `brew upgrade` alone does
+      not change the installed skill. Before `brew uninstall`, run
+      `bash ~/.agents/skills/agmsg/uninstall.sh` to remove the skill.
     EOS
   end
 
   test do
     assert_equal version.to_s, (libexec/"VERSION").read.strip
-    assert_path_exists libexec/"install.sh"
+    assert_match "--cmd", shell_output("#{bin}/muninn-install --help")
   end
 end
