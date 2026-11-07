@@ -94,7 +94,9 @@ does not record GitHub's host key.
 | `idavoll` (cask) | cask | [idavoll](https://github.com/21StarkCom/idavoll) | `Idavoll.app`, `/usr/local/bin/idavoll`, from the release's `.pkg` | Go CLI in an Electron app | Developer ID + notarized + stapled `.pkg` | 13 (Ventura) |
 | `mimir` (cask) | cask | [mimir](https://github.com/21StarkCom/mimir) | `Mimir.app`, `mimir` | Swift app | Developer ID + notarized + stapled | 26 (Tahoe) |
 
-"any" means the entry declares no macOS floor beyond Apple Silicon.
+"any" means the entry declares no macOS floor beyond Apple Silicon. In the Signing column,
+"ad-hoc" is the linker's own signature, new on each build. "Ad hoc once installed" means that
+Homebrew re-signs a dylib ad hoc in the keg when it rewrites the dylib's install name.
 
 ## agent-seats
 
@@ -424,7 +426,7 @@ brew install 21StarkCom/tap/odinctl
 
 The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
 Like `librarian`, the release zip is a node ESM tree (`dist/`, a vendored `node_modules` with
-no symlinks, and the `conformance/` fixtures) that the formula installs into `libexec` and
+no symlinks from `npm install --install-links --no-bin-links`, and the `conformance/` fixtures) that the formula installs into `libexec` and
 wraps to run under the keg's `node`. It has no `service do` block: `odinctl schedule` writes
 its own launchd plists. The package's own Mach-O files are `bin/odin-face`, the Go program
 that `odinctl ui` starts, and from 0.30.0 `bin/desk`, odin's IT desk, the Go program that
