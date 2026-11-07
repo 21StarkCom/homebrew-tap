@@ -22,14 +22,14 @@ fi
 TARGET_REPO="GetEvinced/homebrew-tap"
 TARGET_URL="https://github.com/${TARGET_REPO}.git"
 # Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
-# alfred stays here by the operator's request of 2026-10-29. floorplan's asset is
-# a readable JS tree from a private repo, which the source check cannot judge.
-# muninn ships its bash source tree (STARK-17276).
-EXCLUDED="alfred floorplan muninn"
+# alfred stays here by the operator's request of 2026-10-29. muninn ships its
+# bash source tree (STARK-17276). The operator let floorplan go on 2026-11-07,
+# its readable JS tree included (STARK-17312).
+EXCLUDED="alfred muninn"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
-FIRST_PARTY_SCOPES="@21starkcom @atlas @idun @sleipnir"
+FIRST_PARTY_SCOPES="@21starkcom @atlas @floorplan @idun @sleipnir"
 # A .ts file an entry names under libexec passes only as minified output: a mean
 # line of this many bytes or more. Source runs at about 40.
 MINIFIED_LINE_BYTES=200
@@ -62,7 +62,7 @@ Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
 Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
 each entry's release asset is copied into a GetEvinced release, and each entry
 is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md). alfred, floorplan and muninn are never copied.
+(docs/specs/getevinced-mirror.md). alfred and muninn are never copied.
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist
@@ -79,12 +79,13 @@ it is not copied. It refuses, outside node_modules/: a .ts, .tsx, .mts or .cts
 file that is not a declaration file (.d.ts), unless the entry names its path
 under libexec and it holds minified output; a .map file; and a .json file that
 holds "sourcesContent". In a package of a first-party scope under node_modules/
-(FIRST_PARTY_SCOPES: @21starkcom, @atlas, @idun, @sleipnir), it refuses those
-files with no exception, and any file that holds "sourcesContent". Extensions
-match in any case. Anywhere outside node_modules/ or in such a package, it
-refuses a JS, TS or CSS file with an inline source map (sourceMappingURL=data:).
-It cannot judge readable JS: an unminified bundle, the JS inside a binary, or an
-Electron app.asar, which it reads as one file. A .pkg is a xar archive: bsdtar
+(FIRST_PARTY_SCOPES: @21starkcom, @atlas, @floorplan, @idun, @sleipnir), it
+refuses those files with no exception, and any file that holds "sourcesContent".
+Extensions match in any case. Anywhere outside node_modules/ or in such a
+package, it refuses a JS, TS or CSS file with an inline source map
+(sourceMappingURL=data:). It cannot judge readable JS: an unminified bundle,
+the JS inside a binary, or an Electron app.asar, which it reads as one file.
+A .pkg is a xar archive: bsdtar
 unpacks it, and each member that is itself an archive (each Payload and Scripts),
 and the check reads the tree. A .pkg fails when a member named *Payload does not
 unpack (Apple's pbzx, say), or when it holds no Payload.

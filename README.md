@@ -225,9 +225,10 @@ npm prebuilds of esbuild, rollup, rolldown, lightningcss and fsevents, each with
 ad hoc signature. On install, Homebrew renames each dylib to its long `opt` path, and the
 rollup prebuild has no header space for it. So the formula's `install` gives the three dylibs
 (rollup, rolldown, lightningcss) a short `@rpath` name and signs them ad hoc again, and
-`preserve_rpath` tells Homebrew to keep that name. The GetEvinced mirror does not copy it: its
-asset is a readable JS tree from a private repo. Released from `floorplan-v*` tags by floorplan's `scripts/release-floorplan.sh`,
-whose bump PR stays open for a hand merge.
+`preserve_rpath` tells Homebrew to keep that name. The GetEvinced mirror copies it: the
+operator let its readable JS tree go on 2026-11-07, and the release strips the TypeScript of its
+`@floorplan` packages, so the source check passes. Released from `floorplan-v*` tags by
+floorplan's `scripts/release-floorplan.sh`, whose bump PR stays open for a hand merge.
 
 ## frigg
 
@@ -767,16 +768,16 @@ Before each upload it unpacks the asset and refuses one that holds source (spec 
 outside `node_modules`, a `.ts`, `.tsx`, `.mts` or `.cts` file (but a `.d.ts`, and a
 minified bundle at a path the entry names under `libexec`), a `.map` file, or a `.json`
 that holds `sourcesContent`; in a package of a first-party scope (`@21starkcom`, `@atlas`,
-`@idun`, `@sleipnir`) under `node_modules`, those files or any `sourcesContent`; and an
+`@floorplan`, `@idun`, `@sleipnir`) under `node_modules`, those files or any `sourcesContent`; and an
 inline source map in either place. Extensions match in any case. A refused entry is not
 copied, and the run fails. `scripts/mirror.sh --check <entry> <archive>` runs the same
 check on a local zip, `.tar.gz` or `.pkg`, with no token, so a release can run it before it
 ships. A `.pkg` is a xar archive: `bsdtar` unpacks it and each `Payload` and `Scripts` in it,
 and the check reads the files. The check cannot judge readable JS (an unminified bundle,
 the JS inside a compiled binary, or an Electron `app.asar`, which it reads as one file).
-`alfred` stays out by the operator's request (spec D11), `floorplan` because its asset is
-a readable JS tree from a private repo, and `muninn` because its asset is its bash source tree. A new entry goes there unless its
-PR adds it to `EXCLUDED` in `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
+`alfred` stays out by the operator's request (spec D11), and `muninn` because its asset is
+its bash source tree. A new entry goes there unless its PR adds it to `EXCLUDED` in
+`scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
 `Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
