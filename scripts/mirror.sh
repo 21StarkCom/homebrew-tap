@@ -24,7 +24,8 @@ TARGET_URL="https://github.com/${TARGET_REPO}.git"
 # Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
 # alfred stays here by the operator's request of 2026-10-29. floorplan's asset is
 # a readable JS tree from a private repo, which the source check cannot judge.
-EXCLUDED="alfred floorplan"
+# muninn ships its bash source tree (STARK-17276).
+EXCLUDED="alfred floorplan muninn"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.

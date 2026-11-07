@@ -76,6 +76,7 @@ does not record GitHub's host key.
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `muninn` | formula | [muninn](https://github.com/21StarkCom/muninn) | `muninn-install` | bash source tree | none (no Mach-O) | any |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
@@ -396,6 +397,19 @@ brew install 21StarkCom/tap/njord-linux
 `scripts/release-darwin.sh njord` cross-compiles beside the macOS one from the
 `njord-vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
 is (see [hermod](#hermod)).
+
+## muninn
+
+The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill, the fleet copy of
+agmsg. The release asset is the tagged bash tree; `muninn-install` runs its `install.sh`, which
+copies the skill into `~/.agents/skills/<cmd>/`. It holds source, so `scripts/mirror.sh` excludes it.
+
+```sh
+brew install 21StarkCom/tap/muninn
+muninn-install --cmd agmsg
+```
+
+Its `release.yml` bumps it with `--asset-suffix .tar.gz`.
 
 ## odinctl
 
@@ -800,6 +814,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
 | `njord-linux` | idun | `scripts/release-darwin.sh njord` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
+| `muninn` | muninn | `.github/workflows/release.yml` | GitHub Actions |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `stark-statusline` | idavoll | `statusline/release.sh` (`make statusline-release STATUSLINE_VERSION=X.Y.Z`), for a `statusline-v*` tag | the operator's Mac |
