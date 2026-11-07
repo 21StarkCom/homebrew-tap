@@ -34,11 +34,11 @@ cask "mimir" do
   # `:no_check` would disable integrity verification on a private download, which is the wrong
   # trade for a credential vault, and the versioned browser-download URL 404s for private-repo
   # assets even with a token (verified) — the API asset id is the only working private fetch.
-  version "0.81.0"
-  sha256 "5fa2fcffdb982f1742b864380245f4fa8f249daf1e8377b1af747276b1324f09"
+  version "0.82.0"
+  sha256 "fe444531095c2adaf535c8b2559ceba9f26dcc59b3fce74609491803b271d7ee"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/706687747",
+  url "https://api.github.com/repos/21StarkCom/mimir/releases/assets/720485458",
       using: MimirPrivateReleaseStrategy
   name "Mímir"
   desc "Personal credential vault with a paired CLI and loopback MCP server"
