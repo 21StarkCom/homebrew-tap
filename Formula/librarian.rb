@@ -14,10 +14,10 @@ class Librarian < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/720232420",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/720878729",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.12.0"
-  sha256 "6bd08f683b2cce5961c70b354798b08d4c0622f41d845f3863c824b3dcb220d2"
+  version "0.13.0"
+  sha256 "d5778822466ce761b742a076e1c225b6872b46a0f6d753d54c1a9c03d108a47f"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
