@@ -30,7 +30,12 @@ class Muninn < Formula
   depends_on :macos
 
   def install
-    libexec.install Dir["*"]
+    # Copy, do not move. After install, Homebrew moves CHANGELOG.md, LICENSE and README.md
+    # from the build directory to the keg root, and scans libexec for them only when the
+    # build directory had none. A copy keeps them in the build directory, so libexec keeps
+    # its own CHANGELOG.md, which install.sh reads. The test below catches a regression.
+    libexec.mkpath
+    cp_r Dir["*"], libexec
     (bin/"muninn-install").write <<~SH
       #!/bin/bash
       exec /usr/bin/env bash "#{libexec}/install.sh" "$@"
@@ -50,5 +55,9 @@ class Muninn < Formula
   test do
     assert_equal version.to_s, (libexec/"VERSION").read.strip
     assert_match "--cmd", shell_output("#{bin}/muninn-install --help")
+    (testpath/".claude").mkpath
+    system bin/"muninn-install", "--cmd", "brewtest"
+    assert_equal version.to_s, (testpath/".agents/skills/brewtest/VERSION").read.strip
+    assert_path_exists testpath/".claude/commands/brewtest.md"
   end
 end
