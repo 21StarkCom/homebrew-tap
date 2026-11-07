@@ -30,6 +30,8 @@ class Librarian < Formula
   # and is ambiguous when another tap ships a `brain`.
   depends_on "21starkcom/tap/brain"
   depends_on arch: :arm64 # the Agent SDK's vendored `claude` is darwin-arm64
+  # `librarian harvest` scans each message with `gitleaks stdin` and refuses without it
+  depends_on "gitleaks"
   depends_on :macos
   depends_on "node" # librarian is node ESM; the keg node runs dist/bin.js
 
