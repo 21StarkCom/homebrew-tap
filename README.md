@@ -376,13 +376,13 @@ in the `lumiere` repo (`make build`).
 
 ## muninn
 
-The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill, the fleet copy of
-agmsg. The release asset is the tagged bash tree; `muninn-install` runs its `install.sh`, which
-copies the skill into `~/.agents/skills/<cmd>/`. It holds source, so `scripts/mirror.sh` excludes it.
+The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill. The release
+asset is the tagged bash tree; `muninn-install` runs its `install.sh`, which copies the skill
+into `~/.agents/skills/muninn/`. It holds source, so `scripts/mirror.sh` excludes it.
 
 ```sh
 brew install 21StarkCom/tap/muninn
-muninn-install --cmd agmsg
+muninn-install
 ```
 
 Its `release.yml` bumps it with `--asset-suffix .tar.gz`.
