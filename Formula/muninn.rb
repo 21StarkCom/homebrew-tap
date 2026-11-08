@@ -14,10 +14,10 @@ class Muninn < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/muninn/releases/assets/720759701",
+  url "https://api.github.com/repos/21StarkCom/muninn/releases/assets/723369339",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.1.0"
-  sha256 "7ee29650866514d137be59b5bed9ffd12d04bb81206e264cb7c3fe4f24ec3e2b"
+  version "0.2.0"
+  sha256 "24d577ef9b2cbd59ef000780c2dd208d229ef5a9dfe04db12f9e113d20f75a23"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
