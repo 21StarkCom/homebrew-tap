@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
-# muninn, the fleet's copy of agmsg: cross-agent messaging for CLI agents over
-# one local SQLite file. The release asset is the tagged bash tree (no Mach-O),
-# built by muninn's release.yml. `muninn-install` runs its install.sh, which
-# copies the skill into ~/.agents/skills/<cmd>/.
+# muninn: cross-agent messaging for CLI agents over one local SQLite file.
+# It started from agmsg (MIT license, by Koichi Fujikawa).
+# The release asset is the tagged bash tree (no Mach-O), built by muninn's release.yml.
+# `muninn-install` runs its install.sh, which copies the skill into ~/.agents/skills/muninn/.
 class Muninn < Formula
-  desc "Cross-agent messaging for CLI agents over local SQLite (fleet copy of agmsg)"
+  desc "Cross-agent messaging for CLI agents over local SQLite"
   homepage "https://github.com/21StarkCom/muninn"
   # version / asset id / sha256 are release-specific and rewritten when muninn's
   # release.yml calls the bumper (the README's caller table) — do not hand-edit them.
@@ -44,11 +44,13 @@ class Muninn < Formula
 
   def caveats
     <<~EOS
-      First install: `muninn-install --cmd agmsg` copies the skill into ~/.agents/skills/agmsg/.
-      After each `brew upgrade`, run `muninn-install --cmd agmsg --update`: it stops agmsgd,
-      updates the scripts, keeps your teams and starts agmsgd again. `brew upgrade` alone does
+      First install: `muninn-install` copies the skill into ~/.agents/skills/muninn/.
+      After each `brew upgrade`, run `muninn-install --update`: it stops muninnd,
+      updates the scripts, keeps your teams and starts muninnd again. `brew upgrade` alone does
       not change the installed skill. Before `brew uninstall`, run
-      `bash ~/.agents/skills/agmsg/uninstall.sh` to remove the skill.
+      `bash ~/.agents/skills/muninn/uninstall.sh` to remove the skill.
+      An install made under the old name agmsg moves to muninn on the next `muninn-install` run.
+      Until it moves, its uninstall.sh stays in the folder of the old name.
     EOS
   end
 
