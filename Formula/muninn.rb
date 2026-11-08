@@ -50,6 +50,7 @@ class Muninn < Formula
       not change the installed skill. Before `brew uninstall`, run
       `bash ~/.agents/skills/muninn/uninstall.sh` to remove the skill.
       An install made under the old name agmsg moves to muninn on the next `muninn-install` run.
+      Until it moves, its uninstall.sh stays in the folder of the old name.
     EOS
   end
 
