@@ -36,12 +36,12 @@ end
 cask "idavoll" do
   # version / asset id / sha256 are release-specific and rewritten when idavoll's release
   # calls the bumper (the README's caller table) — do not hand-edit them.
-  version "0.19.2"
-  sha256 "35fc18c4007f7e8dcd6be3dcfdceaca8d305afaa5b695dcf5c7e4a1793c67bb0"
+  version "0.20.0"
+  sha256 "4a3180782e21e9abcbf82e5925c67887e6a416cfae3255f31a9b1b451364687c"
 
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   # The download keeps the asset's own name (idavoll-<version>.pkg), which `pkg` names.
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/697834464",
+  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/732917290",
       using: IdavollPrivateReleaseStrategy
   name "Idavoll"
   desc "Workspace installer for the 21Stark fleet, with its CLI"
