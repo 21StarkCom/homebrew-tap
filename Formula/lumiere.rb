@@ -11,10 +11,10 @@ class Lumiere < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/742820764",
+  url "https://api.github.com/repos/21StarkCom/lumiere/releases/assets/744781496",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.8.1"
-  sha256 "81b4a86b1ab692f93f00ebe072f3b287e3a3d7a13e796646749d3341ec5d2dcc"
+  version "0.9.0"
+  sha256 "30ebe6d97e096fa88511dfe10025e8205f81118733c7727aaac6a8849a9e65d9"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
