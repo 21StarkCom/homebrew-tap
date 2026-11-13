@@ -16,10 +16,10 @@ class StarkStatusline < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/720262753",
+  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/744060253",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.5.0"
-  sha256 "73cba46d2c2b69b3d0ff2da3a4494ab93833703df0ccf13cf5da03230bc72212"
+  version "0.6.0"
+  sha256 "ac6f3b057b1a3945b4d6a2cca60be046dabe7b929b3d80c17a8c9b85bb5437ce"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
