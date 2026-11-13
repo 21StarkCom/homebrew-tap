@@ -51,7 +51,8 @@ brew audit --strict 21StarkCom/tap/idun       # --online also checks the URL/hom
 # A -linux formula is Linux x86_64 only: audit it as that (CI does), and reinstall
 # and test it on the devbox, since a Mac refuses to install it
 brew audit --strict --os=linux --arch=intel 21StarkCom/tap/hermod-linux 21StarkCom/tap/frigg-linux 21StarkCom/tap/urd-linux \
-  21StarkCom/tap/idun-linux 21StarkCom/tap/njord-linux 21StarkCom/tap/valkyrie-linux 21StarkCom/tap/utgard-linux
+  21StarkCom/tap/idun-linux 21StarkCom/tap/njord-linux 21StarkCom/tap/valkyrie-linux 21StarkCom/tap/utgard-linux \
+  21StarkCom/tap/sonar-linux
 
 # Same for the cask (a GUI app). A cask's asset-id URL fails the unversioned-URL
 # audit by design, and atlas also needs `,token_conflicts` (homebrew/core's atlas)
