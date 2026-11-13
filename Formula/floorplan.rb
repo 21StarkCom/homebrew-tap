@@ -16,10 +16,10 @@ class Floorplan < Formula
     $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s
   end
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/floorplan/releases/assets/744173351",
+  url "https://api.github.com/repos/21StarkCom/floorplan/releases/assets/745363608",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.11.1"
-  sha256 "a80fcbc9f1a6dfbf245fc44772c91b53f291d399bfc65d717ee0839e3d8227e4"
+  version "0.12.0"
+  sha256 "fd12d965cf678624c65e5df17b01e01232e9b0a36b547adadf8e7a2ef8cec6c2"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
