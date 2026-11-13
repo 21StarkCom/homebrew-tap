@@ -10,6 +10,7 @@
 # The release builds the face and the desk and signs both with the operator's Developer ID.
 # Released from `odinctl-v*` tags by `scripts/release-odinctl.sh`.
 # The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
+# It also installs `odin`, a link to `odinctl`.
 class Odinctl < Formula
   desc "Doors that run a playbook on the odin agent kernel (terminal and schedule)"
   homepage "https://github.com/21StarkCom/odin"
@@ -35,6 +36,8 @@ class Odinctl < Formula
   depends_on :macos
   depends_on "node" # odinctl is node ESM; the keg node runs dist/bin.js
 
+  conflicts_with "odin", because: "both install an `odin` binary"
+
   def install
     # The zip is the runnable tree (dist/, bin/, conformance/, package.json, and a node_modules/
     # with no symlinks). odinctl reads its conformance fixtures from libexec/conformance, so keep
@@ -45,12 +48,14 @@ class Odinctl < Formula
       exec "#{formula_opt_bin("node")}/node" "#{libexec}/dist/bin.js" "$@"
     SH
     (bin/"odinctl").chmod 0755
+    bin.install_symlink bin/"odinctl" => "odin"
   end
 
   test do
     # `odinctl --version` prints `odinctl <version>`; assert it against the formula's version —
     # version-agnostic, never a hardcoded string.
     assert_equal "odinctl #{version}", shell_output("#{bin}/odinctl --version").strip
+    assert_equal "odinctl #{version}", shell_output("#{bin}/odin --version").strip
     # `odinctl ui` starts the face beside the shim, at libexec/bin/odin-face; it names its release.
     assert_equal "odin-face #{version}", shell_output("#{libexec}/bin/odin-face --version").strip
     # Every run starts the SDK's vendored `claude`, found beside the SDK as node finds it.

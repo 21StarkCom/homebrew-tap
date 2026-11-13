@@ -78,7 +78,7 @@ does not record GitHub's host key.
 | `muninn` | formula | [muninn](https://github.com/21StarkCom/muninn) | `muninn-install` | bash source tree | none (no Mach-O) | any |
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
-| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
+| `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl`, `odin` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `stark-statusline` | formula | [idavoll](https://github.com/21StarkCom/idavoll) | `stark-statusline` | Go | ad-hoc | 13 (Ventura) |
@@ -425,6 +425,7 @@ brew install 21StarkCom/tap/odinctl
 ```
 
 The formula is `odinctl`, not `odin`: homebrew/core's `odin` is the Odin language compiler.
+The formula also links `odin` to `odinctl`, so it conflicts with homebrew/core's `odin`.
 Like `librarian`, the release zip is a node ESM tree (`dist/`, a vendored `node_modules` with
 no symlinks from `npm install --install-links --no-bin-links`, and the `conformance/` fixtures) that the formula installs into `libexec` and
 wraps to run under the keg's `node`. It has no `service do` block: `odinctl schedule` writes
