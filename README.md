@@ -376,6 +376,12 @@ brew install 21StarkCom/tap/lumiere
 zip is a Developer-ID-signed + notarized `darwin_arm64` build. Linux users build from source
 in the `lumiere` repo (`make build`).
 
+From the multi-call build on, the zip holds two binaries: `lumiere-onnx`, which holds the
+ONNX tools, and `lumiere`, which holds the rest. `install` reads the tool list from
+`lumiere tools` and links each `lumiere-<tool>` to the binary that holds it: a tool that
+`lumiere-onnx <tool> -version` runs links there, and every other tool links to `lumiere`. A
+zip that ships a file for each tool (v0.9.0 and before) gets no link.
+
 ## muninn
 
 The [`muninn`](https://github.com/21StarkCom/muninn) cross-agent messaging skill. The release
