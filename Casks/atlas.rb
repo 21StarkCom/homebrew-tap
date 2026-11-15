@@ -37,11 +37,11 @@ cask "atlas" do
   # not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, DELIBERATELY: :no_check
   # disables integrity verification on a private download, and the versioned browser-download URL
   # 404s for private-repo assets even with a token — the API asset id is the only working fetch.
-  version "0.29.1"
-  sha256 "b4a6d0e4b301debd318ce94485e84ca76a9f0a752a0b1b79901ac2ff9356efbb"
+  version "0.29.3"
+  sha256 "e7cbf83622c7bd02114d4d09084a62752c13444acc2ef513f311b0561639582f"
 
   # API asset URL (private repo). asset id is release-specific; re-point it with the bumper.
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/750302366",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/750558583",
       using: AtlasPrivateReleaseStrategy
   name "Atlas"
   desc "Second-brain desktop app (companion GUI to the brain CLI)"
