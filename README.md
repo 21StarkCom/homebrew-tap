@@ -2,14 +2,14 @@
 
 Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
-`brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
-macOS arm64 build (muninn: an unsigned bash tree) pulled from a private GitHub Release, plus eight `-linux` formulae,
+`brew install`: 23 formulae for the CLIs and 4 casks for the GUI apps, each a signed
+macOS arm64 build (muninn and please: unsigned bash trees) pulled from a private GitHub Release, plus eight `-linux` formulae,
 the Linux x86_64 builds for the devbox of hermod, frigg, urd, sonar and idun's four apps
 (`idun-linux`, `njord-linux`, `valkyrie-linux` and `utgard-linux`). The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
-**Status:** active. Every entry installs today; 32 of the 34 are re-pinned on each release
-of their source repo, and the other two are named under
+**Status:** active. Every entry installs today; 32 of the 35 are re-pinned on each release
+of their source repo, and the other three are named under
 [How it fits the fleet](#how-it-fits-the-fleet). Contributors: the rules for editing an
 entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
 
@@ -79,6 +79,7 @@ does not record GitHub's host key.
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl`, `odin` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
+| `please` | formula | [ai-infra-agentic-resources](https://github.com/GetEvinced/ai-infra-agentic-resources) (GetEvinced) | `please` and its helpers (`gh-pr-*`, `please-codex-*`, `subagent-progress`) | bash and python source tree | none (no Mach-O) | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `sonar` | formula | [sonar](https://github.com/21StarkCom/sonar) | `sonar` | Go | ad-hoc | any |
@@ -443,6 +444,24 @@ that `odinctl ui` starts, and from 0.30.0 `bin/desk`, odin's IT desk, the Go pro
 and notarizes them. Its other Mach-O is the Agent SDK's Anthropic-signed `claude`. Released
 from `odinctl-v*` tags by odin's `scripts/release-odinctl.sh`.
 
+## please
+
+[`please`](https://github.com/GetEvinced/ai-infra-agentic-resources/tree/main/tools/please),
+Evinced AI & Infrastructure's CLI for PR reviews (`please review`), PR walkthroughs
+(`please explain`), devops-infra plans (`please run terragrunt plan`) and a setup check
+(`please doctor`). Its source repo is in the GetEvinced org, so the token needs
+contents:read there too. The release asset is the tagged `tools/please/` tree (bash and
+python scripts); `install` puts every file of its `bin/` on PATH, since they call each other
+by name. It holds source, so `scripts/mirror.sh` excludes it.
+
+```sh
+brew install 21StarkCom/tap/please
+please doctor
+```
+
+Its `.github/workflows/release-cli.yml` bumps it with `--asset-suffix .tar.gz` once
+`tools/please/release.json` has `"tap": true`; until then, re-point it by hand.
+
 ## plume
 
 The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — one
@@ -791,9 +810,10 @@ loads only when named in full.
 
 The tap is a passive publish target. Each source repo's release re-pins its own entry by
 running this repo's `scripts/bump.sh` (21stark ADR-0008), which reads the asset id and
-checksum back from the published release and opens a PR here. Two entries have no release
-that bumps them: the atlas cask, re-pointed by hand at a `desktop-v*` release, and tyr, a
-frozen v0.109.0 CLI from before tyr became library-only.
+checksum back from the published release and opens a PR here. Three entries have no release
+that bumps them: the atlas cask, re-pointed by hand at a `desktop-v*` release, tyr, a
+frozen v0.109.0 CLI from before tyr became library-only, and please, until its source repo's
+`tools/please/release.json` turns its tap bump on.
 
 Every push to `main` also reaches [`GetEvinced/homebrew-tap`](https://github.com/GetEvinced/homebrew-tap)
 (`GetEvinced/tap`), for Evinced engineers who cannot read 21StarkCom. `mirror.yml` copies each
@@ -813,8 +833,8 @@ check on a local zip, `.tar.gz` or `.pkg`, with no token, so a release can run i
 ships. A `.pkg` is a xar archive: `bsdtar` unpacks it and each `Payload` and `Scripts` in it,
 and the check reads the files. The check cannot judge readable JS (an unminified bundle,
 the JS inside a compiled binary, or an Electron `app.asar`, which it reads as one file).
-`alfred` stays out by the operator's request (spec D11), and `muninn` because its asset is
-its bash source tree. A new entry goes there unless its PR adds it to `EXCLUDED` in
+`alfred` stays out by the operator's request (spec D11), and `muninn` and `please` because
+each asset is its source tree. A new entry goes there unless its PR adds it to `EXCLUDED` in
 `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
 `Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
 
@@ -854,6 +874,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
 | `njord-linux` | idun | `scripts/release-darwin.sh njord` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
+| `please` | ai-infra-agentic-resources (GetEvinced) | `.github/workflows/release-cli.yml`, for a `please-v*` tag (`--asset-suffix .tar.gz`), once `tools/please/release.json` has `"tap": true`; until then by hand | GitHub Actions |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
 | `sonar` | sonar | `.github/workflows/release.yml` `bump-tap` | GitHub Actions |
