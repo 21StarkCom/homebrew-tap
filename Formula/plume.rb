@@ -27,8 +27,10 @@ class Plume < Formula
   depends_on :macos
 
   def install
-    # Globbed so the install tracks the tool set as new plume-* drivers are added.
-    bin.install Dir["plume-*"]
+    # The plume dispatcher, a bare name that plume-* does not match, and the drivers, globbed
+    # so the install tracks the tool set as new plume-* drivers are added. Dir drops the
+    # dispatcher from a release that does not ship it.
+    bin.install Dir["plume", "plume-*"]
   end
 
   test do
