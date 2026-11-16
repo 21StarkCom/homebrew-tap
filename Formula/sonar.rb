@@ -15,10 +15,10 @@ class Sonar < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sonar/releases/assets/745188332",
+  url "https://api.github.com/repos/21StarkCom/sonar/releases/assets/753909366",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.7.0"
-  sha256 "d2bdb3f242897f48d36be36c9fdd454b75b751b1d331d6e8b13288965f3ca7d0"
+  version "0.8.0"
+  sha256 "79c0909e9a1dcc3888fb97cb5dc7fb6f8ad8508bdee41ea2534ffb41ef813ca7"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
