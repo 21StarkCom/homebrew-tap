@@ -79,7 +79,7 @@ does not record GitHub's host key.
 | `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl`, `odin` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
-| `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume-*` | Go | ad-hoc | any |
+| `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume`, `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
 | `sonar` | formula | [sonar](https://github.com/21StarkCom/sonar) | `sonar` | Go | ad-hoc | any |
 | `sonar-linux` | formula | [sonar](https://github.com/21StarkCom/sonar) | `sonar` | Go | none | none: Linux x86_64 |
@@ -448,7 +448,8 @@ from `odinctl-v*` tags by odin's `scripts/release-odinctl.sh`.
 The [`plume`](https://github.com/21StarkCom/plume) pure-Go document toolkit — one
 `plume-<format>` driver per format (`plume-xlsx`, `plume-docx`, `plume-pdf`,
 `plume-pptx`, `plume-handwriting`), each a thin CLI over the format's library
-package (the library is the product; these binaries are the drivers).
+package (the library is the product; these binaries are the drivers). From the
+release that ships it, a `plume` dispatcher lists and runs the drivers.
 
 ```sh
 brew install 21StarkCom/tap/plume
