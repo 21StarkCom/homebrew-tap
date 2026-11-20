@@ -10,10 +10,10 @@ class Utgard < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/utgard/releases/assets/771308344",
+  url "https://api.github.com/repos/21StarkCom/utgard/releases/assets/771594295",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.12.0"
-  sha256 "5364da8ecc9609ee65afe7b399a6e32effcbd7d5d79c428b94b36ff2f7d8e655"
+  version "0.13.0"
+  sha256 "94ee4c604813ca564f64054a38ff2b4fabb348018a80834d7e9d8ecf50453e5b"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
