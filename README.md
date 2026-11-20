@@ -4,8 +4,8 @@ Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by bre
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
 `brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build (muninn: an unsigned bash tree) pulled from a private GitHub Release, plus eight `-linux` formulae,
-the Linux x86_64 builds for the devbox of hermod, frigg, urd, sonar, ghx and idun's three apps
-(`idun-linux`, `valkyrie-linux` and `utgard-linux`). The tap builds nothing. It only pins each entry to a published release, and each
+the Linux x86_64 builds for the devbox of hermod, frigg, urd, sonar, ghx, utgard and idun's two apps
+(`idun-linux` and `valkyrie-linux`). The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
 **Status:** active. Every entry installs today; 32 of the 34 are re-pinned on each release
@@ -283,7 +283,10 @@ a `vX.Y.Z` tag of the `github-extended` repo. It is compiled with the release Ma
 `ghx` was `njord`, an app of the `idun` repo, up to 0.32.1. Each `ghx` formula also installs
 `njord` as a link to `ghx`, and `formula_renames.json` maps `njord` to `ghx` and
 `njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an installed `njord`
-to `ghx`.
+to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`). Homebrew does
+not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is trusted,
+they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
+`ghx-linux`) trusts the new entry and moves the installed `njord` to it.
 
 On Linux x86_64 (the devbox):
 
