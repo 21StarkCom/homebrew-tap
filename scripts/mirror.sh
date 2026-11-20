@@ -307,6 +307,7 @@ read_entries() {
     [[ -f "${src_root}/${file}" ]] || continue
     if ! renames_ok "${src_root}/${file}"
     then
+      : >"${tmp}/${file}.bad"
       fail_entry "${file}" "it is not a JSON object of entry names to entry names; no pair of it is copied"
       continue
     fi
@@ -537,10 +538,12 @@ clone_target() {
 
 marked() { [[ -f $1 ]] && grep -qxF -- "${MARKER}" "$1"; }
 
-# True when file $1 is a JSON object whose keys and values are entry names.
+# True when file $1 holds one JSON object whose keys and values are entry names.
+# jq's $ also matches before a last newline, so a name must not end in one.
 renames_ok() {
-  jq -e --arg re "${ENTRY_RE}" \
-    'type == "object" and all(to_entries[]; (.key | test($re)) and (.value | type == "string" and test($re)))' \
+  jq -se --arg re "${ENTRY_RE}" '
+    def name: type == "string" and test($re) and (endswith("\n") | not);
+    length == 1 and (.[0] | type == "object" and all(to_entries[]; (.key | name) and (.value | name)))' \
     "$1" >/dev/null 2>&1
 }
 
@@ -774,25 +777,43 @@ remove_departed() {
 
 # Merges the pairs read_entries kept into each rename file of the clone (spec
 # D13): a kept pair sets its old name, a dropped one removes its old name, and a
-# pair whose old name the source file lacks stays. Writes no file that would hold
-# no pair, and leaves a file whose pairs do not change as it is.
+# pair whose old name the source file lacks stays. A kept pair whose new entry
+# failed and has no copy in the clone waits, so no old name moves to nothing.
+# Writes no file that would hold no pair, and leaves a file whose pairs do not
+# change as it is.
 write_renames() {
-  local file dst base merged pairs
+  local file dst base merged pairs new
+  local -a held
   for file in ${RENAME_FILES}
   do
-    [[ -z ${failed[${file}]:-} ]] || continue
+    [[ ! -e "${tmp}/${file}.bad" ]] || continue
+    # A retry after a lost push race reads a new clone: forget an older clone's fault.
+    unset 'failed[${file}]'
     dst="${clone}/${file}"
     base='{}'
     if [[ -e ${dst} ]]
     then
-      base="$(jq -ce 'select(type == "object")' "${dst}" 2>/dev/null)" || {
-        fail_entry "${file}" "${TARGET_REPO} has a ${file} that is not a JSON object; it is left as it is"
+      if ! renames_ok "${dst}"
+      then
+        fail_entry "${file}" "${TARGET_REPO} has a ${file} that is not a JSON object of entry names; it is left as it is"
         continue
-      }
+      fi
+      base="$(jq -c . "${dst}")"
     fi
+    held=()
+    jq -r '.[]' "${tmp}/${file}.kept" >"${tmp}/${file}.new"
+    while IFS= read -r new
+    do
+      [[ -n ${new} && -n ${failed[${new}]:-} ]] || continue
+      ! marked "${clone}/${rel[${new}]}" || continue
+      say "${file}: the pair to ${new} waits: ${new} failed and has no copy in ${TARGET_REPO}"
+      held+=("${new}")
+    done <"${tmp}/${file}.new"
     merged="$(jq -nc --argjson base "${base}" --slurpfile kept "${tmp}/${file}.kept" \
       --rawfile dropped "${tmp}/${file}.dropped" \
-      '($base | delpaths([$dropped | split("\n")[] | select(. != "") | [.]])) + ($kept | add // {})')" ||
+      '($base | delpaths([$dropped | split("\n")[] | select(. != "") | [.]]))
+        + ($kept | add // {} | with_entries(select(.value | IN($ARGS.positional[]) | not)))' \
+      --args "${held[@]}")" ||
       die "cannot merge ${file}"
     if [[ ! -e ${dst} ]]
     then

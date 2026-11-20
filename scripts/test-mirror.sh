@@ -1132,13 +1132,30 @@ check "still no cask_renames.json" tgt_lacks cask_renames.json
 
 begin "rename files: a failed entry keeps its pair"
 rig
-set_formula demo 1.0.0 101 "$(printf '%064d' 9)"
+run_mirror
+check "the first copy: exit 0" is_code 0
+set_formula demo 1.1.0 101 "$(printf '%064d' 9)"
 set_renames formula_renames.json '{"olddemo": "demo"}'
 commit_src
 run_mirror
 check "exit 1" is_code 1
 check "demo failed" err_has "FAILED demo"
 check "its pair is copied" renames_are formula_renames.json '{"olddemo":"demo"}'
+
+begin "rename files: a failed entry with no copy holds its pair"
+rig
+set_formula demo 1.0.0 101 "$(printf '%064d' 9)"
+set_renames formula_renames.json '{"olddemo": "demo", "oldlib": "libdemo"}'
+commit_src
+mkdir -p "${R}/seed"
+printf '{"olddemo": "evdemo"}\n' >"${R}/seed/formula_renames.json"
+push_seed "a GetEvinced pair of the held old name"
+run_mirror
+check "exit 1" is_code 1
+check "demo failed" err_has "FAILED demo"
+check "says the pair waits" out_has "formula_renames.json: the pair to demo waits"
+check "the held old name stays as it was; the other pair is copied" \
+  renames_are formula_renames.json '{"olddemo":"evdemo","oldlib":"libdemo"}'
 
 begin "rename files: --only changes none"
 rig
@@ -1170,9 +1187,25 @@ printf 'not json\n' >"${R}/seed/formula_renames.json"
 push_seed "a broken GetEvinced file"
 run_mirror
 check "a broken GetEvinced file: exit 1" is_code 1
-check "says it is left" err_has "has a formula_renames.json that is not a JSON object; it is left as it is"
+check "says it is left" err_has "has a formula_renames.json that is not a JSON object of entry names; it is left as it is"
 check "it stays as it was" target_file_is formula_renames.json "not json"
 check "the entries are pushed" tgt_has Formula/demo.rb
+rig
+set_renames formula_renames.json '{"olddemo": "demo"}'
+commit_src
+mkdir -p "${R}/seed"
+printf '{"a": "b"}\n{"c": "d"}\n' >"${R}/seed/formula_renames.json"
+push_seed "a GetEvinced file of two objects"
+run_mirror
+check "a file of two objects: exit 1" is_code 1
+check "a file of two objects: says it is left" err_has "has a formula_renames.json that is not a JSON object of entry names"
+check "a file of two objects: the entries are pushed" tgt_has Formula/demo.rb
+rig
+set_renames formula_renames.json '{"olddemo\n": "demo"}'
+commit_src
+run_mirror
+check "a name that ends in a newline: exit 1" is_code 1
+check "a name that ends in a newline: names the bad file" err_has "FAILED formula_renames.json"
 
 begin "rename files: an uncommitted change"
 rig
