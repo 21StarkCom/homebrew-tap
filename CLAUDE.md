@@ -51,7 +51,7 @@ brew audit --strict 21StarkCom/tap/idun       # --online also checks the URL/hom
 # A -linux formula is Linux x86_64 only: audit it as that (CI does), and reinstall
 # and test it on the devbox, since a Mac refuses to install it
 brew audit --strict --os=linux --arch=intel 21StarkCom/tap/hermod-linux 21StarkCom/tap/frigg-linux 21StarkCom/tap/urd-linux \
-  21StarkCom/tap/idun-linux 21StarkCom/tap/njord-linux 21StarkCom/tap/valkyrie-linux 21StarkCom/tap/utgard-linux \
+  21StarkCom/tap/idun-linux 21StarkCom/tap/ghx-linux 21StarkCom/tap/valkyrie-linux 21StarkCom/tap/utgard-linux \
   21StarkCom/tap/sonar-linux
 
 # Same for the cask (a GUI app). A cask's asset-id URL fails the unversioned-URL
@@ -89,9 +89,9 @@ scripts/mirror.sh --dry-run
 ## PRs
 
 - Pass `--ticket STARK-<n>` to the bumper when a ticket covers the bump: it puts the ticket in the PR title.
-- A bump PR that a ticket covers but that opened unscoped needs a retitle and its `no-ticket` label dropped, in one command (`gh pr edit <n> --title … --remove-label no-ticket`): `njord pr-merge` reads the live title, and skips its ticket stamp while the label stays.
-- A bump PR is a release bot's PR under the root review rules. Bumpers open it with plain `gh pr create`, so `njord pr-open`'s checks never ran on it: before you merge, check that its diff changes only the entry's three release lines, and that the asset id and checksum match the release.
-- The secret scan may flag a formula's public 64-hex checksum as high-entropy. Check it against the downloaded release bytes before you pass `--allow-secret-commit` to `njord pr-open`.
+- A bump PR that a ticket covers but that opened unscoped needs a retitle and its `no-ticket` label dropped, in one command (`gh pr edit <n> --title … --remove-label no-ticket`): `ghx pr-merge` reads the live title, and skips its ticket stamp while the label stays.
+- A bump PR is a release bot's PR under the root review rules. Bumpers open it with plain `gh pr create`, so `ghx pr-open`'s checks never ran on it: before you merge, check that its diff changes only the entry's three release lines, and that the asset id and checksum match the release.
+- The secret scan may flag a formula's public 64-hex checksum as high-entropy. Check it against the downloaded release bytes before you pass `--allow-secret-commit` to `ghx pr-open`.
 
 ## Adding a formula (or cask)
 

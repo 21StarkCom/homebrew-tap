@@ -4,8 +4,8 @@ Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by bre
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
 `brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build (muninn: an unsigned bash tree) pulled from a private GitHub Release, plus eight `-linux` formulae,
-the Linux x86_64 builds for the devbox of hermod, frigg, urd, sonar and idun's four apps
-(`idun-linux`, `njord-linux`, `valkyrie-linux` and `utgard-linux`). The tap builds nothing. It only pins each entry to a published release, and each
+the Linux x86_64 builds for the devbox of hermod, frigg, urd, sonar, ghx, utgard and idun's two apps
+(`idun-linux` and `valkyrie-linux`). The tap builds nothing. It only pins each entry to a published release, and each
 source repo's release re-pins its own entry by pull request.
 
 **Status:** active. Every entry installs today; 32 of the 34 are re-pinned on each release
@@ -68,6 +68,8 @@ does not record GitHub's host key.
 | `floorplan` | formula | [floorplan](https://github.com/21StarkCom/floorplan) | `floorplan` | node ESM tree | none of its own; its native npm prebuilds are ad-hoc (the linker's signature; the three it renames, re-signed ad hoc in the keg) | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
+| `ghx` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx`, `njord` (a link to `ghx`) | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `ghx-linux` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx`, `njord` (a link to `ghx`) | `bun build --compile` | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `hermod` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | ad-hoc | 27 (Golden Gate) |
 | `hermod-linux` | formula | [hermod](https://github.com/21StarkCom/hermod) | `hermod` | `bun build --compile` | none | none: Linux x86_64 |
@@ -76,8 +78,6 @@ does not record GitHub's host key.
 | `librarian` | formula | [atlas](https://github.com/21StarkCom/atlas) | `librarian` (and a `brew services` daemon) | node ESM tree | none of its own; its one Mach-O is Anthropic-signed | any |
 | `lumiere` | formula | [lumiere](https://github.com/21StarkCom/lumiere) | `lumiere`, `lumiere-*` | Go | Developer ID + notarized | 26 (Tahoe) |
 | `muninn` | formula | [muninn](https://github.com/21StarkCom/muninn) | `muninn-install` | bash source tree | none (no Mach-O) | any |
-| `njord` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
-| `njord-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `njord` | `bun build --compile` | none | none: Linux x86_64 |
 | `odinctl` | formula | [odin](https://github.com/21StarkCom/odin) | `odinctl`, `odin` | node ESM tree | Developer ID + notarized `odin-face` and `desk`; its `claude` is Anthropic-signed | any |
 | `plume` | formula | [plume](https://github.com/21StarkCom/plume) | `plume`, `plume-*` | Go | ad-hoc | any |
 | `sleipnir` | formula | [sleipnir](https://github.com/21StarkCom/sleipnir) | `slp`, `sleipnir`, `huginn`, `sleipnir-mcp` | minified Bun bundles | Developer ID + notarized native modules in the zip; ad hoc once installed | any |
@@ -266,6 +266,39 @@ release ships beside the darwin one. It is a formula of its own for the reason
 `hermod-linux` is (see [hermod](#hermod)), and its binaries are unsigned. On another
 platform, `go install` from the `frigg` repo.
 
+## ghx
+
+The [`ghx`](https://github.com/21StarkCom/github-extended) GitHub-work CLI — pull requests,
+CI, Actions runs, cleanup and a fleet's repos. It holds the fleet's GitHub verbs
+(`ghx pr-open`, `ghx pr-merge`, `ghx user`, …), and hands every other command to `gh`.
+
+```sh
+brew install 21StarkCom/tap/ghx
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
+a `vX.Y.Z` tag of the `github-extended` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
+
+`ghx` was `njord`, an app of the `idun` repo, up to 0.32.1. Each `ghx` formula also installs
+`njord` as a link to `ghx`, and `formula_renames.json` maps `njord` to `ghx` and
+`njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an installed `njord`
+to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`). Homebrew does
+not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is trusted,
+they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
+`ghx-linux`) trusts the new entry and moves the installed `njord` to it.
+
+On Linux x86_64 (the devbox):
+
+```sh
+brew install 21StarkCom/tap/ghx-linux
+```
+
+`ghx-linux` installs the same release's Linux x86_64 binary, which
+`scripts/release-darwin.sh ghx` cross-compiles beside the macOS one from the
+`vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
+is (see [hermod](#hermod)).
+
 ## heimdall
 
 The [`heimdall`](https://github.com/21StarkCom/heimdall) CLI — personal
@@ -394,33 +427,6 @@ muninn-install
 ```
 
 Its `release.yml` bumps it with `--asset-suffix .tar.gz`.
-
-## njord
-
-The [`njord`](https://github.com/21StarkCom/idun) GitHub-work CLI — pull requests, CI,
-Actions runs, cleanup and a fleet's repos. It is the second app of the `idun` repo, and
-holds the fleet's GitHub verbs (`njord pr-open`, `njord pr-merge`, `njord user`, …).
-
-```sh
-brew install 21StarkCom/tap/njord
-```
-
-The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
-a `njord-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
-`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
-checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
-`apps/idun/setup.sh`, which steps aside when this formula is installed.
-
-On Linux x86_64 (the devbox):
-
-```sh
-brew install 21StarkCom/tap/njord-linux
-```
-
-`njord-linux` installs the same release's Linux x86_64 binary, which
-`scripts/release-darwin.sh njord` cross-compiles beside the macOS one from the
-`njord-vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
-is (see [hermod](#hermod)).
 
 ## odinctl
 
@@ -773,8 +779,9 @@ loads only when named in full.
 
 | Path | What it holds |
 |---|---|
-| `Formula/` | One Ruby formula per CLI, plus eight `<tool>-linux` formulae (`hermod-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `njord-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`), their tools' Linux builds. |
+| `Formula/` | One Ruby formula per CLI, plus eight `<tool>-linux` formulae (`hermod-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`), their tools' Linux builds. |
 | `Casks/` | One cask per GUI app, each with an initialization-only download adapter. The idavoll cask is in `Casks/i/`, which idavoll's installer does not read. |
+| `formula_renames.json` | Homebrew's map of renamed formulae: `njord` → `ghx`, `njord-linux` → `ghx-linux`. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
 | `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`. `--help` is its reference. |
@@ -843,6 +850,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `floorplan` | floorplan | `scripts/release-floorplan.sh`, for a `floorplan-v*` tag | the operator's Mac |
 | `frigg` | frigg | `.github/workflows/release.yml` | GitHub Actions |
 | `frigg-linux` | frigg | `.github/workflows/release.yml` `publish` (`--asset-suffix linux_amd64.zip`) | GitHub Actions |
+| `ghx` | github-extended | `scripts/release-darwin.sh ghx`, for a `v*` tag | the signing Mac |
+| `ghx-linux` | github-extended | `scripts/release-darwin.sh ghx` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `heimdall` | heimdall | `scripts/release-darwin.sh` | the signing Mac |
 | `hermod` | hermod | `ts/scripts/release-darwin.sh` | the signing Mac |
 | `hermod-linux` | hermod | `ts/scripts/release-darwin.sh` (`--asset-suffix linux_x64.zip`) | the signing Mac |
@@ -851,8 +860,6 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `librarian` | atlas | `scripts/release-librarian.sh`, for a `librarian-v*` tag | the signing Mac |
 | `lumiere` | lumiere | `scripts/release-darwin.sh` | the signing Mac |
 | `muninn` | muninn | `.github/workflows/release.yml` (`--asset-suffix .tar.gz`) | GitHub Actions |
-| `njord` | idun | `scripts/release-darwin.sh njord`, for a `njord-v*` tag | the signing Mac |
-| `njord-linux` | idun | `scripts/release-darwin.sh njord` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `odinctl` | odin | `scripts/release-odinctl.sh`, for an `odinctl-v*` tag | the signing Mac |
 | `plume` | plume | `.github/workflows/release.yml` | GitHub Actions |
 | `sleipnir` | sleipnir | `scripts/release-darwin.sh` | the signing Mac |
@@ -871,15 +878,15 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun`, `njord` and `valkyrie`, and each one's `-linux` formula), utgard's (`utgard` and `utgard-linux`), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
+agent-seats', idun's (`idun` and `valkyrie`, and each one's `-linux` formula), github-extended's (`ghx` and `ghx-linux`), utgard's (`utgard` and `utgard-linux`), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`; sonar's two: `sonar` and `sonar-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
-`njord pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
+`ghx pr-merge`, titled `chore(STARK-<n>): …` when a ticket covers it and labeled
 `no-ticket` (by `bump.sh`) while its title names no ticket.
 
 ## Download authentication and CI
 
 All entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Each entry takes its token from Homebrew's own lookup (`HOMEBREW_GITHUB_API_TOKEN`, else Homebrew's gh login, else a keychain token), stripped before use; a whitespace-only env var counts as unset, and when the lookup finds nothing the entry reports the asset URL and setup guidance. Homebrew redacts only environment secrets from its output, so with a gh-only login, `--verbose --debug` or `HOMEBREW_CURL_VERBOSE` output shows the gh token: don't paste it anywhere. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
 
-Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, missing-token checks, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`hermod-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `njord-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
+Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, missing-token checks, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`hermod-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate hermod download check verifies authenticated metadata and partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
