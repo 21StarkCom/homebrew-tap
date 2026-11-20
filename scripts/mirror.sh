@@ -37,6 +37,9 @@ MARKER='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edi
 FROZEN='# frozen_string_literal: true'
 BEGIN_MARK='<!-- BEGIN 21stark-mirror -->'
 END_MARK='<!-- END 21stark-mirror -->'
+# Homebrew's rename maps at the tap root (spec D13): the one kind of file the copy
+# merges into instead of owning, so they hold no marker line.
+RENAME_FILES="formula_renames.json cask_renames.json"
 PUSH_TRIES=3
 # An upload that is not "uploaded" this long after its last update is a dead run's.
 STALE_UPLOAD_SECONDS=3600
@@ -66,7 +69,8 @@ is written there with its asset URL pointed at that copy
 
   --branch <name>   the GetEvinced branch to push (default main); made from
                     main when it does not exist
-  --only <entry>    copy only this entry (repeatable), and delete no file
+  --only <entry>    copy only this entry (repeatable); delete no file and
+                    change no rename file
   --dry-run         print the plan; upload, delete, commit and push nothing
   --check <entry> <archive>
                     run the source check of <entry> on a local .zip,
@@ -91,7 +95,12 @@ and the check reads the tree. A .pkg fails when a member named *Payload does not
 unpack (Apple's pbzx, say), or when it holds no Payload.
 
 It reads Formula/*.rb, Casks/*.rb and Casks/*/*.rb (Casks/i/idavoll.rb), and a
-copy keeps its path. Run it from a checkout whose Formula/ and Casks/ have no
+copy keeps its path. It also reads formula_renames.json and cask_renames.json at
+the root, when they exist, and merges each pair whose new name is a copied entry
+of that kind into the same file of GetEvinced/homebrew-tap: a pair sets its old
+name there, a pair it does not copy removes its old name there, and a GetEvinced
+pair of another old name stays. It writes no rename file that would be empty.
+Run it from a checkout whose Formula/, Casks/ and rename files have no
 uncommitted change.
 To push main, HEAD must be origin/main (git fetch first).
 
@@ -108,10 +117,12 @@ sha256 and its files, make the release as a draft, upload, and publish it. Then
 write the entry with the marker line, the copy's asset URL, 21starkcom/tap
 renamed to getevinced/tap, and "21StarkCom private repos" renamed. A reused copy
 is not checked again. Then delete marked files whose entry left this tap, moved,
-or is excluded; rewrite the README block; commit once and push.
+or is excluded; merge the rename files; rewrite the README block; commit once and
+push.
 A push that loses a race clones again and writes again, up to three times. Files
 without the marker line (aac, evinced) are never changed. No release and no
-uploaded asset is ever deleted; an upload a dead run left (an hour old) is.
+uploaded asset is ever deleted; an upload a dead run left (an hour old) is. The
+rename files hold no marker line: the merge changes only the pairs above.
 
 Exit: 0 every entry copied; 1 an entry failed (the others still pushed) or the
 run failed; 2 usage. --check exits 0 when the archive passes, 1 when it does
@@ -208,9 +219,10 @@ parse_args() {
 check_source() {
   local dirty head main
   ${dry_run} && return 0
-  dirty="$(git -C "${src_root}" status --porcelain -- Formula Casks)" ||
+  # shellcheck disable=SC2086 # RENAME_FILES is a list of plain names
+  dirty="$(git -C "${src_root}" status --porcelain -- Formula Casks ${RENAME_FILES})" ||
     usage_error "${src_root} is not a git checkout"
-  [[ -z ${dirty} ]] || usage_error "Formula/ or Casks/ has uncommitted changes:${NL}${dirty}"
+  [[ -z ${dirty} ]] || usage_error "Formula/, Casks/ or a rename file has uncommitted changes:${NL}${dirty}"
   [[ ${branch} == main ]] || return 0
   head="$(git -C "${src_root}" rev-parse HEAD)"
   main="$(git -C "${src_root}" rev-parse -q --verify refs/remotes/origin/main)" ||
@@ -283,6 +295,33 @@ read_entries() {
     done
   done
   ((${#names[@]} > 0)) || die "no entry to copy in ${src_root}"
+  # Of each pair in a source rename file, keep the one whose new name is an entry
+  # of that kind here; failed entries count, excluded ones are no entry here.
+  local file want old new
+  for file in ${RENAME_FILES}
+  do
+    want=formula
+    [[ ${file} != cask_* ]] || want=cask
+    : >"${tmp}/${file}.kept"
+    : >"${tmp}/${file}.dropped"
+    [[ -f "${src_root}/${file}" ]] || continue
+    if ! renames_ok "${src_root}/${file}"
+    then
+      fail_entry "${file}" "it is not a JSON object of entry names to entry names; no pair of it is copied"
+      continue
+    fi
+    jq -r 'to_entries[] | [.key, .value] | @tsv' "${src_root}/${file}" >"${tmp}/${file}.pairs"
+    while IFS=$'\t' read -r old new
+    do
+      if [[ ${kind[${new}]:-} == "${want}" ]]
+      then
+        jq -nc --arg o "${old}" --arg n "${new}" '{($o): $n}' >>"${tmp}/${file}.kept"
+      else
+        say "${file}: ${old} -> ${new} is not copied: ${new} is no ${want} of the mirror"
+        printf '%s\n' "${old}" >>"${tmp}/${file}.dropped"
+      fi
+    done <"${tmp}/${file}.pairs"
+  done
   local o
   for o in "${only[@]}"
   do
@@ -497,6 +536,13 @@ clone_target() {
 }
 
 marked() { [[ -f $1 ]] && grep -qxF -- "${MARKER}" "$1"; }
+
+# True when file $1 is a JSON object whose keys and values are entry names.
+renames_ok() {
+  jq -e --arg re "${ENTRY_RE}" \
+    'type == "object" and all(to_entries[]; (.key | test($re)) and (.value | type == "string" and test($re)))' \
+    "$1" >/dev/null 2>&1
+}
 
 # Fails each entry whose GetEvinced file exists without the marker line.
 check_clashes() {
@@ -726,6 +772,41 @@ remove_departed() {
   done
 }
 
+# Merges the pairs read_entries kept into each rename file of the clone (spec
+# D13): a kept pair sets its old name, a dropped one removes its old name, and a
+# pair whose old name the source file lacks stays. Writes no file that would hold
+# no pair, and leaves a file whose pairs do not change as it is.
+write_renames() {
+  local file dst base merged pairs
+  for file in ${RENAME_FILES}
+  do
+    [[ -z ${failed[${file}]:-} ]] || continue
+    dst="${clone}/${file}"
+    base='{}'
+    if [[ -e ${dst} ]]
+    then
+      base="$(jq -ce 'select(type == "object")' "${dst}" 2>/dev/null)" || {
+        fail_entry "${file}" "${TARGET_REPO} has a ${file} that is not a JSON object; it is left as it is"
+        continue
+      }
+    fi
+    merged="$(jq -nc --argjson base "${base}" --slurpfile kept "${tmp}/${file}.kept" \
+      --rawfile dropped "${tmp}/${file}.dropped" \
+      '($base | delpaths([$dropped | split("\n")[] | select(. != "") | [.]])) + ($kept | add // {})')" ||
+      die "cannot merge ${file}"
+    if [[ ! -e ${dst} ]]
+    then
+      [[ ${merged} != "{}" ]] || continue
+    elif jq -e --argjson m "${merged}" '. == $m' "${dst}" >/dev/null
+    then
+      continue
+    fi
+    jq . <<<"${merged}" >"${dst}"
+    pairs="$(jq -r 'to_entries | map("\(.key) -> \(.value)") | join(", ")' <<<"${merged}")"
+    say "${file}: writing ${pairs}"
+  done
+}
+
 # Rewrites the README block from the marked files in the clone.
 write_readme() {
   local block f name k v home line sep=""
@@ -793,13 +874,22 @@ write_and_push() {
     [[ -n ${new_id[${name}]:-} ]] || continue
     write_copy "${name}"
   done
-  ((${#only[@]} > 0)) || remove_departed
+  if ((${#only[@]} == 0))
+  then
+    remove_departed
+    write_renames
+  fi
   write_readme
   cgit add -A
   cgit diff --cached --name-only >"${tmp}/changed"
   changed_formulae=() changed_casks=() changed=""
   while IFS= read -r path
   do
+    if [[ " ${RENAME_FILES} " == *" ${path} "* ]]
+    then
+      changed+="${NL}- ${path}"
+      continue
+    fi
     [[ ${path} == *.rb ]] || continue
     name="${path##*/}"
     name="${name%.rb}"

@@ -1071,6 +1071,116 @@ check "demo is not written" tgt_lacks Formula/demo.rb
 check "the others are pushed" tgt_has Formula/libdemo.rb
 check "names the failed entry" err_has "FAILED demo"
 
+# The rename files (spec D13).
+renames_are() { # <file> <compact JSON, keys sorted>
+  [[ "$(tgt_file "$1" | jq -cS .)" == "$2" ]]
+}
+set_renames() { # <file> <JSON>: the source tap's rename file
+  printf '%s\n' "$2" >"${R}/src/$1"
+}
+last_message_has_line() { tgt log -1 --format=%B main | grep -qxF -- "$1"; }
+target_file_is() { [[ "$(tgt_file "$1")" == "$2" ]]; }
+
+begin "rename files: copied, dropped and kept pairs"
+rig
+set_renames formula_renames.json '{"olddemo": "demo", "oldsecret": "secret", "gone": "nosuch", "wrongkind": "democask"}'
+set_renames cask_renames.json '{"oldcask": "democask", "notacask": "demo"}'
+commit_src
+mkdir -p "${R}/seed"
+printf '{\n  "oldsecret": "secret",\n  "evold": "evnew"\n}\n' >"${R}/seed/formula_renames.json"
+push_seed "GetEvinced pairs of its own"
+run_mirror
+check "exit 0" is_code 0
+check "formula pairs: copied, excluded dropped, GetEvinced kept" \
+  renames_are formula_renames.json '{"evold":"evnew","olddemo":"demo"}'
+check "cask pairs: copied, a formula's dropped" renames_are cask_renames.json '{"oldcask":"democask"}'
+check "says why a pair is not copied" out_has "formula_renames.json: oldsecret -> secret is not copied: secret is no formula of the mirror"
+check "the commit names the rename files" last_message_has_line "- formula_renames.json"
+check "aac and evinced unchanged" aac_same
+before="$(head_of)"
+run_mirror
+check "a second run: exit 0" is_code 0
+check "a second run: no new commit" head_is "${before}"
+
+begin "rename files: a pair dropped later is removed"
+set_renames formula_renames.json '{"oldsecret": "secret"}'
+rm -f "${R}/src/cask_renames.json"
+commit_src
+run_mirror
+check "exit 0" is_code 0
+check "olddemo stays: the source file lacks its old name" \
+  renames_are formula_renames.json '{"evold":"evnew","olddemo":"demo"}'
+check "a removed source file leaves its GetEvinced pairs" renames_are cask_renames.json '{"oldcask":"democask"}'
+set_renames formula_renames.json '{"olddemo": "secret"}'
+commit_src
+run_mirror
+check "a dropped pair removes its old name" renames_are formula_renames.json '{"evold":"evnew"}'
+
+begin "rename files: no pair kept, no file"
+rig
+run_mirror
+check "no source file: exit 0" is_code 0
+check "no formula_renames.json" tgt_lacks formula_renames.json
+check "no cask_renames.json" tgt_lacks cask_renames.json
+set_renames formula_renames.json '{"oldsecret": "secret"}'
+set_renames cask_renames.json '{}'
+commit_src
+run_mirror
+check "only dropped pairs: exit 0" is_code 0
+check "still no formula_renames.json" tgt_lacks formula_renames.json
+check "still no cask_renames.json" tgt_lacks cask_renames.json
+
+begin "rename files: a failed entry keeps its pair"
+rig
+set_formula demo 1.0.0 101 "$(printf '%064d' 9)"
+set_renames formula_renames.json '{"olddemo": "demo"}'
+commit_src
+run_mirror
+check "exit 1" is_code 1
+check "demo failed" err_has "FAILED demo"
+check "its pair is copied" renames_are formula_renames.json '{"olddemo":"demo"}'
+
+begin "rename files: --only changes none"
+rig
+set_renames formula_renames.json '{"olddemo": "demo"}'
+commit_src
+run_mirror --only demo
+check "exit 0" is_code 0
+check "no formula_renames.json" tgt_lacks formula_renames.json
+
+begin "rename files: one that is not a map of names"
+rig
+set_renames formula_renames.json '["olddemo", "demo"]'
+set_renames cask_renames.json '{"oldcask": "democask"}'
+commit_src
+mkdir -p "${R}/seed"
+printf '{"evold": "evnew"}\n' >"${R}/seed/formula_renames.json"
+push_seed "a GetEvinced pair"
+run_mirror
+check "exit 1" is_code 1
+check "names the bad file" err_has "FAILED formula_renames.json: it is not a JSON object of entry names to entry names"
+check "the GetEvinced file stays" renames_are formula_renames.json '{"evold":"evnew"}'
+check "the other rename file is copied" renames_are cask_renames.json '{"oldcask":"democask"}'
+check "the entries are pushed" tgt_has Formula/demo.rb
+rig
+set_renames formula_renames.json '{"olddemo": "demo"}'
+commit_src
+mkdir -p "${R}/seed"
+printf 'not json\n' >"${R}/seed/formula_renames.json"
+push_seed "a broken GetEvinced file"
+run_mirror
+check "a broken GetEvinced file: exit 1" is_code 1
+check "says it is left" err_has "has a formula_renames.json that is not a JSON object; it is left as it is"
+check "it stays as it was" target_file_is formula_renames.json "not json"
+check "the entries are pushed" tgt_has Formula/demo.rb
+
+begin "rename files: an uncommitted change"
+rig
+set_renames formula_renames.json '{"olddemo": "demo"}'
+run_mirror
+check "exit 2" is_code 2
+check "says what is uncommitted" err_has "formula_renames.json"
+
 begin "usage"
 run_mirror --bogus
 check "an unknown flag exits 2" is_code 2
@@ -1082,6 +1192,7 @@ code=$?
 check "--help exits 0" is_code 0
 check "--help names the environment" out_has "MIRROR_TARGET_TOKEN"
 check "--help names the source check" out_has "--check <entry> <archive>"
+check "--help names the rename files" out_has "formula_renames.json and cask_renames.json"
 
 printf '\n%s passed, %s failed\n' "${passed}" "${failed}"
 ((failed == 0))

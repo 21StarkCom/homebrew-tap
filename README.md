@@ -807,8 +807,10 @@ Every push to `main` also reaches [`GetEvinced/homebrew-tap`](https://github.com
 entry's release asset into a release there and writes the entry there with its URL on that
 copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
 ([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
-line and its own block of the README there, so the Evinced team's own `aac` and `evinced`
-stay theirs, and it deletes no release.
+line, its own block of the README there, and its own pairs in `formula_renames.json` and
+`cask_renames.json` (spec D13), so the Evinced team's own `aac` and `evinced` stay theirs,
+and it deletes no release. A rename here, such as `njord` to `ghx`, so reaches GetEvinced,
+and `brew update` moves an install of the old name there too.
 Before each upload it unpacks the asset and refuses one that holds source (spec D12):
 outside `node_modules`, a `.ts`, `.tsx`, `.mts` or `.cts` file (but a `.d.ts`, and a
 minified bundle at a path the entry names under `libexec`), a `.map` file, or a `.json`
