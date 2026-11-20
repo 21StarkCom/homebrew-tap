@@ -18,10 +18,10 @@ class Brain < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/749994271",
+  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/770520622",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.31.0"
-  sha256 "315ed9c4398f88754a98977e8cc71ce127a7933c1e3281122c7047481333bd41"
+  version "0.32.0"
+  sha256 "ebd1ed51c3157d6b35ee053675c7b8dd0dfd9d2450e9634fb0e9fa13c23c2c7c"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
