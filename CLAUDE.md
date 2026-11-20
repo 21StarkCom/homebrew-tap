@@ -84,7 +84,7 @@ scripts/mirror.sh --dry-run
 - CI installs and tests no entry. Run `brew reinstall` and `brew test` on a Mac, and on the x86_64 devbox for a `-linux` formula.
 - A change to the sandboxed workers' skip needs a Mac's `brew reinstall` and `brew test` under a gh-only login: CI's Linux Homebrew never loads those workers for an entry.
 - Keep `test do` version-agnostic: assert `version.to_s` against the tool's own `version` output, never a fixed string.
-- CI's fetch catches a gone asset and a hand-edited asset id or `sha256` that no longer match. An id and a checksum that agree but belong to another release pass: check the version against the release yourself.
+- CI fetches only the entries a PR changes; a change of `scripts/` or `formulae.yml`, or a manual run (`gh workflow run formulae.yml`), fetches every entry. The fetch catches a gone asset and a hand-edited asset id or `sha256` that no longer match. An id and a checksum that agree but belong to another release pass: check the version against the release yourself.
 
 ## PRs
 

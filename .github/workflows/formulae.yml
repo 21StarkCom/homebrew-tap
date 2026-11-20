@@ -5,16 +5,62 @@ on:
   push:
     branches: [main]
   merge_group:
+  # A manual run audits and fetches every entry, as a run that changes
+  # scripts/ or this file does.
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read # dorny/paths-filter reads the PR's changed-files list
 
 concurrency:
-  group: formulae-${{ github.event.pull_request.number || github.ref }}
+  # Each push to main has a group of its own commit, so a newer push never
+  # cancels it, not even while it waits: its `changes` job diffs it against
+  # the commit before it, and nothing else would check its files.
+  group: formulae-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # A bump PR changes one entry. The token diagnostics, the audit and the fetch
+  # read only the entries that changed; a change of scripts/ or of this file runs
+  # every entry and the gh-login and preflight checks. A run that changes no entry and no script skips the homebrew
+  # job, and the run still concludes success for bump.sh --merge.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      all: ${{ steps.filter.outputs.all }}
+      formulae: ${{ steps.filter.outputs.formulae }}
+      formulae_files: ${{ steps.filter.outputs.formulae_files }}
+      casks: ${{ steps.filter.outputs.casks }}
+      casks_files: ${{ steps.filter.outputs.casks_files }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          # A push or merge_group run diffs in git, and paths-filter cannot fetch
+          # the base commit of this private repo with no credentials: fetch it all.
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          list-files: shell
+          filters: |
+            all:
+              - 'scripts/**'
+              - '.github/workflows/formulae.yml'
+            formulae:
+              - added|modified: 'Formula/*.rb'
+            casks:
+              - added|modified: 'Casks/*.rb'
+              - added|modified: 'Casks/*/*.rb'
+
   homebrew:
+    needs: changes
+    if: >-
+      ${{ !cancelled() && (github.event_name == 'workflow_dispatch' || needs.changes.result != 'success'
+      || needs.changes.outputs.all == 'true' || needs.changes.outputs.formulae == 'true'
+      || needs.changes.outputs.casks == 'true') }}
     # Homebrew on Linux, not a macOS runner. Every entry but the Formula/*-linux.rb
     # ones (Linux x86_64, audited as that below) is macOS-only (`depends_on
     # :macos` or `macos:`), and Linux Homebrew styles, audits and fetches them (a
@@ -31,6 +77,10 @@ jobs:
       HOMEBREW_NO_AUTO_UPDATE: 1
       HOMEBREW_NO_ANALYTICS: 1
       HOMEBREW_NO_INSTALL_CLEANUP: 1
+      # Fail closed: a run whose `changes` failed checks every entry.
+      FULL: ${{ github.event_name == 'workflow_dispatch' || needs.changes.result != 'success' || needs.changes.outputs.all == 'true' }}
+      FORMULAE_FILES: ${{ needs.changes.outputs.formulae_files }}
+      CASKS_FILES: ${{ needs.changes.outputs.casks_files }}
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -59,9 +109,16 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
         run: brew style Formula Casks scripts
-      - name: Missing and whitespace-only token diagnostics
-        run: brew ruby scripts/verify-auth.rb
-      - name: Audit and fetch every formula
+      - name: Missing and whitespace-only token diagnostics (the changed entries on a partial run)
+        # A new or hand-edited entry must still reject a missing token and keep it
+        # out of its JSON metadata. The job runs only when an entry changed or FULL.
+        run: |
+          if [[ "$FULL" != true ]]; then
+            export VERIFY_AUTH_ENTRIES="$FORMULAE_FILES $CASKS_FILES"
+          fi
+          brew ruby scripts/verify-auth.rb
+      - name: Audit and fetch the changed formulae (every formula on a full run)
+        if: env.FULL == 'true' || needs.changes.outputs.formulae == 'true'
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
@@ -73,7 +130,12 @@ jobs:
           macos=()
           linux=()
           # A <tool>-linux formula is <tool>'s Linux x86_64 build, for the devbox.
-          for path in Formula/*.rb; do
+          paths=(Formula/*.rb)
+          if [[ "$FULL" != true ]]; then
+            # Space-separated; entry names hold no space, quote or glob character.
+            read -ra paths <<<"$FORMULAE_FILES"
+          fi
+          for path in "${paths[@]}"; do
             name="${path##*/}"
             name="${name%.rb}"
             formulae+=("21StarkCom/tap/${name}")
@@ -85,8 +147,11 @@ jobs:
           done
           # Audit as the platform users install on: some checks run only for the
           # OS and arch being audited.
-          brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
-          # Named formulae only: a bare `brew audit` audits every formula it can find.
+          # Named formulae only: a bare `brew audit` audits every formula it can find,
+          # and a run that changed only a -linux formula has no macOS one.
+          if ((${#macos[@]})); then
+            brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
+          fi
           if ((${#linux[@]})); then
             brew audit --strict --os=linux --arch=intel "${linux[@]}"
           fi
@@ -118,7 +183,8 @@ jobs:
             fi
             echo "${formula}: ${tool} is a Linux x86-64 executable"
           done
-      - name: Fetch and audit every cask
+      - name: Fetch and audit the changed casks (every cask on a full run)
+        if: env.FULL == 'true' || needs.changes.outputs.casks == 'true'
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
@@ -128,7 +194,11 @@ jobs:
           fi
           # A cask in Casks/<first character>/ too (Casks/i/idavoll.rb): Homebrew
           # reads Casks/**/*.rb. A glob with no match stays as its pattern.
-          for path in Casks/*.rb Casks/*/*.rb; do
+          paths=(Casks/*.rb Casks/*/*.rb)
+          if [[ "$FULL" != true ]]; then
+            read -ra paths <<<"$CASKS_FILES"
+          fi
+          for path in "${paths[@]}"; do
             [[ -f "$path" ]] || continue
             name="${path##*/}"
             name="${name%.rb}"
@@ -154,6 +224,7 @@ jobs:
             echo "${cask}: fetched and audited"
           done
       - name: Fetch with a gh login alone
+        if: env.FULL == 'true'
         # No HOMEBREW_GITHUB_API_TOKEN here: entries fall back to `gh auth token`
         # (STARK-10632). Homebrew's lookup runs its own gh first, so install it as a
         # user would; the runner's gh shares its config and would answer too.
@@ -170,6 +241,7 @@ jobs:
           brew fetch --force 21StarkCom/tap/stark-statusline
           brew fetch --force --cask 21StarkCom/tap/mimir
       - name: Verify authenticated preflight and partial resume
+        if: env.FULL == 'true'
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
           HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check

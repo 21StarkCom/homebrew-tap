@@ -4,6 +4,7 @@
   "merge": {
     "allowNoRequiredChecks": false,
     "allowSecretCommit": true,
-    "allowSecretToLlm": true
+    "allowSecretToLlm": true,
+    "allowSkippedChecks": true
   }
 }

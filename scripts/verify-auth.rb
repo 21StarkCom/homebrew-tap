@@ -7,8 +7,15 @@ require "open3"
 require "tmpdir"
 
 root = Pathname.new(__dir__).parent
+# VERIFY_AUTH_ENTRIES, when it names any, limits the check to those entries
+# (paths from the tap root, space-separated): CI's changed entries.
+entries = ENV.fetch("VERIFY_AUTH_ENTRIES", "").split
 # A cask can also sit in Casks/<first character>/ (Casks/i/idavoll.rb).
-paths = root.glob("{Formula,Casks}/*.rb") + root.glob("Casks/*/*.rb")
+paths = if entries.empty?
+  root.glob("{Formula,Casks}/*.rb") + root.glob("Casks/*/*.rb")
+else
+  entries.map { |entry| root.join(entry) }
+end
 invalid_tokens = [nil, " \t\n"]
 # Entries fall back to `gh auth token`, then a keychain token, when the env
 # var is unset or blank. An empty HOME hides gh's login, so a signed-in box

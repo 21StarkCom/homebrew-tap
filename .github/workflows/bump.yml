@@ -15,13 +15,50 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read # dorny/paths-filter reads the PR's changed-files list
 
 concurrency:
-  group: bump-${{ github.event.pull_request.number || github.ref }}
+  # Each push to main has a group of its own commit, so a newer push never
+  # cancels it, not even while it waits: its `changes` job diffs it against
+  # the commit before it, and nothing else would check its files.
+  group: bump-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# The three test jobs read scripts/ and, for the workflow-set test, the
+# workflow files; test-bump.sh also checks that every entry has the bumper's
+# three lines, so a new entry runs it too. A bump PR changes none of these, so
+# its jobs skip, and the run still concludes success for bump.sh --merge. The
+# trigger stays unfiltered (CLAUDE.md, CI). A job whose `changes` failed runs
+# anyway (fail closed).
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      scripts: ${{ steps.filter.outputs.scripts }}
+      entries: ${{ steps.filter.outputs.entries }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+          # A push or merge_group run diffs in git, and paths-filter cannot fetch
+          # the base commit of this private repo with no credentials: fetch it all.
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          filters: |
+            scripts:
+              - 'scripts/**'
+              - '.github/workflows/**'
+            entries:
+              - added: 'Formula/*.rb'
+              - added: 'Casks/*.rb'
+              - added: 'Casks/*/*.rb'
+
   test:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.scripts == 'true' || needs.changes.outputs.entries == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -34,6 +71,8 @@ jobs:
         run: scripts/test-bump.sh
 
   mirror-test:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.scripts == 'true') }}
     # mirror.sh needs bash 4 or later and runs only here and on a Mac with
     # Homebrew's bash, so it has no bash 3.2 job.
     runs-on: ubuntu-latest
@@ -51,6 +90,8 @@ jobs:
         run: scripts/test-mirror.sh
 
   bash-3-2:
+    needs: changes
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.scripts == 'true' || needs.changes.outputs.entries == 'true') }}
     # Docker Hub's bash 3.2 image (Alpine), in place of a macOS runner: its bash is
     # the only one on PATH, so test-bump.sh and bump.sh both run under 3.2. Busybox's
     # diff prints only unified diffs, and the test counts GNU diff's `>` lines.
