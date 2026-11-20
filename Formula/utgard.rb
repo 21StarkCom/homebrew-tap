@@ -1,19 +1,19 @@
 # frozen_string_literal: true
 
-# Signed (Developer ID) + notarized macOS build of utgard, the remote-VM CLI from the idun repo.
+# Signed (Developer ID) + notarized macOS build of utgard, the remote-VM CLI, from 21StarkCom/utgard.
 class Utgard < Formula
   desc "Remote VMs: the devbox and the winbox, run from the Mac"
-  homepage "https://github.com/21StarkCom/idun"
+  homepage "https://github.com/21StarkCom/utgard"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
   # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idun/releases/assets/732517162",
+  url "https://api.github.com/repos/21StarkCom/utgard/releases/assets/771308344",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.11.2"
-  sha256 "68c9349999b55ac24dd65e47fcb9658cfc9446f4d324454f747b70ac45aa0f9d"
+  version "0.12.0"
+  sha256 "5364da8ecc9609ee65afe7b399a6e32effcbd7d5d79c428b94b36ff2f7d8e655"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,

@@ -87,8 +87,8 @@ does not record GitHub's host key.
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `urd` | formula | [urd](https://github.com/21StarkCom/urd) | `urd` | Go | ad-hoc | any |
 | `urd-linux` | formula | [urd](https://github.com/21StarkCom/urd) | `urd` | Go | none | none: Linux x86_64 |
-| `utgard` | formula | [idun](https://github.com/21StarkCom/idun) | `utgard` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
-| `utgard-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `utgard` | `bun build --compile` | none | none: Linux x86_64 |
+| `utgard` | formula | [utgard](https://github.com/21StarkCom/utgard) | `utgard` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `utgard-linux` | formula | [utgard](https://github.com/21StarkCom/utgard) | `utgard` | `bun build --compile` | none | none: Linux x86_64 |
 | `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `valkyrie-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | none | none: Linux x86_64 |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
@@ -579,21 +579,20 @@ from the `urd` repo.
 
 ## utgard
 
-The [`utgard`](https://github.com/21StarkCom/idun) remote VMs — the subcommands
-`utgard devbox` and `utgard winbox`, which run the devbox and the winbox VMs from the Mac.
-The formula puts only `utgard` on `PATH`. It is the fourth app of the `idun` repo, and
-takes over `devbox` and `winbox` from `idun` (idun's `docs/specs/vm-app.md`).
+The [`utgard`](https://github.com/21StarkCom/utgard) remote VMs — the subcommands
+`utgard devbox`, `utgard winbox` and `utgard open`, which run the devbox and the winbox VMs
+and open tabs on each box from the Mac. The formula puts only `utgard` on `PATH`. utgard
+took over `devbox` and `winbox` from `idun`, and lives in its own repo (utgard's
+`docs/specs/vm-app.md`).
 
 ```sh
 brew install 21StarkCom/tap/utgard
 ```
 
 The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
-a `utgard-vX.Y.Z` tag of the `idun` repo. It is compiled with the release Mac's Homebrew
-`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate). A
-checkout of the `idun` repo can instead install a live, repo-tracking wrapper with
-`apps/idun/setup.sh`, which writes no `~/.local/bin/utgard` while this formula is
-installed; it never removes one written before, so remove that by hand.
+a `vX.Y.Z` tag of the `utgard` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
+Releases up to 0.11.2 came from the `utgard-vX.Y.Z` tags of the `idun` repo.
 
 On Linux x86_64 (the devbox):
 
@@ -603,7 +602,7 @@ brew install 21StarkCom/tap/utgard-linux
 
 `utgard-linux` installs the same release's Linux x86_64 binary, which
 `scripts/release-darwin.sh utgard` cross-compiles beside the macOS one from the
-`utgard-vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
+`vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `hermod-linux`
 is (see [hermod](#hermod)).
 
 ## valkyrie
@@ -863,8 +862,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `urd` | urd | `scripts/release.sh`, after its tag's `.github/workflows/release.yml` publishes | the devbox |
 | `urd-linux` | urd | `scripts/release.sh` (`--asset-suffix linux_amd64.zip`) | the devbox |
-| `utgard` | idun | `scripts/release-darwin.sh utgard`, for a `utgard-v*` tag | the signing Mac |
-| `utgard-linux` | idun | `scripts/release-darwin.sh utgard` (`--asset-suffix linux_x64.zip`) | the signing Mac |
+| `utgard` | utgard | `scripts/release-darwin.sh utgard`, for a `v*` tag | the signing Mac |
+| `utgard-linux` | utgard | `scripts/release-darwin.sh utgard` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `valkyrie` | idun | `scripts/release-darwin.sh valkyrie`, for a `valkyrie-v*` tag | the signing Mac |
 | `valkyrie-linux` | idun | `scripts/release-darwin.sh valkyrie` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
@@ -872,7 +871,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun`, `njord`, `valkyrie` and `utgard`, and each one's `-linux` formula), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
+agent-seats', idun's (`idun`, `njord` and `valkyrie`, and each one's `-linux` formula), utgard's (`utgard` and `utgard-linux`), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`; sonar's two: `sonar` and `sonar-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
