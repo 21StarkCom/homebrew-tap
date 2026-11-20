@@ -14,7 +14,10 @@ permissions:
   pull-requests: read # dorny/paths-filter reads the PR's changed-files list
 
 concurrency:
-  group: formulae-${{ github.event.pull_request.number || github.ref }}
+  # Each push to main has a group of its own commit, so a newer push never
+  # cancels it, not even while it waits: its `changes` job diffs it against
+  # the commit before it, and nothing else would check its files.
+  group: formulae-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
