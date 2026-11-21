@@ -5,9 +5,9 @@ class Idun < Formula
   desc "Personal-ops CLI for GitHub identities, seat rotation, and housekeeping"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/idun
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/idun-v0.180.1/idun_v0.180.1_darwin_arm64.zip"
-  version "0.180.1"
-  sha256 "1d62f7c5bb9e67b358a2a4ef3d1d083bf6512a09df594a76ae00e82c073aae6c"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/idun-v0.181.0/idun_v0.181.0_darwin_arm64.zip"
+  version "0.181.0"
+  sha256 "9709adad9699726009e738ba035df7b05ce431a38554f6e756bce0fbc16b7eaa"
 
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
