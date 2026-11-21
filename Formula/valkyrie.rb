@@ -5,9 +5,9 @@ class Valkyrie < Formula
   desc "Agent launchers: Claude Code and Codex sessions in tabs and worktrees"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/idun
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/valkyrie-v0.18.0/valkyrie_0.18.0_darwin_arm64.zip"
-  version "0.18.0"
-  sha256 "250bd4075cb49faa2521b1a9ce47a7bff66886f392448f6afdc342c65c3415de"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/valkyrie-v0.19.0/valkyrie_0.19.0_darwin_arm64.zip"
+  version "0.19.0"
+  sha256 "665e0b54347cf6fa7bcbd48a23bbbe30d26adc0d2534daae8eea940859720861"
 
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
