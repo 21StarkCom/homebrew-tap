@@ -17,10 +17,10 @@ class Sleipnir < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/772237538",
+  url "https://api.github.com/repos/21StarkCom/sleipnir/releases/assets/774702086",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.107.1"
-  sha256 "cc1f8bc2f308dfb57606b2a4aa4a9d6877a2841a3011d460099e274a6017e661"
+  version "0.108.0"
+  sha256 "380a872c6b936e2a99e4e0020fc3a22309ccac4b6782ad5d16a348951606d0ea"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
