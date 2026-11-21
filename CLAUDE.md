@@ -42,9 +42,10 @@ brew install 21StarkCom/tap/idun
 
 # Lint and audit an edit, from the repo root
 brew style Formula/idun.rb
-brew audit --strict 21StarkCom/tap/idun
+# --except=version, as CI: a url can make the bumper's `version` line "redundant"
+brew audit --strict --except=version 21StarkCom/tap/idun
 # A -linux formula: audit it as Linux x86_64 (CI does); reinstall and test it on the devbox
-brew audit --strict --os=linux --arch=intel 21StarkCom/tap/<tool>-linux
+brew audit --strict --except=version --os=linux --arch=intel 21StarkCom/tap/<tool>-linux
 
 # A cask's audit skips the unversioned-URL check, as CI does; atlas also needs `,token_conflicts`
 brew fetch --cask 21StarkCom/tap/atlas        # checks the registered clone's pinned sha256

@@ -149,11 +149,14 @@ jobs:
           # OS and arch being audited.
           # Named formulae only: a bare `brew audit` audits every formula it can find,
           # and a run that changed only a -linux formula has no macOS one.
+          # --except=version: a public url names the release, so Homebrew can scan the
+          # version from it (muninn-v0.3.2.tar.gz) and calls the `version` line redundant.
+          # The bumper needs that line, and test-bump.sh checks it is there once.
           if ((${#macos[@]})); then
-            brew audit --strict --os=tahoe --arch=arm "${macos[@]}"
+            brew audit --strict --except=version --os=tahoe --arch=arm "${macos[@]}"
           fi
           if ((${#linux[@]})); then
-            brew audit --strict --os=linux --arch=intel "${linux[@]}"
+            brew audit --strict --except=version --os=linux --arch=intel "${linux[@]}"
           fi
           # The download check `brew install` used to make: each asset is readable
           # and matches its pinned sha256. One call downloads them concurrently.
