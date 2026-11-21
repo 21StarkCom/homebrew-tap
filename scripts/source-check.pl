@@ -21,9 +21,9 @@
 # those files are source with no exception, and so is any file that holds
 # "sourcesContent". Anywhere outside node_modules/ or in such a package, a JS,
 # TS or CSS file with an inline source map (sourceMappingURL=data:) is source.
-# An AppleDouble file (._<name>) is metadata, and is not read.
-# Postfix conditions only: brew style's layout pass misreads a line that starts
-# with `if` in shell strings, and the same habit keeps this file uniform.
+# An AppleDouble file (._<name>, with its magic number) is metadata, and is not
+# checked. Postfix conditions where they fit: brew style's layout pass misreads a
+# line that starts with `if` in shell strings, and the same habit keeps this file uniform.
 use strict;
 use warnings;
 use Compress::Raw::Zlib qw(MAX_WBITS Z_OK Z_STREAM_END);
@@ -93,8 +93,9 @@ sub consider {
   $p =~ s{\A(?:\./)+}{};
   return if $p eq "" || $p =~ m{/\z};
   # An AppleDouble file (._<name>, as macOS tar and zip write one beside a file
-  # with extended attributes) holds that file's metadata, not its bytes.
-  return if $p =~ m{(?:\A|/)\._[^/]*\z};
+  # with extended attributes) holds that file's metadata, not its bytes. Its
+  # magic number tells it from a file that only has such a name.
+  return if $p =~ m{(?:\A|/)\._[^/]*\z} && ($body->() // "") =~ /\A\x00\x05\x16\x07/;
   my ($rest) = $p =~ m{.*(?:\A|/)node_modules/(.*)\z};
   my $ours = defined $rest && $rest =~ m{\A(@[^/]+)/[^/]+/} && $scope{$1} ? 1 : 0;
   return if defined $rest && !$ours;
@@ -186,7 +187,11 @@ sub tar_gz {
   my $next = Archive::Tar->iter($file, 1) or die "$file: cannot read: " . Archive::Tar->error . "\n";
   while (my $f = $next->()) {
     next if $f->is_dir;
-    consider($f->full_path, sub { $f->is_file ? $f->get_content : undef });
+    # A hard link holds no bytes of its own: the tree check reads its target's.
+    consider($f->full_path, sub {
+      die "$file: " . $f->full_path . " is a hard link, which the check cannot read\n" if $f->is_hardlink;
+      $f->is_file ? $f->get_content : undef;
+    });
   }
   my $error = Archive::Tar->error;
   die "$file: cannot read: $error\n" if defined $error && $error ne "";

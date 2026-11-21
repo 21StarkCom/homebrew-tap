@@ -7,6 +7,8 @@
 class UrdLinux < Formula
   desc "Local identity and infra cache for Linux: one SQLite file, synced from vendors"
   homepage "https://github.com/21StarkCom/homebrew-tap"
+  # version / url / sha256 are rewritten when urd's release calls the bumper with
+  # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
   # Source release repo: 21StarkCom/urd
   url "https://github.com/21StarkCom/homebrew-tap/releases/download/urd-linux-v0.15.1/urd_v0.15.1_linux_amd64.zip"
   version "0.15.1"

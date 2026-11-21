@@ -40,7 +40,8 @@ URL_RE='^[[:space:]]*url[[:space:]]+"https://api\.github\.com/repos/([A-Za-z0-9_
 # this tap, and names its source repo in a comment.
 PUBLIC_URL_RE='^[[:space:]]*url[[:space:]]+"https://github\.com/21StarkCom/homebrew-tap/releases/download/[^"/]+/[^"/]+"'
 SOURCE_RE='^[[:space:]]*#[[:space:]]*Source release repo:[[:space:]]*([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)[[:space:]]*$'
-ASSET_NAME_RE='^[A-Za-z0-9._+@-]+$'
+# No +: the upload passes the name unencoded in a query, where + reads as a space.
+ASSET_NAME_RE='^[A-Za-z0-9._@-]+$'
 VERSION_RE='^[[:space:]]*version[[:space:]]+"([^"]*)"'
 NL=$'\n'
 
@@ -311,7 +312,7 @@ check_source_files() {
 # reused; other bytes under the name stop the run: a public asset is never
 # replaced. A draft left by a failed run has no tag yet, so a new draft is made.
 publish_asset() {
-  local found rid="" draft=false p_id="" p_state="" p_digest="" _end got up err
+  local found rid="" draft=false p_id="" p_state="" p_digest="" p_name="" _end got up err
   # The published release of the tag: its id, and the id, state and digest of
   # its asset of this name (ASSET_NAME_RE keeps the name safe in the jq string).
   if found="$(gh api "repos/${TAP_REPO}/releases/tags/${pub_tag}" --jq '
@@ -352,9 +353,11 @@ publish_asset() {
   say "==> uploading ${a_name} to release ${pub_tag}"
   up="$(gh api -X POST -H 'Content-Type: application/octet-stream' --input "${tmp}/asset" \
     "https://uploads.github.com/repos/${TAP_REPO}/releases/${rid}/assets?name=${a_name}" \
-    --jq '[.id, .state, (.digest // ""), "."] | map(tostring) | join("\u001f")')" ||
+    --jq '[.id, .state, (.digest // ""), .name, "."] | map(tostring) | join("\u001f")')" ||
     die "could not upload ${a_name} to release ${pub_tag}"
-  IFS=$'\x1f' read -r p_id p_state p_digest _end <<<"${up}"
+  IFS=$'\x1f' read -r p_id p_state p_digest p_name _end <<<"${up}"
+  # GitHub renames an asset whose name holds special characters: the pinned url would 404.
+  [[ "${p_name}" = "${a_name}" ]] || die "GitHub stored the upload of ${a_name} to ${pub_tag} as '${p_name}'"
   [[ "${p_state}" = uploaded ]] || die "the upload of ${a_name} to ${pub_tag} reads back as state '${p_state}'"
   if [[ -z "${p_digest}" ]]
   then

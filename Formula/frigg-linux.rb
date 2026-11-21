@@ -7,6 +7,8 @@
 class FriggLinux < Formula
   desc "Google Workspace IT-ops toolkit for Linux: frigg, frigg-*, frg-*, gws-* tools"
   homepage "https://github.com/21StarkCom/homebrew-tap"
+  # version / url / sha256 are rewritten when frigg's release calls the bumper with
+  # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
   # Source release repo: 21StarkCom/frigg
   url "https://github.com/21StarkCom/homebrew-tap/releases/download/frigg-linux-v0.88.0/frigg_v0.88.0_linux_amd64.zip"
   version "0.88.0"

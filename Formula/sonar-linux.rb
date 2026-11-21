@@ -8,6 +8,8 @@
 class SonarLinux < Formula
   desc "Read-only CLI that resolves vendor links and probes URLs, for Linux"
   homepage "https://github.com/21StarkCom/homebrew-tap"
+  # version / url / sha256 are rewritten when sonar's release calls the bumper with
+  # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
   # Source release repo: 21StarkCom/sonar
   url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-linux-v0.15.2/sonar_v0.15.2_linux_amd64.zip"
   version "0.15.2"

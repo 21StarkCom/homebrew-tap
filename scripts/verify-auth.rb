@@ -36,6 +36,14 @@ Dir.mktmpdir("verify-auth-home") do |home|
         HOMEBREW_BREW_FILE.to_s, "fetch", kind, name
       )
       abort "#{name}: a public entry did not download with no token:\n#{output}" unless status.success?
+      # A fetch Homebrew skips exits 0 with nothing downloaded. Ask --cache as macOS
+      # arm64 for a cask: it prints nothing for a macOS-only cask on Linux.
+      cache_args = (kind == "--cask") ? ["--cask", "--os=tahoe", "--arch=arm"] : ["--formula"]
+      cache, = Open3.capture2(
+        { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => nil, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
+        HOMEBREW_BREW_FILE.to_s, "--cache", *cache_args, name
+      )
+      abort "#{name}: a public entry's no-token fetch downloaded nothing" unless File.size?(cache.strip)
       output, status = Open3.capture2e(
         { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => nil, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
         HOMEBREW_BREW_FILE.to_s, "info", "--json=v2", kind, name

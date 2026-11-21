@@ -207,7 +207,7 @@ case "$cmd" in
         dig="sha256:$(h "$S/assets/$aid")"
         [ ! -f "$S/upload.bad" ] || dig="sha256:0000000000000000000000000000000000000000000000000000000000000000"
         [ ! -f "$S/upload.nodigest" ] || dig=""
-        jq -n --argjson id "$aid" --arg d "$dig" '{id: $id, state: "uploaded", digest: (if $d == "" then null else $d end)}' | emit
+        jq -n --argjson id "$aid" --arg n "${path##*name=}" --arg d "$dig" '{id: $id, name: $n, state: "uploaded", digest: (if $d == "" then null else $d end)}' | emit
         ;;
       "repos/$TAP/releases/"[0-9]*)
         # Publishing a draft makes its tag readable, as on GitHub.
