@@ -41,6 +41,10 @@ DST_TOKEN="dst-token-fedcba9876543210"
 DST_BASIC="$(printf 'x-access-token:%s' "${DST_TOKEN}" | base64 | tr -d '\n')"
 MARKER='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
 OLD_TIME="2020-01-01T00:00:00Z"
+# The PUBLIC_ENTRIES of the next rig's mirror.sh; pub_rig sets its own.
+export RIG_PUBLIC="demo"
+PUB_TAP="21StarkCom/homebrew-public"
+PUB_DL="https://github.com/${PUB_TAP}/releases/download"
 passed=0 failed=0 rigs=0 name="" code=0 out="" err="" R=""
 NL=$'\n'
 
@@ -173,6 +177,135 @@ pkgcask_text() { # <version> <asset id> <sha256>: a cask whose asset is a .pkg, 
     'end'
 }
 
+# A formula with the tap's token code, as each real formula has it: the lookup on
+# one line (tokformula), or in a do block (blockformula). <name> <version> <asset id> <sha256>
+tokformula_text() {
+  local cls
+  cls="$(perl -e 'print ucfirst($ARGV[0])' "$1")"
+  printf '%s\n' \
+    '# frozen_string_literal: true' \
+    '' \
+    "# The $1 fixture: a formula with the tap's token code." \
+    "class ${cls} < Formula" \
+    "  desc \"$1\"" \
+    "  homepage \"https://github.com/21StarkCom/$1\"" \
+    '  # API asset URL (private repo). asset id is release-specific; bump on each release.' \
+    "  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else \`gh auth token\`, else a keychain token."
+  case "$1" in
+    blockformula)
+      printf '%s\n' \
+        '  # So does its fix_linkage worker (sandbox_operation.rb), which reloads it for preserve_rpath.' \
+        '  worker = %w[build.rb test.rb postinstall.rb sandbox_operation.rb].any? do |w|' \
+        '    $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s' \
+        '  end'
+      ;;
+    *) printf '%s\n' '  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }' ;;
+  esac
+  printf '%s\n' \
+    '  token = worker ? "" : GitHub::API.credentials.to_s.strip' \
+    "  url \"https://api.github.com/repos/21StarkCom/$1/releases/assets/$3\"," \
+    '      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]' \
+    "  version \"$2\"" \
+    "  sha256 \"$4\"" \
+    '  if token.empty? && !worker' \
+    '    raise CurlDownloadStrategyError.new(' \
+    '      stable.url,' \
+    "      \"This private tap needs a GitHub token with contents:read access: \" \\" \
+    "      \"run \`gh auth login\` with Homebrew's gh (\`brew install gh\`), or set HOMEBREW_GITHUB_API_TOKEN.\"," \
+    '    )' \
+    '  end' \
+    '' \
+    '  depends_on arch: :arm64' \
+    '' \
+    '  def install' \
+    "    bin.install \"$1\"" \
+    '  end' \
+    'end'
+}
+
+# A cask with the tap's download adapter and its caveat. <version> <asset id> <sha256>
+tokcask_text() {
+  printf '%s\n' \
+    '# frozen_string_literal: true' \
+    '' \
+    'require "download_strategy"' \
+    '' \
+    '# Cask URL specs are serialized by brew info and installed metadata. Keep the' \
+    '# credential in the downloader only; inherit all native preflight/cache/resume.' \
+    'class TokcaskPrivateReleaseStrategy < CurlDownloadStrategy' \
+    '  def initialize(url, name, version, **meta)' \
+    '    super' \
+    '    token = GitHub::API.credentials.to_s.strip' \
+    '    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]' \
+    '  end' \
+    'end' \
+    '' \
+    '# The tokcask fixture: a cask with the tap'"'"'s download adapter.' \
+    'cask "tokcask" do' \
+    "  version \"$1\"" \
+    "  sha256 \"$3\"" \
+    '' \
+    '  # API asset URL (private repo). asset id is release-specific; bump on each release.' \
+    "  url \"https://api.github.com/repos/21StarkCom/tokcask/releases/assets/$2\"," \
+    '      using: TokcaskPrivateReleaseStrategy' \
+    '  name "Tokcask"' \
+    '  homepage "https://github.com/21StarkCom/tokcask"' \
+    '' \
+    '  caveats <<~EOS' \
+    "    Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed" \
+    '    in (`brew install gh && gh auth login`), or export HOMEBREW_GITHUB_API_TOKEN=<token>' \
+    '' \
+    '    `brew uninstall --zap --cask 21StarkCom/tap/tokcask` removes its data.' \
+    '  EOS' \
+    'end'
+}
+
+# The public copies of tokformula, blockformula and tokcask, written out by hand
+# apart from mirror.sh's perl. <name> <version> <asset name> <sha256>
+pub_formula_copy() {
+  local cls
+  cls="$(perl -e 'print ucfirst($ARGV[0])' "$1")"
+  printf '%s\n' \
+    '# frozen_string_literal: true' \
+    '' \
+    "${MARKER}" \
+    '' \
+    "# The $1 fixture: a formula with the tap's token code." \
+    "class ${cls} < Formula" \
+    "  desc \"$1\"" \
+    "  homepage \"https://github.com/${PUB_TAP}\"" \
+    "  url \"${PUB_DL}/$1-v$2/$3\"" \
+    "  version \"$2\"" \
+    "  sha256 \"$4\"" \
+    '' \
+    '  depends_on arch: :arm64' \
+    '' \
+    '  def install' \
+    "    bin.install \"$1\"" \
+    '  end' \
+    'end'
+}
+pub_tokcask_copy() { # <version> <asset name> <sha256>
+  printf '%s\n' \
+    '# frozen_string_literal: true' \
+    '' \
+    "${MARKER}" \
+    '' \
+    '# The tokcask fixture: a cask with the tap'"'"'s download adapter.' \
+    'cask "tokcask" do' \
+    "  version \"$1\"" \
+    "  sha256 \"$3\"" \
+    '' \
+    "  url \"${PUB_DL}/tokcask-v$1/$2\"" \
+    '  name "Tokcask"' \
+    "  homepage \"https://github.com/${PUB_TAP}\"" \
+    '' \
+    '  caveats <<~EOS' \
+    '    `brew uninstall --zap --cask 21StarkCom/public/tokcask` removes its data.' \
+    '  EOS' \
+    'end'
+}
+
 write_stub() {
   cat >"$1" <<'STUB'
 #!/usr/bin/env bash
@@ -181,7 +314,8 @@ write_stub() {
 # logged with the side its GH_TOKEN belongs to, never the token itself.
 set -u
 S="$FAKE_GH"
-T=GetEvinced/homebrew-tap
+# The target repo: GetEvinced's, or the public tap's under --target public.
+T="${FAKE_TARGET:-GetEvinced/homebrew-tap}"
 role=none
 [[ ${GH_TOKEN:-} == "$FAKE_SRC_TOKEN" ]] && role=src
 [[ ${GH_TOKEN:-} == "$FAKE_DST_TOKEN" ]] && role=dst
@@ -346,18 +480,22 @@ rig() {
   rigs=$((rigs + 1))
   R="${work}/rig${rigs}"
   mkdir -p "${R}/src/scripts" "${R}/src/Formula" "${R}/src/Casks" "${R}/bin" "${R}/gh/src" "${R}/tmp"
-  # The rig's own exclusion list, so a change to the real one never turns this red.
-  perl -pe 's/^EXCLUDED=.*/EXCLUDED="secret"/' "${root}/scripts/mirror.sh" >"${R}/src/scripts/mirror.sh"
-  grep -qx 'EXCLUDED="secret"' "${R}/src/scripts/mirror.sh" || {
-    echo "test-mirror.sh: cannot set EXCLUDED in the copy of mirror.sh" >&2
+  # The rig's own exclusion and public lists, so a change to the real ones never
+  # turns this red.
+  perl -pe 's/^EXCLUDED=.*/EXCLUDED="secret"/; s/^PUBLIC_ENTRIES=.*/PUBLIC_ENTRIES="$ENV{RIG_PUBLIC}"/' \
+    "${root}/scripts/mirror.sh" >"${R}/src/scripts/mirror.sh"
+  if ! grep -qx 'EXCLUDED="secret"' "${R}/src/scripts/mirror.sh" ||
+     ! grep -qx "PUBLIC_ENTRIES=\"${RIG_PUBLIC}\"" "${R}/src/scripts/mirror.sh"
+  then
+    echo "test-mirror.sh: cannot set EXCLUDED and PUBLIC_ENTRIES in the copy of mirror.sh" >&2
     exit 1
-  }
+  fi
   echo '[]' >"${R}/gh/releases.json"
   echo 9000 >"${R}/gh/next_id"
   : >"${R}/gh/log"
   write_stub "${R}/bin/gh"
   write_git_shim "${R}/bin/git"
-  printf '[init]\n\tdefaultBranch = main\n[advice]\n\tdetachedHead = false\n[url "file://%s"]\n\tinsteadOf = https://github.com/GetEvinced/homebrew-tap.git\n' \
+  printf '[init]\n\tdefaultBranch = main\n[advice]\n\tdetachedHead = false\n[url "file://%s"]\n\tinsteadOf = https://github.com/GetEvinced/homebrew-tap.git\n\tinsteadOf = https://github.com/21StarkCom/homebrew-public.git\n' \
     "${R}/target.git" >"${R}/gitconfig"
   export GIT_CONFIG_GLOBAL="${R}/gitconfig"
   source_asset demo 101 "demo 1.0.0"
@@ -1226,6 +1364,135 @@ check "--help exits 0" is_code 0
 check "--help names the environment" out_has "MIRROR_TARGET_TOKEN"
 check "--help names the source check" out_has "--check <entry> <archive>"
 check "--help names the rename files" out_has "formula_renames.json and cask_renames.json"
+check "--help names the public target" out_has "--target public"
+run_mirror --target bogus
+check "an unknown --target exits 2" is_code 2
+check "says which targets there are" err_has "--target needs getevinced or public"
+
+# --- --target public (docs/specs/public-tap.md) --------------------------------
+
+# A rig for --target public: the rig's tap plus tokformula, blockformula and
+# tokcask, and a public tap that holds only the scan files a new fleet repo gets.
+pub_rig() {
+  RIG_PUBLIC="demo libdemo democask tokformula blockformula tokcask"
+  rig
+  RIG_PUBLIC="demo"
+  source_asset tokformula 501 "tokformula 1.0.0"
+  source_asset blockformula 511 "blockformula 1.0.0"
+  source_asset tokcask 601 "tokcask 1.0.0"
+  tokformula_text tokformula 1.0.0 501 "$(asset_sha tokformula 501)" >"${R}/src/Formula/tokformula.rb"
+  tokformula_text blockformula 1.0.0 511 "$(asset_sha blockformula 511)" >"${R}/src/Formula/blockformula.rb"
+  tokcask_text 1.0.0 601 "$(asset_sha tokcask 601)" >"${R}/src/Casks/tokcask.rb"
+  commit_src
+  rm -rf "${R}/target.git" "${R}/seed"
+  git init -q --bare "${R}/target.git"
+  git init -q "${R}/seed"
+  mkdir -p "${R}/seed/.github/workflows"
+  printf 'name: secret-scan\n' >"${R}/seed/.github/workflows/secret-scan.yml"
+  push_seed seed
+}
+run_pub() { FAKE_TARGET="${PUB_TAP}" run_mirror --target public "$@"; }
+set_public() { # <entry>...: the PUBLIC_ENTRIES of the rig's mirror.sh
+  LIST="$*" perl -pi -e 's/^PUBLIC_ENTRIES=.*/PUBLIC_ENTRIES="$ENV{LIST}"/' "${R}/src/scripts/mirror.sh"
+}
+copy_lacks() { ! copy_has "$@"; }
+copy_is() { # <rel path> <expected text>
+  diff <(printf '%s\n' "$2") <(tgt_file "$1") >"${R}/copy.diff"
+}
+no_token_trace() {
+  ! tgt grep -qiE 'GitHub::API|Authorization:|CurlDownloadStrategy|api\.github\.com/repos/|HOMEBREW_GITHUB_API_TOKEN|private repos|21starkcom/tap([^a-z0-9_]|$)' \
+    main -- Formula Casks
+}
+readme_line1_is() { [[ "$(tgt_file README.md | sed -n 1p)" == "$1" ]]; }
+
+begin "public: first run into a new tap"
+pub_rig
+run_pub
+check "exit 0" is_code 0
+check "uploads the six listed entries" count_is "dst release upload" 6
+check "copies no entry off the list" tgt_lacks Formula/kept.rb
+for e in demo libdemo tokformula blockformula; do check "Formula/${e}.rb pushed" tgt_has "Formula/${e}.rb"; done
+for e in democask tokcask; do check "Casks/${e}.rb pushed" tgt_has "Casks/${e}.rb"; done
+check "demo downloads from the public release" copy_has Formula/demo.rb "  url \"${PUB_DL}/demo-v1.0.0/demo-101.zip\""
+check "demo drops its headers: argument" copy_lacks Formula/demo.rb "headers:"
+check "tokformula: the token code and its comments go" \
+  copy_is Formula/tokformula.rb "$(pub_formula_copy tokformula 1.0.0 tokformula-501.zip "$(asset_sha tokformula 501)")"
+check "blockformula: the do block goes too" \
+  copy_is Formula/blockformula.rb "$(pub_formula_copy blockformula 1.0.0 blockformula-511.zip "$(asset_sha blockformula 511)")"
+check "tokcask: the adapter, its comments and the caveat go" \
+  copy_is Casks/tokcask.rb "$(pub_tokcask_copy 1.0.0 tokcask-601.zip "$(asset_sha tokcask 601)")"
+check "democask: its one-line caveat goes, with the blank line before end" \
+  copy_is Casks/democask.rb "$(printf '%s\n' '# frozen_string_literal: true' '' "${MARKER}" '' 'cask "democask" do' \
+    '  version "1.0.0"' "  sha256 \"$(asset_sha democask 301)\"" '' "  url \"${PUB_DL}/democask-v1.0.0/democask-301.zip\"" \
+    '  name "Democask"' "  homepage \"https://github.com/${PUB_TAP}\"" 'end')"
+check "libdemo depends on 21starkcom/public/demo" copy_has Formula/libdemo.rb 'depends_on "21starkcom/public/demo"'
+check "an uppercase 21STARKCOM/tap is renamed too" copy_has Formula/libdemo.rb 'or 21STARKCOM/public/demo'
+check "21StarkCom/homebrew-tap and 21StarkCom/tapestry stay" copy_has Formula/libdemo.rb 'Its home is 21StarkCom/homebrew-tap; 21StarkCom/tapestry is not a tap.'
+check "no copy holds token code or the private tap" no_token_trace
+check "the scan files stay" tgt_has .github/workflows/secret-scan.yml
+check "README starts with the tap's name" readme_line1_is "# 21StarkCom/public"
+check "README says how to tap it" readme_has "brew tap 21StarkCom/public"
+check "README asks for no token" readme_lacks "HOMEBREW_GITHUB_API_TOKEN"
+check "README lists demo" readme_has '| `demo` | formula | 1.0.0 |'
+check "README lists tokcask" readme_has '| `tokcask` | cask | 1.0.0 |'
+check "releases are published" no_drafts
+check "writes use the target token" writes_use_target_token
+check "no secret in the output" no_secret_in_output
+check "GITHUB_OUTPUT lists tokcask" output_lists casks tokcask
+
+begin "public: a changed entry reuses its copy and keeps its asset name"
+perl -pi -e 's/desc "demo"/desc "demo, again"/' "${R}/src/Formula/demo.rb"
+commit_src
+run_pub
+check "exit 0" is_code 0
+check "no upload" no_calls "release upload"
+check "the copy has the change" copy_has Formula/demo.rb 'desc "demo, again"'
+check "the url still names the uploaded asset" copy_has Formula/demo.rb "  url \"${PUB_DL}/demo-v1.0.0/demo-101.zip\""
+
+begin "public: an entry taken off the list"
+set_public demo libdemo democask tokformula blockformula
+run_pub
+check "exit 0" is_code 0
+check "its copy is deleted" tgt_lacks Casks/tokcask.rb
+check "says why" out_has "tokcask: is excluded from the mirror; deleting Casks/tokcask.rb"
+check "README no longer lists it" readme_lacks '`tokcask`'
+
+begin "public: an entry that names one off the list"
+set_public libdemo democask tokformula blockformula
+run_pub
+check "exit 1" is_code 1
+check "says it names an excluded entry" err_has "it names 21StarkCom/tap/demo, which the mirror excludes"
+check "demo's copy is deleted" tgt_lacks Formula/demo.rb
+check "the others stay" tgt_has Formula/tokformula.rb
+
+begin "public: token code of a shape the copy does not know"
+pub_rig
+source_asset oddformula 701 "oddformula 1.0.0"
+tokformula_text oddformula 1.0.0 701 "$(asset_sha oddformula 701)" |
+  sed 's/credentials\.to_s\.strip/credentials.to_s/' >"${R}/src/Formula/oddformula.rb"
+source_asset argformula 711 "argformula 1.0.0"
+formula_text argformula 1.0.0 711 "$(asset_sha argformula 711)" |
+  sed 's#headers: \["Accept: application/octet-stream"\]#verified: "github.com/21StarkCom/argformula/"#' >"${R}/src/Formula/argformula.rb"
+commit_src
+set_public demo oddformula argformula
+run_pub
+check "exit 1" is_code 1
+check "oddformula fails on its token lookup" err_has "oddformula: cannot copy Formula/oddformula.rb: the public copy still holds GitHub::API"
+check "argformula fails on its url argument" err_has "argformula: cannot copy Formula/argformula.rb: its url stanza has an argument the public copy cannot drop"
+check "neither uploads its asset: only demo's goes" count_is "dst release upload" 1
+check "neither is pushed" bash -c '! git --git-dir="$1" cat-file -e main:Formula/oddformula.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Formula/argformula.rb 2>/dev/null' _ "${R}/target.git"
+check "demo still goes" tgt_has Formula/demo.rb
+
+begin "public: --dry-run, and a listed name that is no entry"
+pub_rig
+set_public demo ghost
+before="$(head_of)"
+run_pub --dry-run
+check "exit 0" is_code 0
+check "says what it would copy" out_has "demo 1.0.0: would copy 21StarkCom/demo asset 101 to release demo-v1.0.0"
+check "warns of the listed name" err_has "PUBLIC_ENTRIES names ghost, which is no entry of this tap"
+check "no upload" no_calls "release upload"
+check "no push" head_is "${before}"
 
 printf '\n%s passed, %s failed\n' "${passed}" "${failed}"
 ((failed == 0))

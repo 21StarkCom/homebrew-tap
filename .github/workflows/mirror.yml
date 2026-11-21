@@ -2,11 +2,13 @@ name: mirror
 
 # Copies every entry of this tap, with its release asset, into
 # GetEvinced/homebrew-tap (docs/specs/getevinced-mirror.md, epic STARK-13601),
-# then fetches the changed copies from GetEvinced to prove they download. No
-# pull_request trigger: bump.yml, a gate workflow, runs scripts/test-mirror.sh, so
-# this file stays out of bump.sh's GATE_WORKFLOWS. The App key lives in the
-# Environment getevinced-mirror, which only main can use (D10), and each job also
-# refuses any other ref, so a dispatch on another branch skips both jobs.
+# then fetches the changed copies from GetEvinced to prove they download. The
+# public-* jobs do the same for the entries of PUBLIC_ENTRIES into the public tap
+# 21StarkCom/homebrew-public (docs/specs/public-tap.md, STARK-19531), and fetch
+# them with no token. No pull_request trigger: bump.yml, a gate workflow, runs
+# scripts/test-mirror.sh, so this file stays out of bump.sh's GATE_WORKFLOWS. Each
+# App key lives in an Environment that only main can use (D10), and each job also
+# refuses any other ref, so a dispatch on another branch skips every job.
 on:
   push:
     branches: [main]
@@ -201,6 +203,146 @@ jobs:
             brew fetch --cask "$cask"
             # As in formulae.yml: a cask Homebrew skips exits 0 having downloaded
             # nothing. Ask --cache as macOS arm64: it prints nothing for one on Linux.
+            [[ -s "$(brew --cache --cask --os=tahoe --arch=arm "$cask")" ]] ||
+              { echo "$cask: brew fetch --cask downloaded nothing" >&2; exit 1; }
+            echo "$cask: fetched"
+          done
+
+  public-sync:
+    # The public tap. It runs once the repo variable PUBLIC_TAP_APP_CLIENT_ID names
+    # the App 21stark-public-tap; the App's key lives in the Environment public-tap,
+    # which only main can use. Every published asset stays public: mirror.sh
+    # checks each copy before its upload.
+    if: github.ref == 'refs/heads/main' && vars.PUBLIC_TAP_APP_CLIENT_ID != ''
+    runs-on: ubuntu-latest
+    environment: public-tap
+    timeout-minutes: 60
+    outputs:
+      formulae: ${{ steps.mirror.outputs.formulae }}
+      casks: ${{ steps.mirror.outputs.casks }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # main's tip, as in sync.
+          ref: main
+          persist-credentials: false
+      - name: Mint a 21StarkCom/homebrew-public token
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.PUBLIC_TAP_APP_CLIENT_ID }}
+          private-key: ${{ secrets.PUBLIC_TAP_APP_KEY }}
+          owner: 21StarkCom
+          repositories: homebrew-public
+          permission-contents: write
+      - name: Name the App's bot as the committer
+        id: bot
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          SLUG: ${{ steps.app.outputs.app-slug }}
+        run: |
+          id="$(gh api "users/${SLUG}%5Bbot%5D" --jq .id)"
+          echo "name=${SLUG}[bot]" >>"$GITHUB_OUTPUT"
+          echo "email=${id}+${SLUG}[bot]@users.noreply.github.com" >>"$GITHUB_OUTPUT"
+      - name: Install bsdtar
+        run: command -v bsdtar || { sudo apt-get update -qq && sudo apt-get install -y -qq libarchive-tools; }
+      - name: Mirror
+        id: mirror
+        env:
+          MIRROR_SOURCE_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
+          MIRROR_TARGET_TOKEN: ${{ steps.app.outputs.token }}
+          MIRROR_GIT_NAME: ${{ steps.bot.outputs.name }}
+          MIRROR_GIT_EMAIL: ${{ steps.bot.outputs.email }}
+        run: scripts/mirror.sh --target public
+
+  public-verify:
+    needs: public-sync
+    # As verify, for the public tap, with no token anywhere: it taps and fetches
+    # as a person with no GitHub login does.
+    if: >-
+      !cancelled() && github.ref == 'refs/heads/main' && needs.public-sync.result != 'skipped' &&
+      (github.event_name != 'push' || needs.public-sync.outputs.formulae != '' || needs.public-sync.outputs.casks != '')
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_ANALYTICS: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+      GIT_TERMINAL_PROMPT: 0
+    steps:
+      - name: Put the runner's Homebrew on PATH
+        run: echo /home/linuxbrew/.linuxbrew/bin >>"$GITHUB_PATH"
+      - name: Update Homebrew
+        run: brew update
+      - name: Tap 21StarkCom/public with no credential
+        run: |
+          unset GH_TOKEN GITHUB_TOKEN HOMEBREW_GITHUB_API_TOKEN
+          brew tap 21StarkCom/public
+          brew trust --tap 21StarkCom/public
+          echo "TAP_DIR=$(brew --repository 21StarkCom/public)" >>"$GITHUB_ENV"
+      - name: Pick the copies to check
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          FORMULAE: ${{ needs.public-sync.outputs.formulae }}
+          CASKS: ${{ needs.public-sync.outputs.casks }}
+        run: |
+          marker='# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it.'
+          marked() {
+            local f
+            for f in "$TAP_DIR/$1"/*.rb "$TAP_DIR/$1"/*/*.rb; do
+              if [[ -f "$f" ]] && grep -qxF -- "$marker" "$f"; then
+                f="${f##*/}"
+                printf '%s ' "${f%.rb}"
+              fi
+            done
+          }
+          if [[ "$EVENT" != push ]]; then
+            FORMULAE="$(marked Formula)"
+            CASKS="$(marked Casks)"
+            if [[ -z "${FORMULAE// /}${CASKS// /}" ]]; then
+              echo "21StarkCom/public holds no file with the mirror marker; does \$marker still match scripts/mirror.sh's MARKER?" >&2
+              exit 1
+            fi
+          fi
+          echo "formulae=$FORMULAE" >>"$GITHUB_OUTPUT"
+          echo "casks=$CASKS" >>"$GITHUB_OUTPUT"
+          echo "checking formulae: ${FORMULAE:-none}; casks: ${CASKS:-none}"
+      - name: Style the copies
+        env:
+          FORMULAE: ${{ steps.pick.outputs.formulae }}
+          CASKS: ${{ steps.pick.outputs.casks }}
+        # Not FormulaAudit/DependencyOrder, as in verify.
+        run: |
+          paths=()
+          for f in $FORMULAE; do paths+=("$TAP_DIR/Formula/$f.rb"); done
+          for c in $CASKS; do paths+=("$TAP_DIR/Casks/$c.rb"); done
+          ((${#paths[@]} == 0)) || brew style --except-cops FormulaAudit/DependencyOrder "${paths[@]}"
+      - name: Fetch the copies with no token
+        env:
+          FORMULAE: ${{ steps.pick.outputs.formulae }}
+          CASKS: ${{ steps.pick.outputs.casks }}
+        run: |
+          unset GH_TOKEN GITHUB_TOKEN HOMEBREW_GITHUB_API_TOKEN
+          # Each fetch checks the download against the pinned sha256. Never add --os
+          # or --arch: brew fetch then looks only for a bottle and downloads nothing.
+          refs=()
+          for f in $FORMULAE; do refs+=("21starkcom/public/$f"); done
+          ((${#refs[@]} == 0)) || brew fetch "${refs[@]}"
+          for f in $FORMULAE; do
+            [[ "$f" == *-linux ]] || continue
+            tool="${f%-linux}"
+            cache="$(brew --cache "21starkcom/public/$f")"
+            [[ -s "$cache" ]] || { echo "21starkcom/public/$f: brew fetch downloaded nothing" >&2; exit 1; }
+            unzip -q -o "$cache" "$tool" -d "$RUNNER_TEMP/$f"
+            format="$(file -b "$RUNNER_TEMP/$f/$tool")"
+            [[ "$format" == *"ELF 64-bit LSB "*"executable, x86-64,"* ]] ||
+              { echo "21starkcom/public/$f: $tool is not a Linux x86-64 executable: $format" >&2; exit 1; }
+            echo "21starkcom/public/$f: $tool is a Linux x86-64 executable"
+          done
+          for c in $CASKS; do
+            cask="21starkcom/public/$c"
+            brew fetch --cask "$cask"
             [[ -s "$(brew --cache --cask --os=tahoe --arch=arm "$cask")" ]] ||
               { echo "$cask: brew fetch --cask downloaded nothing" >&2; exit 1; }
             echo "$cask: fetched"

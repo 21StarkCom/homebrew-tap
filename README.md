@@ -784,14 +784,15 @@ loads only when named in full.
 | `formula_renames.json` | Homebrew's map of renamed formulae: `njord` → `ghx`, `njord-linux` → `ghx-linux`. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
-| `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`. `--help` is its reference. |
+| `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`; with `--target public`, the entries of `PUBLIC_ENTRIES` into `21StarkCom/homebrew-public`. `--help` is its reference. |
 | `scripts/test-mirror.sh` | The mirror's tests, against a bare remote and a stubbed `gh`. |
 | `docs/specs/getevinced-mirror.md` | The design of the GetEvinced mirror (epic STARK-13601). |
+| `docs/specs/public-tap.md` | The design of the public tap, `21StarkCom/public` (STARK-19531). |
 | `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors, with synthetic credentials only and gh's login hidden. |
 | `scripts/verify-download.rb` | Checks hermod's authenticated preflight and a partial-download resume against the pinned checksum. |
 | `.github/workflows/formulae.yml` | On ubuntu arm64 (Homebrew on Linux): styles every entry, runs both verify scripts, audits and fetches every formula and cask, and fetches with only a gh login. |
 | `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu, and under bash 3.2 in the `bash:3.2` image, and `scripts/test-mirror.sh` on ubuntu. |
-| `.github/workflows/mirror.yml` | On each push to `main`, daily and by hand: runs `scripts/mirror.sh` as the `21stark-tap-mirror` App, then fetches the changed copies (every copy, daily and by hand) from GetEvinced. |
+| `.github/workflows/mirror.yml` | On each push to `main`, daily and by hand: runs `scripts/mirror.sh` as the `21stark-tap-mirror` App, then fetches the changed copies (every copy, daily and by hand) from GetEvinced. Its `public-*` jobs do the same for the public tap as the `21stark-public-tap` App, and fetch with no token. |
 | `.github/workflows/secret-scan.yml` | The fleet's shared secret scan. |
 
 ## How it fits the fleet
@@ -826,6 +827,22 @@ the JS inside a compiled binary, or an Electron `app.asar`, which it reads as on
 its bash source tree. A new entry goes there unless its PR adds it to `EXCLUDED` in
 `scripts/mirror.sh`. The mirror reads `Casks/*.rb` and
 `Casks/*/*.rb`, so it copies the idavoll cask (`Casks/i/idavoll.rb`) to the same path there.
+
+Some entries also reach the public tap [`21StarkCom/homebrew-public`](https://github.com/21StarkCom/homebrew-public)
+(`21StarkCom/public`), which anyone installs from with no GitHub login:
+
+```sh
+brew tap 21StarkCom/public
+brew install 21StarkCom/public/<entry>
+```
+
+`mirror.yml` copies each entry of `PUBLIC_ENTRIES` in `scripts/mirror.sh`, with its release
+asset, into a public release there ([the spec](docs/specs/public-tap.md)). The copy downloads
+from that release and drops the token code: the token lookup and its check, the cask
+download adapter, and the caveat that asks for GitHub access. The list holds only entries
+whose asset has no readable JS: the twelve Go formulae and `mimir`. It is an allow list, so
+a new entry stays out of the public tap until a PR adds it. A public asset cannot be called
+back: the mirror checks each copy before it uploads.
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
