@@ -312,11 +312,20 @@ jobs:
         env:
           FORMULAE: ${{ steps.pick.outputs.formulae }}
           CASKS: ${{ steps.pick.outputs.casks }}
+          MARKER: "# Mirrored from 21StarkCom/homebrew-tap by scripts/mirror.sh. Do not edit: the next run overwrites it."
         # Not FormulaAudit/DependencyOrder, as in verify.
         run: |
           paths=()
           for f in $FORMULAE; do paths+=("$TAP_DIR/Formula/$f.rb"); done
-          for c in $CASKS; do paths+=("$TAP_DIR/Casks/$c.rb"); done
+          for c in $CASKS; do
+            # As in verify: the marked Casks/<name>.rb, or one in a subfolder.
+            p=""
+            for f in "$TAP_DIR"/Casks/"$c".rb "$TAP_DIR"/Casks/*/"$c".rb; do
+              [[ -f "$f" ]] && grep -qxF -- "$MARKER" "$f" && { p="$f"; break; }
+            done
+            [[ -n "$p" ]] || { echo "21StarkCom/public holds no marked copy of the cask $c" >&2; exit 1; }
+            paths+=("$p")
+          done
           ((${#paths[@]} == 0)) || brew style --except-cops FormulaAudit/DependencyOrder "${paths[@]}"
       - name: Fetch the copies with no token
         env:

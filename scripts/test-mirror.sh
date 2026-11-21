@@ -1473,15 +1473,43 @@ tokformula_text oddformula 1.0.0 701 "$(asset_sha oddformula 701)" |
 source_asset argformula 711 "argformula 1.0.0"
 formula_text argformula 1.0.0 711 "$(asset_sha argformula 711)" |
   sed 's#headers: \["Accept: application/octet-stream"\]#verified: "github.com/21StarkCom/argformula/"#' >"${R}/src/Formula/argformula.rb"
+# A third url argument after headers:, and a headers: array over three lines.
+source_asset moreformula 721 "moreformula 1.0.0"
+formula_text moreformula 1.0.0 721 "$(asset_sha moreformula 721)" |
+  perl -pe 's#^(\s+headers: \[[^\]]*\])$#$1,\n      verified: "github.com/21StarkCom/moreformula/"#' >"${R}/src/Formula/moreformula.rb"
+source_asset multiformula 731 "multiformula 1.0.0"
+formula_text multiformula 1.0.0 731 "$(asset_sha multiformula 731)" |
+  perl -pe 's#^(\s+)headers: \[("[^"]*")\]$#$1headers: [\n$1  $2,\n$1]#' >"${R}/src/Formula/multiformula.rb"
 commit_src
-set_public demo oddformula argformula
+set_public demo oddformula argformula moreformula multiformula
 run_pub
 check "exit 1" is_code 1
 check "oddformula fails on its token lookup" err_has "oddformula: cannot copy Formula/oddformula.rb: the public copy still holds GitHub::API"
 check "argformula fails on its url argument" err_has "argformula: cannot copy Formula/argformula.rb: its url stanza has an argument the public copy cannot drop"
-check "neither uploads its asset: only demo's goes" count_is "dst release upload" 1
-check "neither is pushed" bash -c '! git --git-dir="$1" cat-file -e main:Formula/oddformula.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Formula/argformula.rb 2>/dev/null' _ "${R}/target.git"
+check "moreformula fails on its third url argument" err_has "moreformula: cannot copy Formula/moreformula.rb: its url stanza has an argument the public copy cannot drop"
+check "multiformula fails on its multiline headers:" err_has "multiformula: cannot copy Formula/multiformula.rb: its url stanza has an argument the public copy cannot drop"
+check "none uploads its asset: only demo's goes" count_is "dst release upload" 1
+check "none is pushed" bash -c 'for e in oddformula argformula moreformula multiformula; do ! git --git-dir="$1" cat-file -e "main:Formula/$e.rb" 2>/dev/null || exit 1; done' _ "${R}/target.git"
 check "demo still goes" tgt_has Formula/demo.rb
+
+begin "public: a formula and a cask with one name"
+pub_rig
+set_formula democask 1.0.0 301
+commit_src
+run_pub
+check "exit 1" is_code 1
+check "says it is both" err_has "is both Formula/democask.rb and Casks/democask.rb"
+check "copies neither" bash -c '! git --git-dir="$1" cat-file -e main:Formula/democask.rb 2>/dev/null && ! git --git-dir="$1" cat-file -e main:Casks/democask.rb 2>/dev/null' _ "${R}/target.git"
+check "the others are pushed" tgt_has Formula/demo.rb
+
+begin "a GetEvinced tap with no README gets the block alone"
+rig
+"${REAL_GIT}" clone -q "${R}/target.git" "${R}/edit"
+"${REAL_GIT}" -C "${R}/edit" rm -q README.md
+"${REAL_GIT}" -C "${R}/edit" commit -qm "no README" && "${REAL_GIT}" -C "${R}/edit" push -q origin HEAD:main
+run_mirror
+check "exit 0" is_code 0
+check "README starts with the block, with no title" readme_line1_is '<!-- BEGIN 21stark-mirror -->'
 
 begin "public: --dry-run, and a listed name that is no entry"
 pub_rig

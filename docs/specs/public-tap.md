@@ -38,8 +38,9 @@ from that spec. STARK-19531 holds the work.
 The copy is the source file with the marker line of the GetEvinced copy, and
 these changes:
 
-1. The asset URL becomes the URL of P5. Its one `headers:` or `using:` line goes.
-   An entry fails when its `url` keeps another argument.
+1. The asset URL becomes the URL of P5. Its one argument line goes: a `headers:`
+   array on that line, or a `using:` class. An entry fails when its `url` has
+   another argument, or more than one.
 2. In a formula, the token lookup goes: the `worker = …` statement (one line, or
    a `do` block) with the comment block right above it, the
    `token = worker ? "" : …` line, and the `if token.empty? && !worker … end`

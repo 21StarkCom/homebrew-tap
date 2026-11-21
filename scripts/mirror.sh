@@ -182,7 +182,7 @@ hash_of() {
 # gh as each side: the token goes in the environment, never in an argument.
 src_gh() { GH_TOKEN="${MIRROR_SOURCE_TOKEN}" gh "$@"; }
 dst_gh() { GH_TOKEN="${MIRROR_TARGET_TOKEN}" gh "$@"; }
-# git toward GetEvinced: the token rides an http.extraheader in the environment,
+# git toward the target: the token rides an http.extraheader in the environment,
 # so it never lands in .git/config, a URL or an argument.
 tgit() {
   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
@@ -276,24 +276,26 @@ check_source() {
 # reads Casks/**/*.rb; idavoll's cask is in Casks/i/, which idavoll's own installer
 # does not read, so the copy keeps that path too.
 read_entries() {
-  local f name line first n_url n_ver n_sha e
-  local -A listed=()
+  local f name line first n_url n_ver n_sha e q
+  local -A listed=() seen=()
   for e in ${EXCLUDED}; do excluded[${e}]=1; done
   if [[ ${target} == public ]]
   then
     # An allow list: every other entry of this tap is excluded from the public tap.
+    # A listed name that is both a formula and a cask stays listed, so the loop
+    # below fails it as it does for GetEvinced.
     for e in ${PUBLIC_ENTRIES}; do listed[${e}]=1; done
     for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb "${src_root}"/Casks/*/*.rb
     do
       [[ -f ${f} ]] || continue
       name="${f##*/}"
       name="${name%.rb}"
+      seen[${name}]=1
       [[ -n ${listed[${name}]:-} ]] || excluded[${name}]=1
-      unset 'listed[${name}]'
     done
     for e in "${!listed[@]}"
     do
-      warn "PUBLIC_ENTRIES names ${e}, which is no entry of this tap"
+      [[ -n ${seen[${e}]:-} ]] || warn "PUBLIC_ENTRIES names ${e}, which is no entry of this tap"
     done
   fi
   for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb "${src_root}"/Casks/*/*.rb
@@ -343,10 +345,13 @@ read_entries() {
       fail_entry "${name}" "needs one url, version and sha256 stanza each; has ${n_url}, ${n_ver} and ${n_sha}"
     fi
     # The copy renames 21StarkCom/tap/<x> to the target's tap, where no excluded x
-    # exists: such an entry stays out until it is excluded too.
+    # exists: such an entry stays out until it is excluded too. A . or + of a name
+    # (ENTRY_RE) matches only itself.
     for e in "${!excluded[@]}"
     do
-      if grep -qiE "21starkcom/tap/${e}([^A-Za-z0-9_-]|\$)" "${f}"
+      q="${e//./[.]}"
+      q="${q//+/[+]}"
+      if grep -qiE "21starkcom/tap/${q}([^A-Za-z0-9_-]|\$)" "${f}"
       then
         fail_entry "${name}" "it names 21StarkCom/tap/${e}, which the mirror excludes; exclude ${name} too, or drop the reference"
         break
@@ -574,7 +579,7 @@ check_archive() {
   say "${check_entry}: ${check_file##*/} passes the source check"
 }
 
-# Clones the GetEvinced branch into $clone, from main when the branch is new.
+# Clones the target branch into $clone, from main when the branch is new.
 clone_target() {
   local rc=0
   rm -rf "${clone}"
@@ -606,7 +611,7 @@ renames_ok() {
     "$1" >/dev/null 2>&1
 }
 
-# Fails each entry whose GetEvinced file exists without the marker line.
+# Fails each entry whose file in the target exists without the marker line.
 check_clashes() {
   local name
   for name in "${names[@]}"
@@ -649,8 +654,9 @@ publish_release() { # <entry> <release id> <tag>
   }
 }
 
-# Sets new_id[$1] to a GetEvinced asset with the entry's bytes: an uploaded copy
-# found by its digest, or one this run uploads. Fails the entry on any error.
+# Sets new_id[$1] and new_name[$1] to an asset of the target with the entry's
+# bytes: an uploaded copy found by its digest, or one this run uploads. Fails the
+# entry on any error.
 ensure_asset() {
   local name="$1" tag release="" rjson rid draft found sname file got uname taken asset state digest busy body
   tag="${name}-v${ver[${name}]}"
@@ -794,6 +800,8 @@ ensure_asset() {
 # Writes the copy of entry $1 into the clone (the spec's "The copy of an entry";
 # for --target public, docs/specs/public-tap.md adds its rules). With --check, it
 # only makes the copy, with a stand-in asset, and fails the entry when it cannot.
+# No line of the perl starts with `if`: brew style's layout pass misreads one in a
+# string, and re-indents the shell code after it.
 write_copy() {
   local name="$1" check="${2:-}" out home dl
   home="https://github.com/${TARGET_REPO}"
@@ -808,61 +816,64 @@ write_copy() {
     my $n = 0;
     $n++ while $rest =~ /$url/g;
     $n == 1 or die "it has $n asset url stanzas\n";
-    unless ($ENV{TARGET} eq "public") {
+    my $public = $ENV{TARGET} eq "public";
+    $public or do {
       $rest =~ s/$url/$1$ENV{TARGET_REPO}$2$ENV{NEWID}"/;
       $rest =~ s{(21starkcom)(/tap)\b}{($1 eq lc($1) ? "getevinced" : "GetEvinced") . $2}gie;
       $rest =~ s{read access to 21StarkCom private repos}{read access to GetEvinced private repos}g;
-    }
+    };
     # The public copy downloads a public release with no token, so the token code goes.
-    if ($ENV{TARGET} eq "public") {
-       # The asset URL, with the one headers: or using: line that may follow it.
-          $rest =~ s{^([ \t]*url[ \t]+)"https://api\.github\.com/repos/[^"\n]+"(?:,[ \t]*\n[ \t]*(?:headers|using):[^\n]*)?[ \t]*$}{$1"$ENV{PUBLIC_URL}"}m;
-          $rest =~ m{^[ \t]*url[ \t]+"[^"\n]*",}m and die "its url stanza has an argument the public copy cannot drop\n";
-       # A formula: the token lookup, its check, and the comment block right above
-       # the lookup, which explains the pin, the bumper and the token.
-          $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^([ \t]*)worker = %w\[[^\]\n]*\]\.any\? do \|w\|[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
-          $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^[ \t]*worker = %w\[[^\]\n]*\]\.any\? \{[^\n]*\}[ \t]*\n}{}m;
-          $rest =~ s{^[ \t]*token = worker \? "" : GitHub::API\.credentials\.to_s\.strip[ \t]*\n}{}m;
-          $rest =~ s{^([ \t]*)if token\.empty\? && !worker[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
-          $rest =~ s{^[ \t]*# (?:API asset URL \(private repo\)|Homebrew.s own lookup:|Its sandboxed build, test and postinstall workers|config\. They never download|So does its fix_linkage worker)[^\n]*\n}{}mg;
-       # A cask: its download adapter, and the comment above it.
-          $rest =~ s{^require "download_strategy"[ \t]*\n(?:[ \t]*\n)?}{}m;
-          $rest =~ s{^# Cask URL specs are serialized[^\n]*\n# credential in the downloader only[^\n]*\n}{}m;
-          $rest =~ s{^class [A-Za-z0-9_]+ < CurlDownloadStrategy[ \t]*\n.*?^end[ \t]*\n(?:[ \t]*\n)?}{}ms;
-       # The caveat that asks for GitHub access, in a heredoc or on one line.
-          $rest =~ s{^[ \t]*Installing needs GitHub read access to 21StarkCom private repos:[^\n]*\n[ \t]*in \(`brew install gh && gh auth login`\), or export HOMEBREW_GITHUB_API_TOKEN=<token>[ \t]*\n(?:[ \t]*\n)?}{}m;
-          $rest =~ s{^[ \t]*caveats "Installing needs GitHub read access to 21StarkCom private repos[^"\n]*"[ \t]*\n}{}m;
-          $rest =~ s{^[ \t]*caveats <<~EOS[ \t]*\n[ \t]*EOS[ \t]*\n}{}m;
-          $rest =~ s{\n[ \t]*\n(end[ \t]*\n?)\z}{\n$1};
-       # The source repo is private: its page is no homepage for the public.
-          $rest =~ s{^([ \t]*homepage[ \t]+)"https://github\.com/21StarkCom/[A-Za-z0-9_.-]+"}{$1"$ENV{PUBLIC_HOME}"}m;
-          $rest =~ s{(21starkcom)/tap\b}{$1/public}gi;
-       for my $left ("GitHub::API", "Authorization:", "CurlDownloadStrategy", "api.github.com/repos/",
-       "HOMEBREW_GITHUB_API_TOKEN", "private repos") {
-       index($rest, $left) < 0 or die "the public copy still holds $left: its token code has a shape the copy does not know\n";
-       }
-       }
-          $rest =~ m{21starkcom/tap\b}i and die "the copy still names 21starkcom/tap\n";
-       print $first, "\n", $ENV{MARKER}, "\n\n", $rest;
-       ' "${src_root}/${rel[${name}]}" 2>"${tmp}/perl.err")" || {
-       fail_entry "${name}" "cannot copy ${rel[${name}]}: $(<"${tmp}/perl.err")"
-       return 0
-       }
-       [[ -z ${check} ]] || return 0
-       mkdir -p "${clone}/${rel[${name}]%/*}"
-       printf '%s\n' "${out}" >"${clone}/${rel[${name}]}"
-       }
-       
-       # Deletes each marked GetEvinced file whose entry left this tap, moved (between
-       # Formula/ and Casks/, or into or out of a Casks/ subfolder), or is excluded.
-       remove_departed() {
-       local f name path why
-       for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb "${clone}"/Casks/*/*.rb; do
-       marked "${f}" || continue
-       name="${f##*/}"
-       name="${name%.rb}"
-       path="${f#"${clone}"/}"
-       if [[ -n ${excluded[${name}]:-} ]]
+    $public and do {
+      # The asset URL, with the one argument line that may follow it: a headers:
+      # array on that line, or a using: class. Any other argument fails the entry.
+      $rest =~ s{^([ \t]*url[ \t]+)"https://api\.github\.com/repos/[^"\n]+"(?:,[ \t]*\n[ \t]*(?:headers:[ \t]*\[[^\]\n]*\]|using:[ \t]*[A-Za-z0-9_:]+))?[ \t]*$}{$1"$ENV{PUBLIC_URL}"}m;
+      $rest =~ m{^[ \t]*url[ \t]+"[^"\n]*",}m and die "its url stanza has an argument the public copy cannot drop\n";
+      # A formula: the token lookup, its check, and the comment block right above
+      # the lookup, which explains the pin, the bumper and the token.
+      $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^([ \t]*)worker = %w\[[^\]\n]*\]\.any\? do \|w\|[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
+      $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^[ \t]*worker = %w\[[^\]\n]*\]\.any\? \{[^\n]*\}[ \t]*\n}{}m;
+      $rest =~ s{^[ \t]*token = worker \? "" : GitHub::API\.credentials\.to_s\.strip[ \t]*\n}{}m;
+      $rest =~ s{^([ \t]*)if token\.empty\? && !worker[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
+      $rest =~ s{^[ \t]*# (?:API asset URL \(private repo\)|Homebrew.s own lookup:|Its sandboxed build, test and postinstall workers|config\. They never download|So does its fix_linkage worker)[^\n]*\n}{}mg;
+      # A cask: its download adapter, and the comment above it.
+      $rest =~ s{^require "download_strategy"[ \t]*\n(?:[ \t]*\n)?}{}m;
+      $rest =~ s{^# Cask URL specs are serialized[^\n]*\n# credential in the downloader only[^\n]*\n}{}m;
+      $rest =~ s{^class [A-Za-z0-9_]+ < CurlDownloadStrategy[ \t]*\n.*?^end[ \t]*\n(?:[ \t]*\n)?}{}ms;
+      # The caveat that asks for GitHub access, in a heredoc or on one line.
+      $rest =~ s{^[ \t]*Installing needs GitHub read access to 21StarkCom private repos:[^\n]*\n[ \t]*in \(`brew install gh && gh auth login`\), or export HOMEBREW_GITHUB_API_TOKEN=<token>[ \t]*\n(?:[ \t]*\n)?}{}m;
+      $rest =~ s{^[ \t]*caveats "Installing needs GitHub read access to 21StarkCom private repos[^"\n]*"[ \t]*\n}{}m;
+      $rest =~ s{^[ \t]*caveats <<~EOS[ \t]*\n[ \t]*EOS[ \t]*\n}{}m;
+      $rest =~ s{\n[ \t]*\n(end[ \t]*\n?)\z}{\n$1};
+      # The source repo is private: its page is no homepage for the public.
+      $rest =~ s{^([ \t]*homepage[ \t]+)"https://github\.com/21StarkCom/[A-Za-z0-9_.-]+"}{$1"$ENV{PUBLIC_HOME}"}m;
+      $rest =~ s{(21starkcom)/tap\b}{$1/public}gi;
+      foreach my $left ("GitHub::API", "Authorization:", "CurlDownloadStrategy", "api.github.com/repos/",
+        "HOMEBREW_GITHUB_API_TOKEN", "private repos") {
+        index($rest, $left) < 0 or die "the public copy still holds $left: its token code has a shape the copy does not know\n";
+      }
+    };
+    $rest =~ m{21starkcom/tap\b}i and die "the copy still names 21starkcom/tap\n";
+    print $first, "\n", $ENV{MARKER}, "\n\n", $rest;
+  ' "${src_root}/${rel[${name}]}" 2>"${tmp}/perl.err")" || {
+    fail_entry "${name}" "cannot copy ${rel[${name}]}: $(<"${tmp}/perl.err")"
+    return 0
+  }
+  [[ -z ${check} ]] || return 0
+  mkdir -p "${clone}/${rel[${name}]%/*}"
+  printf '%s\n' "${out}" >"${clone}/${rel[${name}]}"
+}
+
+# Deletes each marked file of the target whose entry left this tap, moved (between
+# Formula/ and Casks/, or into or out of a Casks/ subfolder), or is excluded.
+remove_departed() {
+  local f name path why
+  for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb "${clone}"/Casks/*/*.rb
+  do
+    marked "${f}" || continue
+    name="${f##*/}"
+    name="${name%.rb}"
+    path="${f#"${clone}"/}"
+    if [[ -n ${excluded[${name}]:-} ]]
     then
       why="is excluded from the mirror"
     elif [[ -z ${kind[${name}]:-} ]]
@@ -1009,9 +1020,13 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
       s/^\Q$ENV{BEGIN_MARK}\E\n.*?^\Q$ENV{END_MARK}\E(?:\n|\z)/$ENV{BLOCK}\n/ms
     ' "${clone}/README.md" || die "cannot rewrite the README block"
   else
-    # A new README starts with the tap's name.
-    [[ -s "${clone}/README.md" ]] || printf '# %s\n' "${TARGET_TAP}" >"${clone}/README.md"
-    sep="${NL}"
+    # A new public README starts with the tap's name. GetEvinced's README is the
+    # Evinced team's: the job writes only its block there (spec D6).
+    if [[ ${target} == public && ! -s "${clone}/README.md" ]]
+    then
+      printf '# %s\n' "${TARGET_TAP}" >"${clone}/README.md"
+    fi
+    [[ ! -s "${clone}/README.md" ]] || sep="${NL}"
     printf '%s%s\n' "${sep}" "${block}" >>"${clone}/README.md"
   fi
 }
