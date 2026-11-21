@@ -4,24 +4,11 @@
 # pdf, pptx). Cross-compiled darwin/arm64 build (Go linker ad-hoc signature).
 class Plume < Formula
   desc "Document toolkit CLIs: xlsx, docx, pdf and pptx read/write drivers"
-  homepage "https://github.com/21StarkCom/plume"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/plume/releases/assets/767750577",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/plume
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/plume-v0.11.0/plume_v0.11.0_darwin_arm64.tar.gz"
   version "0.11.0"
   sha256 "1a6dbfd7db26e0b5d955e45e7497295fda5211856c364c02a7d4e57c3fe989b9"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :arm64
   depends_on :macos

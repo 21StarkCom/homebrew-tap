@@ -7,26 +7,13 @@
 # workflow (STARK-18511).
 class SonarLinux < Formula
   desc "Read-only CLI that resolves vendor links and probes URLs, for Linux"
-  homepage "https://github.com/21StarkCom/sonar"
-  # version / asset id / sha256 are release-specific and rewritten when sonar's
-  # release calls the bumper with --asset-suffix linux_amd64.zip (the README's caller
-  # table) — do not hand-edit them.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/sonar/releases/assets/768094888",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # version / url / sha256 are rewritten when sonar's release calls the bumper with
+  # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
+  # Source release repo: 21StarkCom/sonar
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-linux-v0.15.2/sonar_v0.15.2_linux_amd64.zip"
   version "0.15.2"
   sha256 "975170e6c4dad4b2f71a3c06d272d3236c8939d40122f399aedf35975e7ca9d3"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :x86_64 # sonar's release builds linux/amd64
   depends_on :linux

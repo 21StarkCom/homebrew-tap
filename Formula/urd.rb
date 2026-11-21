@@ -6,25 +6,11 @@
 # published by urd's GitHub Actions release workflow (STARK-14363).
 class Urd < Formula
   desc "Local identity and infra cache: one SQLite file, synced from vendors"
-  homepage "https://github.com/21StarkCom/urd"
-  # version / asset id / sha256 are release-specific and rewritten when urd's
-  # release calls the bumper (the README's caller table) — do not hand-edit them.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/urd/releases/assets/745318406",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/urd
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/urd-v0.15.1/urd_v0.15.1_darwin_arm64.zip"
   version "0.15.1"
   sha256 "25ad0a0a73fac64f5ad18b4017991f2940a43ea76acab067662b95e1cead767c"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :arm64
   depends_on :macos

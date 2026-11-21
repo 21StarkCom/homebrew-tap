@@ -36,13 +36,19 @@ ENTRY_RE='^[A-Za-z0-9][A-Za-z0-9@+._-]*$'
 # An optional non-digit prefix (v, cli-v), then X.Y.Z[-pre]: BASH_REMATCH[2].
 TAG_RE='^([A-Za-z][A-Za-z._-]*)?([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z-]+(\.[0-9A-Za-z-]+)*)?)$'
 URL_RE='^[[:space:]]*url[[:space:]]+"https://api\.github\.com/repos/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)/releases/assets/[0-9]+"'
+# A public entry (docs/specs/public-tap.md) downloads from a public release of
+# this tap, and names its source repo in a comment.
+PUBLIC_URL_RE='^[[:space:]]*url[[:space:]]+"https://github\.com/21StarkCom/homebrew-tap/releases/download/[^"/]+/[^"/]+"'
+SOURCE_RE='^[[:space:]]*#[[:space:]]*Source release repo:[[:space:]]*([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)[[:space:]]*$'
+# No +: the upload passes the name unencoded in a query, where + reads as a space.
+ASSET_NAME_RE='^[A-Za-z0-9._@-]+$'
 VERSION_RE='^[[:space:]]*version[[:space:]]+"([^"]*)"'
 NL=$'\n'
 
 entry="" tag="" version="" ticket="" suffix="darwin_arm64.zip"
 dry_run=false no_pr=false merge=false npos=0
 tap_root="" rel="" repo="" pinned="" tmp="" restore_ref="" branch=""
-a_id="" a_name="" sha="" pr="" pushed=""
+a_id="" a_name="" sha="" pr="" pushed="" public=false pub_tag="" pub_url=""
 
 usage() {
   local text
@@ -74,6 +80,18 @@ The release repo is the one the entry's asset url names. The release must carry
 exactly one asset ending in the suffix. It is downloaded by id and hashed, and
 its <asset>.sha256 sidecar and GitHub's digest, when present, must agree with
 that hash. The entry's version, asset url and sha256 lines must each occur once.
+
+A public entry (docs/specs/public-tap.md) downloads with no token from a public
+release of this tap: its url is
+https://github.com/21StarkCom/homebrew-tap/releases/download/<entry>-v<version>/<asset>,
+and one line `# Source release repo: <owner>/<repo>` names the release repo.
+Its asset must pass scripts/source-check.pl, since a public asset cannot be
+called back. Then it is published as the release <entry>-v<version> of this
+tap: a draft first, the upload read back against the hash, then published. A
+release that already holds the asset's name with that hash is reused; other
+bytes under the name stop the run. --dry-run publishes nothing; --no-pr and a
+PR run publish before they edit the entry. The token needs Contents: write on
+this tap for that.
 
 A PR run needs this checkout clean (no tracked edits) and at origin's main. It
 pushes bump/<entry>-<version> and opens a PR, or reuses the one open on that
@@ -185,21 +203,34 @@ cleanup() {
   exit "${rc}"
 }
 
-# The entry's release repo, from its one asset url line, and the version it pins.
+# The entry's release repo, from its one asset url line (a public entry: its
+# source line), and the version it pins.
 read_entry() {
-  local line urls=0
+  local line urls=0 publics=0 sources=0 source=""
   while IFS= read -r line || [[ -n "${line}" ]]
   do
     if [[ ${line} =~ ${URL_RE} ]]
     then
       urls=$((urls + 1))
       repo="${BASH_REMATCH[1]}"
+    elif [[ ${line} =~ ${PUBLIC_URL_RE} ]]
+    then
+      publics=$((publics + 1))
+    elif [[ ${line} =~ ${SOURCE_RE} ]]
+    then
+      sources=$((sources + 1))
+      source="${BASH_REMATCH[1]}"
     elif [[ -z "${pinned}" ]] && [[ ${line} =~ ${VERSION_RE} ]]
     then
       pinned="${BASH_REMATCH[1]}"
     fi
   done <"${tap_root}/${rel}"
-  [[ "${urls}" -eq 1 ]] || die "${rel}: want one release asset url line, found ${urls}"
+  [[ $((urls + publics)) -eq 1 ]] || die "${rel}: want one release asset url line, found $((urls + publics))"
+  [[ "${publics}" -eq 1 ]] || return 0
+  [[ "${sources}" -eq 1 ]] ||
+    die "${rel}: a public entry needs one '# Source release repo: <owner>/<repo>' line, found ${sources}"
+  public=true
+  repo="${source}"
 }
 
 # I3: a PR run starts from a clean checkout at origin's main.
@@ -263,14 +294,100 @@ resolve_asset() {
   say "    ${a_name}  id=${a_id}  sha256=${sha}${s_id:+ (sidecar agrees)}${digest:+ (digest agrees)}"
 }
 
+# A public entry's asset must pass the source check before it is published: a
+# public asset cannot be called back.
+check_source_files() {
+  local hits
+  say "==> checking ${a_name} for source (scripts/source-check.pl)"
+  [[ -f "${tap_root}/scripts/source-check.pl" ]] || die "${tap_root}/scripts/source-check.pl is missing"
+  hits="$(perl "${tap_root}/scripts/source-check.pl" --entry "${tap_root}/${rel}" --archive "${tmp}/asset" 2>"${tmp}/check.err")" ||
+    die "the source check of ${a_name} did not run: $(<"${tmp}/check.err")"
+  [[ -n "${hits}" ]] || return 0
+  die "${a_name} holds source, so it is not published:${NL}${hits}"
+}
+
+# A public entry's asset becomes the asset of the release <entry>-v<version> of
+# this tap. A new release is a draft until the upload reads back against the
+# hash, then it is published. A release that holds the name with this hash is
+# reused; other bytes under the name stop the run: a public asset is never
+# replaced. A draft left by a failed run has no tag yet, so a new draft is made.
+publish_asset() {
+  local found rid="" draft=false p_id="" p_state="" p_digest="" p_name="" _end got up err
+  # The published release of the tag: its id, and the id, state and digest of
+  # its asset of this name (ASSET_NAME_RE keeps the name safe in the jq string).
+  if found="$(gh api "repos/${TAP_REPO}/releases/tags/${pub_tag}" --jq '
+     ([.assets[] | select(.name == "'"${a_name}"'")][0] // {}) as $a
+     | [.id, ($a.id // ""), ($a.state // ""), ($a.digest // ""), "."] | map(tostring) | join("\u001f")' 2>"${tmp}/gh.err")"
+  then
+    IFS=$'\x1f' read -r rid p_id p_state p_digest _end <<<"${found}"
+  else
+    err="$(<"${tmp}/gh.err")"
+    [[ ${err} == *"HTTP 404"* ]] || die "could not read release ${pub_tag} on ${TAP_REPO}: ${err}"
+  fi
+  if [[ -n "${p_id}" ]]
+  then
+    [[ "${p_state}" = uploaded ]] ||
+      die "release ${pub_tag} of ${TAP_REPO} holds ${a_name} in state ${p_state}: delete that asset, and run again"
+    if [[ -z "${p_digest}" ]]
+    then
+      gh api -H 'Accept: application/octet-stream' "repos/${TAP_REPO}/releases/assets/${p_id}" >"${tmp}/published" ||
+        die "could not download ${a_name} of release ${pub_tag} to check it"
+      got="$(sha256_of "${tmp}/published")" || die "could not hash ${a_name} of release ${pub_tag}"
+      p_digest="sha256:${got}"
+    fi
+    [[ "${p_digest}" = "sha256:${sha}" ]] ||
+      die "release ${pub_tag} of ${TAP_REPO} already holds other bytes as ${a_name} (${p_digest}, not sha256:${sha}); a public asset is never replaced"
+    say "==> release ${pub_tag} already holds ${a_name}; reusing it"
+    return 0
+  fi
+  if [[ -z "${rid}" ]]
+  then
+    say "==> making the draft release ${pub_tag} on ${TAP_REPO}"
+    rid="$(gh api -X POST "repos/${TAP_REPO}/releases" -f tag_name="${pub_tag}" -f target_commitish=main \
+      -f name="${entry} ${version}" -F draft=true -f make_latest=false \
+      -f body="The release asset \`${a_name}\` of \`${entry}\` ${version}, SHA-256 \`${sha}\`, published by scripts/bump.sh for the public entry \`${rel}\`." \
+      --jq .id)" || die "could not make the draft release ${pub_tag} on ${TAP_REPO}"
+    [[ ${rid} =~ ^[0-9]+$ ]] || die "the draft release ${pub_tag} has no numeric id (got '${rid}')"
+    draft=true
+  fi
+  say "==> uploading ${a_name} to release ${pub_tag}"
+  up="$(gh api -X POST -H 'Content-Type: application/octet-stream' --input "${tmp}/asset" \
+    "https://uploads.github.com/repos/${TAP_REPO}/releases/${rid}/assets?name=${a_name}" \
+    --jq '[.id, .state, (.digest // ""), .name, "."] | map(tostring) | join("\u001f")')" ||
+    die "could not upload ${a_name} to release ${pub_tag}"
+  IFS=$'\x1f' read -r p_id p_state p_digest p_name _end <<<"${up}"
+  # GitHub renames an asset whose name holds special characters: the pinned url would 404.
+  [[ "${p_name}" = "${a_name}" ]] || die "GitHub stored the upload of ${a_name} to ${pub_tag} as '${p_name}'"
+  [[ "${p_state}" = uploaded ]] || die "the upload of ${a_name} to ${pub_tag} reads back as state '${p_state}'"
+  if [[ -z "${p_digest}" ]]
+  then
+    gh api -H 'Accept: application/octet-stream' "repos/${TAP_REPO}/releases/assets/${p_id}" >"${tmp}/published" ||
+      die "could not download the upload of ${a_name} to check it"
+    got="$(sha256_of "${tmp}/published")" || die "could not hash the upload of ${a_name}"
+    p_digest="sha256:${got}"
+  fi
+  [[ "${p_digest}" = "sha256:${sha}" ]] ||
+    die "the upload of ${a_name} to ${pub_tag} reads back as ${p_digest}, not sha256:${sha}"
+  if ${draft}
+  then
+    gh api -X PATCH "repos/${TAP_REPO}/releases/${rid}" -F draft=false -f make_latest=false >/dev/null ||
+      die "uploaded ${a_name}, but could not publish the draft release ${pub_tag}: publish it on ${TAP_REPO}'s releases page"
+  fi
+  say "==> published ${pub_url}"
+}
+
 # I5: each of the three lines matches exactly once, or nothing is written. The
 # rewrite goes to a copy, so the checkout is untouched until a mode writes it (I1).
 rewrite_entry() {
-  ENTRY="${rel}" REPO="${repo}" VER="${version}" ASSET="${a_id}" SHA="${sha}" perl -0777 -pe '
+  ENTRY="${rel}" REPO="${repo}" VER="${version}" ASSET="${a_id}" SHA="${sha}" PUB="${pub_url}" perl -0777 -pe '
     my $repo = quotemeta $ENV{REPO};
+    # A public entry pins the release of this tap; any other, its source asset.
+    my $urls = $ENV{PUB} ne ""
+      ? scalar(s{^([ \t]*url[ \t]+)"https://github\.com/21StarkCom/homebrew-tap/releases/download/[^"/\n]+/[^"/\n]+"}{$1"$ENV{PUB}"}mg)
+      : scalar(s{^([ \t]*url[ \t]+"https://api\.github\.com/repos/$repo/releases/assets/)[0-9]+"}{$1$ENV{ASSET}"}mg);
     my %n = (
       "version"   => scalar(s{^([ \t]*version[ \t]+)"[^"]*"}{$1"$ENV{VER}"}mg),
-      "asset url" => scalar(s{^([ \t]*url[ \t]+"https://api\.github\.com/repos/$repo/releases/assets/)[0-9]+"}{$1$ENV{ASSET}"}mg),
+      "asset url" => $urls,
       "sha256"    => scalar(s{^([ \t]*sha256[ \t]+)"[^"]*"}{$1"$ENV{SHA}"}mg),
     );
     for (sort keys %n) {
@@ -305,7 +422,7 @@ bumper_shape() {
     BEGIN { $r = quotemeta $ENV{REPO}; $bad = 0; $n = 0 }
     next if /^$/ || /^ / || /^@@ / || /^\\ No newline/;
     $n++;
-    $bad++ unless /^[-+][ \t]*(version[ \t]+"[^"]*"|url[ \t]+"https:\/\/api\.github\.com\/repos\/$r\/releases\/assets\/[0-9]+",?|sha256[ \t]+"[0-9a-f]{64}")[ \t]*$/;
+    $bad++ unless /^[-+][ \t]*(version[ \t]+"[^"]*"|url[ \t]+"https:\/\/api\.github\.com\/repos\/$r\/releases\/assets\/[0-9]+",?|url[ \t]+"https:\/\/github\.com\/21StarkCom\/homebrew-tap\/releases\/download\/[^"\/]+\/[^"\/]+"|sha256[ \t]+"[0-9a-f]{64}")[ \t]*$/;
     END { exit($bad || !$n ? 1 : 0) }' <<<"${patch}" || {
     say "    its commit changes more than the version, asset url and sha256 lines:"
     say "${patch}"
@@ -320,6 +437,7 @@ publish_pr() {
   [[ -z "${ticket}" ]] || scope="chore(${ticket})"
   title="${scope}: bump ${entry} to ${tag}"
   body="Point \`${rel}\` at \`${a_name}\` (asset \`${a_id}\`, sha256 \`${sha}\`) from ${repo} ${tag}."
+  ! ${public} || body="${body} It is published as the release \`${pub_tag}\` of this tap: ${pub_url}"
   branch="bump/${entry}-${version}"
 
   tip="$(git -C "${tap_root}" ls-remote origin "refs/heads/${branch}")" || die "could not read ${branch} from origin"
@@ -647,9 +765,18 @@ main() {
   if ${pr_run}; then check_checkout; fi
 
   resolve_asset
+  if ${public}
+  then
+    [[ ${a_name} =~ ${ASSET_NAME_RE} ]] || die "unexpected asset name for a public release: ${a_name}"
+    pub_tag="${entry}-v${version}"
+    pub_url="https://github.com/${TAP_REPO}/releases/download/${pub_tag}/${a_name}"
+    check_source_files
+  fi
   rewrite_entry "${tmp}/updated" || die "not rewriting ${rel}"
   if git diff --no-index --quiet -- "${tap_root}/${rel}" "${tmp}/updated"
   then
+    # A pinned public entry's release must exist; a dry run only says so.
+    if ${public} && ! ${dry_run}; then publish_asset; fi
     say "==> ${rel} already pins ${repo} ${tag}; nothing to do"
     return 0
   fi
@@ -657,6 +784,7 @@ main() {
   git --no-pager diff --no-index --no-ext-diff --no-color -- "${tap_root}/${rel}" "${tmp}/updated" >&2 || true
   if ${dry_run}
   then
+    ! ${public} || say "==> --dry-run: would publish ${a_name} as the release ${pub_tag} of ${TAP_REPO}"
     say "==> --dry-run: changed nothing"
     return 0
   fi
@@ -665,6 +793,7 @@ main() {
     say "==> ${rel} pins ${pinned}, newer than ${version}: a PR run never moves an entry back (stage it with --no-pr)"
     return 0
   fi
+  if ${public}; then publish_asset; fi
   if ${no_pr}
   then
     copy_file "${tmp}/updated" "${tap_root}/${rel}" || die "could not write ${rel}"

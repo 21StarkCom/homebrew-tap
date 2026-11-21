@@ -145,11 +145,16 @@ shift
   shift
 }
 jqx="" accept="" path="" repo="" head="" state_f="" title="" body="" match="" num="" squash=false del=false
-add_l="" rm_l=""
+add_l="" rm_l="" method=GET fields="" input=""
+# The sha256 of file $1.
+h() { { sha256sum "$1" 2>/dev/null || shasum -a 256 "$1"; } | cut -c1-64; }
 while [ $# -gt 0 ]
 do
   case "$1" in
     -H) accept="$2"; shift ;;
+    -X) method="$2"; shift ;;
+    -f | -F) fields="$fields$2$nl"; shift ;;
+    --input) input="$2"; shift ;;
     --jq) jqx="$2"; shift ;;
     -R) repo="$2"; shift ;;
     --head) head="$2"; shift ;;
@@ -176,6 +181,43 @@ case "$cmd" in
         [ "$accept" = "Accept: application/octet-stream" ] || bad "asset read without octet-stream"
         [ -f "$S/assets/${path##*/}" ] || nf
         cat "$S/assets/${path##*/}"
+        ;;
+      "repos/$TAP/releases")
+        # A new release of the tap, a draft: $S/rel/<id>.{tag,fields,assets}.
+        [ "$method" = POST ] || bad "releases without POST"
+        [ ! -f "$S/release.fail" ] || { echo "gh: Validation Failed (HTTP 422)" >&2; exit 1; }
+        id=$(($(cat "$S/next_release" 2>/dev/null || echo 900) + 1))
+        echo "$id" >"$S/next_release"
+        mkdir -p "$S/rel"
+        printf '%s' "$fields" | sed -n 's/^tag_name=//p' >"$S/rel/$id.tag"
+        printf '%s' "$fields" >"$S/rel/$id.fields"
+        : >"$S/rel/$id.assets"
+        jq -n --argjson id "$id" '{id: $id}' | emit
+        ;;
+      "https://uploads.github.com/repos/$TAP/releases/"*)
+        [ "$method" = POST ] || bad "upload without POST"
+        rid="${path#https://uploads.github.com/repos/$TAP/releases/}"
+        rid="${rid%%/*}"
+        [ -f "$S/rel/$rid.tag" ] || nf
+        [ -f "$input" ] || bad "upload without --input"
+        aid=$(($(cat "$S/next_asset" 2>/dev/null || echo 5000) + 1))
+        echo "$aid" >"$S/next_asset"
+        cp "$input" "$S/assets/$aid"
+        printf '%s %s\n' "$aid" "${path##*name=}" >>"$S/rel/$rid.assets"
+        dig="sha256:$(h "$S/assets/$aid")"
+        [ ! -f "$S/upload.bad" ] || dig="sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        [ ! -f "$S/upload.nodigest" ] || dig=""
+        jq -n --argjson id "$aid" --arg n "${path##*name=}" --arg d "$dig" '{id: $id, name: $n, state: "uploaded", digest: (if $d == "" then null else $d end)}' | emit
+        ;;
+      "repos/$TAP/releases/"[0-9]*)
+        # Publishing a draft makes its tag readable, as on GitHub.
+        [ "$method" = PATCH ] || bad "release $path without PATCH"
+        rid="${path##*/}"
+        [ -f "$S/rel/$rid.tag" ] || nf
+        mkdir -p "$S/api/repos/$TAP/releases/tags"
+        while read -r aid an; do jq -n --argjson id "$aid" --arg n "$an" --arg d "sha256:$(h "$S/assets/$aid")" '{id: $id, name: $n, state: "uploaded", digest: $d}'; done <"$S/rel/$rid.assets" |
+          jq -s --argjson id "$rid" '{id: $id, assets: .}' >"$S/api/repos/$TAP/releases/tags/$(cat "$S/rel/$rid.tag").json"
+        echo '{}'
         ;;
       "repos/$TAP/compare/main..."*)
         tip="${path##*...}"
@@ -299,6 +341,7 @@ new_rig() {
   formula_text 1.2.2 111 "${ONES}" >"${R}/seed/Formula/demo.rb"
   cask_text 0.1.0 222 "${ONES}" >"${R}/seed/Casks/democask.rb"
   cp "${root}/scripts/bump.sh" "${R}/seed/scripts/bump.sh"
+  cp "${root}/scripts/source-check.pl" "${R}/seed/scripts/source-check.pl"
   git -C "${R}/seed" init -q
   git -C "${R}/seed" add -A
   git -C "${R}/seed" commit -q -m seed
@@ -320,10 +363,11 @@ refresh_clone() {
 
 # add_release <owner/repo> <tag> <asset id> <asset name> [--no-sidecar]
 #   [--no-digest] [--bad-sidecar] [--bad-digest] [--bad-size] [--state <s>]
-#   [--also <another asset name>]. Sets $rel_sha to the asset's sha256.
+#   [--also <another asset name>] [--bytes <file>: the asset's bytes]. Sets
+#   $rel_sha to the asset's sha256.
 add_release() {
   local repo="$1" tag="$2" id="$3" asset="$4" sidecar=true digest=true bad_sidecar=false bad_digest=false
-  local bad_size=false state=uploaded also="" size assets side
+  local bad_size=false state=uploaded also="" size assets side bytes=""
   shift 4
   while [[ $# -gt 0 ]]
   do
@@ -341,10 +385,19 @@ add_release() {
         also="$2"
         shift
         ;;
+      --bytes)
+        bytes="$2"
+        shift
+        ;;
     esac
     shift
   done
-  printf 'the bytes of %s %s asset %s\n' "${repo}" "${tag}" "${id}" >"${R}/gh/assets/${id}"
+  if [[ -n "${bytes}" ]]
+  then
+    cp "${bytes}" "${R}/gh/assets/${id}"
+  else
+    printf 'the bytes of %s %s asset %s\n' "${repo}" "${tag}" "${id}" >"${R}/gh/assets/${id}"
+  fi
   rel_sha="$(hash_of "${R}/gh/assets/${id}")"
   size="$(wc -c <"${R}/gh/assets/${id}" | tr -d ' ')"
   if ${bad_size}; then size=$((size + 1)); fi
@@ -830,6 +883,169 @@ set_runs --for "${moved}" "${ALL_GREEN[@]}"
 BUDGET=10 bump demo v1.2.3 --merge
 check "a head that moves to a human's edit is never merged unattended" eval 'is_code 1 && stderr_has "not merging a human" && [ "$(gh_calls "pr merge")" = 0 ] && [ "$(gh_calls "pr view")" = 2 ]'
 
+# --- public entries (docs/specs/public-tap.md) ---------------------------------
+
+PUB_DL="https://github.com/${TAP}/releases/download"
+# A public entry: its url is a public release of the tap, and a comment names its
+# source repo. <version> <asset name> <sha256>
+pub_text() {
+  printf '%s\n' \
+    'class Pubdemo < Formula' \
+    '  desc "Pubdemo"' \
+    '  homepage "https://github.com/21StarkCom/homebrew-tap"' \
+    '  # Source release repo: 21StarkCom/pubdemo' \
+    "  url \"${PUB_DL}/pubdemo-v$1/$2\"" \
+    "  version \"$1\"" \
+    "  sha256 \"$3\"" \
+    'end'
+}
+# Zips its arguments, path=text pairs, into $1 with Perl's core zip module.
+zip_of() { # <zip> <path=text>...
+  local out="$1"
+  shift
+  perl -MIO::Compress::Zip=zip,\$ZipError -e '
+    my $out = shift @ARGV;
+    my $z = IO::Compress::Zip->new($out) or die $ZipError;
+    for (@ARGV) { my ($n, $t) = split /=/, $_, 2; $z->newStream(Name => $n); $z->print($t) }
+    $z->close' "${out}" "$@"
+}
+# A rig whose tap also holds Formula/pubdemo.rb at 1.0.0.
+pub_rig() {
+  new_rig
+  other_clone
+  pub_text 1.0.0 pubdemo_1.0.0_darwin_arm64.zip "${ONES}" >"${R}/other/Formula/pubdemo.rb"
+  git -C "${R}/other" add -A
+  git -C "${R}/other" commit -qm "pubdemo"
+  git -C "${R}/other" push -q origin HEAD:main
+  refresh_clone
+  zip_of "${work}/clean.zip" "pubdemo=binary bytes" "share/readme.txt=hello"
+}
+released() { [[ -f "${R}/gh/api/repos/${TAP}/releases/tags/$1.json" ]]; }
+pinned_line() { grep -qxF "$2" "${R}/tap/$1" || remote show "main:$1" | grep -qxF "$2"; }
+
+begin "a public entry: --dry-run publishes nothing"
+pub_rig
+add_release 21StarkCom/pubdemo v1.1.0 601 pubdemo_1.1.0_darwin_arm64.zip --bytes "${work}/clean.zip"
+bump pubdemo v1.1.0 --dry-run
+check "exit 0" is_code 0
+check "previews the public url" stderr_has "+  url \"${PUB_DL}/pubdemo-v1.1.0/pubdemo_1.1.0_darwin_arm64.zip\""
+check "says what it would publish" stderr_has "would publish pubdemo_1.1.0_darwin_arm64.zip as the release pubdemo-v1.1.0"
+check "runs the source check" stderr_has "checking pubdemo_1.1.0_darwin_arm64.zip for source"
+check "makes no release" eval '[ "$(gh_calls "api -X POST")" = 0 ] && [ "$(gh_calls "api -X PATCH")" = 0 ]'
+
+begin "a public entry: a PR run publishes the release, then pins it"
+: >"${R}/gh/log"
+bump pubdemo v1.1.0 --ticket STARK-9
+check "exit 0, stdout the PR number" eval 'is_code 0 && stdout_is "42$NL"'
+check "reads the source release of 21StarkCom/pubdemo" eval '[ "$(gh_calls "api repos/21StarkCom/pubdemo/releases/tags/v1.1.0")" = 1 ]'
+check "makes a draft release pubdemo-v1.1.0" eval 'grep -qx "draft=true" "$R/gh/rel/901.fields" && grep -qx "tag_name=pubdemo-v1.1.0" "$R/gh/rel/901.fields"'
+check "uploads the asset under its own name" eval 'grep -q "^5001 pubdemo_1.1.0_darwin_arm64.zip$" "$R/gh/rel/901.assets" && cmp -s "$R/gh/assets/5001" "$work/clean.zip"'
+check "publishes the release" released pubdemo-v1.1.0
+check "publishes before it pushes" eval '[ "$(log_line "api -X PATCH repos/$TAP/releases/901")" -lt "$(log_line "pr create")" ]'
+check "the branch is main plus one bumper commit" eval '[ "$(remote rev-list --count main..bump/pubdemo-1.1.0)" = 1 ] && [ "$(remote diff --name-only main...bump/pubdemo-1.1.0)" = Formula/pubdemo.rb ]'
+check "it pins the public url" eval 'remote show bump/pubdemo-1.1.0:Formula/pubdemo.rb | grep -qxF "  url \"${PUB_DL}/pubdemo-v1.1.0/pubdemo_1.1.0_darwin_arm64.zip\""'
+check "it pins the version and sha256" eval 'remote show bump/pubdemo-1.1.0:Formula/pubdemo.rb | grep -qxF "  version \"1.1.0\"" && remote show bump/pubdemo-1.1.0:Formula/pubdemo.rb | grep -qxF "  sha256 \"$rel_sha\""'
+check "it keeps the source line" eval 'remote show bump/pubdemo-1.1.0:Formula/pubdemo.rb | grep -qxF "  # Source release repo: 21StarkCom/pubdemo"'
+check "the PR body names the release" eval 'has "$(pr_field 42 body)" "published as the release \`pubdemo-v1.1.0\` of this tap"'
+check "I15: the checkout is back on main" clone_on_main
+
+begin "a public entry: a rerun reuses the release"
+: >"${R}/gh/log"
+bump pubdemo v1.1.0 --ticket STARK-9
+check "exit 0" is_code 0
+check "makes and uploads nothing" eval '[ "$(gh_calls "api -X POST")" = 0 ] && [ "$(gh_calls "api -X PATCH")" = 0 ]'
+check "says it reuses it" stderr_has "release pubdemo-v1.1.0 already holds pubdemo_1.1.0_darwin_arm64.zip; reusing it"
+check "reuses the PR" stderr_has "reusing PR #42"
+
+begin "a public entry: main already pins it, and its release is there"
+other_clone
+git -C "${R}/other" merge -q --ff-only origin/bump/pubdemo-1.1.0
+git -C "${R}/other" push -q origin main
+refresh_clone
+: >"${R}/gh/log"
+bump pubdemo v1.1.0
+check "exit 0, nothing to do" eval 'is_code 0 && stdout_is "" && stderr_has "already pins"'
+check "checks the release, and makes nothing" eval '[ "$(gh_calls "api repos/$TAP/releases/tags/pubdemo-v1.1.0")" = 1 ] && [ "$(gh_calls "api -X POST")" = 0 ]'
+
+begin "a public entry: --merge gates the bump as any other"
+pub_rig
+add_release 21StarkCom/pubdemo v1.1.0 601 pubdemo_1.1.0_darwin_arm64.zip --bytes "${work}/clean.zip"
+set_runs "${ALL_GREEN[@]}"
+bump pubdemo v1.1.0 --merge
+check "publishes, then merges the bumper's own commit" eval 'is_code 0 && released pubdemo-v1.1.0 && [ "$(pr_field 42 state)" = MERGED ]'
+
+begin "a public entry: other bytes under the asset's name stop the run"
+pub_rig
+add_release 21StarkCom/pubdemo v1.1.0 601 pubdemo_1.1.0_darwin_arm64.zip --bytes "${work}/clean.zip"
+mkdir -p "${R}/gh/api/repos/${TAP}/releases/tags"
+jq -n --arg d "sha256:${ZERO}" '{id: 77, assets: [{id: 78, name: "pubdemo_1.1.0_darwin_arm64.zip", state: "uploaded", digest: $d}]}' \
+  >"${R}/gh/api/repos/${TAP}/releases/tags/pubdemo-v1.1.0.json"
+bump pubdemo v1.1.0
+check "exit 1" is_code 1
+check "says it never replaces a public asset" stderr_has "a public asset is never replaced"
+check "uploads nothing and opens no PR" eval '[ "$(gh_calls "api -X POST")" = 0 ] && [ "$(gh_calls "pr create")" = 0 ]'
+
+begin "a public entry: a published release without the asset gets it"
+rm "${R}/gh/api/repos/${TAP}/releases/tags/pubdemo-v1.1.0.json"
+mkdir -p "${R}/gh/rel"
+printf 'pubdemo-v1.1.0' >"${R}/gh/rel/77.tag"
+: >"${R}/gh/rel/77.assets"
+jq -n '{id: 77, assets: []}' >"${R}/gh/api/repos/${TAP}/releases/tags/pubdemo-v1.1.0.json"
+: >"${R}/gh/log"
+bump pubdemo v1.1.0 --no-pr
+check "exit 0" is_code 0
+check "uploads to that release, with no new draft" eval '[ "$(gh_calls "api -X POST repos/$TAP/releases")" = 0 ] && grep -q "pubdemo_1.1.0_darwin_arm64.zip" "$R/gh/rel/77.assets"'
+check "publishes nothing more" eval '[ "$(gh_calls "api -X PATCH")" = 0 ]'
+check "--no-pr pins the public url in the checkout" pinned_line Formula/pubdemo.rb "  url \"${PUB_DL}/pubdemo-v1.1.0/pubdemo_1.1.0_darwin_arm64.zip\""
+git -C "${R}/tap" checkout -q -- Formula/pubdemo.rb
+
+begin "a public entry: an upload that reads back wrong is not published"
+pub_rig
+add_release 21StarkCom/pubdemo v1.1.0 601 pubdemo_1.1.0_darwin_arm64.zip --bytes "${work}/clean.zip"
+: >"${R}/gh/upload.bad"
+bump pubdemo v1.1.0
+check "exit 1" is_code 1
+check "says the digest is wrong" stderr_has "reads back as sha256:${ZERO}"
+check "publishes nothing and opens no PR" eval '[ "$(gh_calls "api -X PATCH")" = 0 ] && [ "$(gh_calls "pr create")" = 0 ] && ! released pubdemo-v1.1.0'
+rm "${R}/gh/upload.bad"
+
+begin "a public entry: an upload with no digest is downloaded and hashed"
+: >"${R}/gh/upload.nodigest"
+: >"${R}/gh/log"
+bump pubdemo v1.1.0 --no-pr
+check "exit 0" is_code 0
+check "downloads the upload to hash it" eval '[ "$(gh_calls "api -H Accept: application/octet-stream repos/$TAP/releases/assets/")" = 1 ]'
+check "publishes it" released pubdemo-v1.1.0
+rm "${R}/gh/upload.nodigest"
+git -C "${R}/tap" checkout -q -- Formula/pubdemo.rb
+
+begin "a public entry: an asset with source is not published"
+pub_rig
+zip_of "${work}/source.zip" "pubdemo=binary bytes" "dist/app.js.map={}"
+add_release 21StarkCom/pubdemo v1.1.0 601 pubdemo_1.1.0_darwin_arm64.zip --bytes "${work}/source.zip"
+bump pubdemo v1.1.0
+check "exit 1" is_code 1
+check "names the file and why" stderr_has "dist/app.js.map: a source map"
+check "makes no release and opens no PR" eval '[ "$(gh_calls "api -X POST")" = 0 ] && [ "$(gh_calls "pr create")" = 0 ]'
+bump pubdemo v1.1.0 --dry-run
+check "--dry-run refuses it too" is_code 1
+printf 'not an archive\n' >"${work}/plain.bin"
+add_release 21StarkCom/pubdemo v1.1.1 611 pubdemo_1.1.1_darwin_arm64.zip --bytes "${work}/plain.bin"
+bump pubdemo v1.1.1
+check "an asset the check cannot read: exit 1" is_code 1
+check "says the check did not run" stderr_has "the source check of pubdemo_1.1.1_darwin_arm64.zip did not run"
+
+begin "a public entry needs one source line"
+pub_rig
+other_clone
+perl -ni -e 'print unless /Source release repo/' "${R}/other/Formula/pubdemo.rb"
+git -C "${R}/other" commit -qam "no source line" && git -C "${R}/other" push -q origin HEAD:main
+refresh_clone
+: >"${R}/gh/log"
+bump pubdemo v1.1.0 --dry-run
+check "exit 1 before any gh call" eval 'is_code 1 && no_gh'
+check "says what it needs" stderr_has "a public entry needs one '# Source release repo: <owner>/<repo>' line, found 0"
+
 begin "every entry in this tap has the bumper's three lines, once each"
 for path in "${root}"/Formula/*.rb "${root}"/Casks/*.rb "${root}"/Casks/*/*.rb
 do
@@ -838,7 +1054,9 @@ do
   result="$(cd "${root}" && ENTRY_REL="${entry_rel}" OUT="${work}/rewritten.rb" bash -c '
     . scripts/bump.sh
     tap_root=$PWD rel=$ENTRY_REL version=9.9.9 a_id=123 sha='"${ONES}"'
-    read_entry && rewrite_entry "$OUT" && echo "$repo"' 2>&1)"
+    read_entry || exit 1
+    ! $public || pub_url="https://github.com/21StarkCom/homebrew-tap/releases/download/x-v9.9.9/x.zip"
+    rewrite_entry "$OUT" && echo "$repo"' 2>&1)"
   changed="$(diff "${path}" "${work}/rewritten.rb" | grep -c '^>' || true)"
   check "${entry_rel} (release repo ${result##*"${NL}"})" eval '[ "$changed" = 3 ] && has "$result" 21StarkCom/'
 done

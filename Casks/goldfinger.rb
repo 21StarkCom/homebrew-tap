@@ -1,25 +1,5 @@
 # frozen_string_literal: true
 
-require "download_strategy"
-
-# Cask URL specs are serialized by brew info and installed metadata. Keep the
-# credential in the downloader only; inherit all native preflight/cache/resume.
-class GoldfingerPrivateReleaseStrategy < CurlDownloadStrategy
-  def initialize(url, name, version, **meta)
-    super
-    # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-    token = GitHub::API.credentials.to_s.strip
-    if token.empty?
-      raise CurlDownloadStrategyError.new(
-        url,
-        "This private tap needs a GitHub token with contents:read access: " \
-        "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-      )
-    end
-    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  end
-end
-
 # Signed (Developer ID) + notarized + STAPLED macOS build of goldfinger — background computer use
 # for agents: Goldfinger.app runs the daemon that holds the Accessibility and Screen Recording
 # grants, and its own executable is also the `goldfinger` CLI that drives it. From 0.8.0 on, the
@@ -28,21 +8,17 @@ end
 # app, so it ships as a cask: the .app lands in /Applications and its executable is symlinked onto
 # PATH. The zip is the notarized, stapled bundle (Goldfinger.app at the archive root).
 cask "goldfinger" do
-  # version / asset id / sha256 are release-specific and rewritten when goldfinger's
-  # release calls the bumper (the README's caller table) — do not hand-edit them.
-  #
-  # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version
-  # string is not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, as mimir's
-  # cask does: the API asset id is the only working private fetch, and integrity stays checked.
+  # version / url / sha256 are release-specific and rewritten when goldfinger's release
+  # calls the bumper (the README's caller table), which publishes the zip as a release of
+  # this tap — do not hand-edit them. The real sha256 keeps every download checked.
   version "0.21.0"
   sha256 "c8b56691421871cc2d41caac7ee0fef9975dcf35802a703131dbb0eae02ed008"
 
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  url "https://api.github.com/repos/21StarkCom/goldfinger/releases/assets/727176333",
-      using: GoldfingerPrivateReleaseStrategy
+  # Source release repo: 21StarkCom/goldfinger
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/goldfinger-v0.21.0/Goldfinger_0.21.0_darwin_arm64.zip"
   name "Goldfinger"
   desc "Background computer use for agents: operate native apps without taking focus"
-  homepage "https://github.com/21StarkCom/goldfinger"
+  homepage "https://github.com/21StarkCom/homebrew-tap"
 
   depends_on arch: :arm64        # the shipped bundle is a signed arm64 Mach-O
   depends_on macos: :tahoe       # min macOS 26 (Package.swift .macOS(.v26)); bare symbol == ">="
@@ -97,9 +73,6 @@ cask "goldfinger" do
       ]
 
   caveats <<~EOS
-    Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed
-    in (`brew install gh && gh auth login`), or export HOMEBREW_GITHUB_API_TOKEN=<token>
-
     Grant Goldfinger Accessibility and Screen Recording once, from a terminal:
       goldfinger setup
     It asks for each grant, opens its System Settings pane, and waits until both are allowed.
