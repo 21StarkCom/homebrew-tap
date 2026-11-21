@@ -6,27 +6,11 @@
 # linker-signed native prebuilds. Released from `floorplan-v*` tags by `scripts/release-floorplan.sh`.
 class Floorplan < Formula
   desc "C4 design tool of the 21Stark fleet, built on LikeC4"
-  homepage "https://github.com/21StarkCom/floorplan"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  # So does its fix_linkage worker (sandbox_operation.rb), which reloads it for preserve_rpath.
-  worker = %w[build.rb test.rb postinstall.rb sandbox_operation.rb].any? do |w|
-    $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s
-  end
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/floorplan/releases/assets/767303201",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/floorplan
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/floorplan-v0.15.1/floorplan_0.15.1_darwin_arm64.zip"
   version "0.15.1"
   sha256 "d0e34696cbb03eb67903054a904f2689a5e5607d944ab5e5dc97aab28c851f2d"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :arm64 # the zip vendors darwin-arm64 native prebuilds (esbuild, rollup, …)
   depends_on :macos

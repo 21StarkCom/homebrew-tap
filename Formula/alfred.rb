@@ -6,24 +6,11 @@
 # opt path, so `brew upgrade alfred` never orphans the daemon.
 class Alfred < Formula
   desc "Manual-ticket CLI + always-on local daemon for the 21Stark work fleet"
-  homepage "https://github.com/21StarkCom/odin"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/odin/releases/assets/775729174",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/odin
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/alfred-v0.85.0/alfred_v0.85.0_darwin_arm64.zip"
   version "0.85.0"
   sha256 "693188c22129772016aaebbfa54a322055854a6061d2d440817a575c4bf1161a"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   # alfred reads people, identity and org data through `urd`. Tap-qualified: a bare name
   # resolves to homebrew/core first, and is ambiguous when another tap ships a `urd`.

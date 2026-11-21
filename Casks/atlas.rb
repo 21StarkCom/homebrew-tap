@@ -1,25 +1,5 @@
 # frozen_string_literal: true
 
-require "download_strategy"
-
-# Cask URL specs are serialized by brew info and installed metadata. Keep the
-# credential in the downloader only; inherit all native preflight/cache/resume.
-class AtlasPrivateReleaseStrategy < CurlDownloadStrategy
-  def initialize(url, name, version, **meta)
-    super
-    # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-    token = GitHub::API.credentials.to_s.strip
-    if token.empty?
-      raise CurlDownloadStrategyError.new(
-        url,
-        "This private tap needs a GitHub token with contents:read access: " \
-        "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-      )
-    end
-    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  end
-end
-
 # Developer-ID-signed + notarized + stapled macOS build of the **Atlas** desktop app — the GUI for
 # the second-brain engine (the `brain` CLI is the companion formula in this tap). An Electron
 # app, so it ships as a cask: Atlas.app lands in /Applications. The bundle carries its own CLI
@@ -30,22 +10,17 @@ end
 # the notarized (spctl: "Notarized Developer ID"), stapled bundle (Atlas.app at the archive root),
 # so Gatekeeper validates it offline though every install or upgrade lands it quarantined.
 cask "atlas" do
-  # version / asset id / sha256 are release-specific. No release step bumps this cask (the
-  # README's caller table): re-point it with the bumper — do not hand-edit them.
-  #
-  # `brew audit` warns "Use sha256 :no_check when URL is unversioned" because the version is
-  # not in the (opaque, by-asset-id) URL. We keep a real sha256 anyway, DELIBERATELY: :no_check
-  # disables integrity verification on a private download, and the versioned browser-download URL
-  # 404s for private-repo assets even with a token — the API asset id is the only working fetch.
+  # version / url / sha256 are release-specific. No release step bumps this cask (the README's
+  # caller table): re-point it with the bumper, which publishes the zip as a release of this
+  # tap — do not hand-edit them. The real sha256 keeps every download checked.
   version "0.29.5"
   sha256 "99152e9dd0b73f120501079ecef5d57dd1f1967a2a6ce071a39968da73d0583f"
 
-  # API asset URL (private repo). asset id is release-specific; re-point it with the bumper.
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/770927902",
-      using: AtlasPrivateReleaseStrategy
+  # Source release repo: 21StarkCom/atlas
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/atlas-v0.29.5/Atlas-0.29.5.zip"
   name "Atlas"
   desc "Second-brain desktop app (companion GUI to the brain CLI)"
-  homepage "https://github.com/21StarkCom/atlas"
+  homepage "https://github.com/21StarkCom/homebrew-tap"
 
   depends_on arch: :arm64 # the shipped bundle is a signed arm64 Mach-O
   # The bundled official Node (Contents/Resources/node, which runs the app's brain CLI) is built
@@ -76,9 +51,4 @@ cask "atlas" do
         "~/Library/Saved Application State/com.21stark.atlas.desktop.savedState",
       ],
       rmdir:      "~/Library/Application Support/@atlas"
-
-  caveats <<~EOS
-    Installing needs GitHub read access to 21StarkCom private repos: Homebrew's gh signed
-    in (`brew install gh && gh auth login`), or export HOMEBREW_GITHUB_API_TOKEN=<token>
-  EOS
 end

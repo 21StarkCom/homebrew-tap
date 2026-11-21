@@ -4,24 +4,11 @@
 # formula was named hermod up to 0.52.0 (STARK-19541): it keeps a `hermod` link to muxctl.
 class Muxctl < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
-  homepage "https://github.com/21StarkCom/mux-control"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/mux-control/releases/assets/775368395",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/mux-control
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/muxctl-v0.53.0/muxctl_v0.53.0_darwin_arm64.zip"
   version "0.53.0"
   sha256 "7c379667bd58445831570e68edfbd83c8528e3eac7fa6e249fd2b0e5370611b5"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   # muxctl finds a repo's checkout with `urd repos get`. Tap-qualified: a bare name resolves
   # to homebrew/core first, and is ambiguous when another tap ships a `urd`.

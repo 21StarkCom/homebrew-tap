@@ -46,6 +46,8 @@ PUBLIC_URL_RE='^[[:space:]]*url[[:space:]]+"https://github\.com/21StarkCom/homeb
 VERSION_RE='^[[:space:]]*version[[:space:]]+"([^"]+)"'
 SHA_RE='^[[:space:]]*sha256[[:space:]]+"([0-9a-f]{64})"'
 HOMEPAGE_RE='^[[:space:]]*homepage[[:space:]]+"([^"]+)"'
+# The bumper's SOURCE_RE: a public entry names its source repo, since its homepage is this tap.
+SOURCE_RE='^[[:space:]]*#[[:space:]]*Source release repo:[[:space:]]*([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)[[:space:]]*$'
 ENTRY_RE='^[A-Za-z0-9][A-Za-z0-9@+._-]*$'
 NL=$'\n'
 
@@ -790,7 +792,7 @@ write_renames() {
 
 # Rewrites the README block from the marked files in the clone.
 write_readme() {
-  local block f name k v home line sep=""
+  local block f name k v home src line sep=""
   block="${BEGIN_MARK}
 ## Mirrored from 21StarkCom/homebrew-tap
 
@@ -820,12 +822,15 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
     name="${f##*/}"
     name="${name%.rb}"
     if [[ ${f} == */Casks/* ]]; then k=cask; else k=formula; fi
-    v="" home=""
+    v="" home="" src=""
     while IFS= read -r line
     do
       if [[ -z ${v} && ${line} =~ ${VERSION_RE} ]]; then v="${BASH_REMATCH[1]}"; fi
       if [[ -z ${home} && ${line} =~ ${HOMEPAGE_RE} ]]; then home="${BASH_REMATCH[1]}"; fi
+      if [[ -z ${src} && ${line} =~ ${SOURCE_RE} ]]; then src="${BASH_REMATCH[1]}"; fi
     done <"${f}"
+    # The Source column names the source repo, not the tap a public entry's homepage names.
+    if [[ -n ${src} ]]; then home="https://github.com/${src}"; fi
     block+="${NL}| \`${name}\` | ${k} | ${v} | [${home#https://github.com/}](${home}) |"
   done
   block+="${NL}${END_MARK}"

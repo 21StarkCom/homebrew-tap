@@ -6,7 +6,8 @@
 # reference. Tests: scripts/test-bump.sh.
 #
 # Only bash builtins, git, gh, perl, and sha256sum or shasum (Decision 1): every
-# caller, the Linux release jobs included, has exactly those.
+# caller, the Linux release jobs included, has exactly those. The one exception:
+# source-check.pl unpacks a public entry's .pkg asset with bsdtar (idavoll's Mac).
 #
 # brew style (formulae.yml) lints this with every optional shellcheck check. Three
 # are off: single-quoted $names are jq's, not the shell's (SC2016); functions run
@@ -119,7 +120,8 @@ needs Actions: read on the token.
 
 stdout: the PR number and nothing else. Empty means there is nothing to merge.
 Exit: 0 done or nothing to do, 1 refused or failed, 2 usage error.
-Needs bash, git, gh, perl, and sha256sum or shasum.
+Needs bash, git, gh, perl, and sha256sum or shasum. A public entry's .pkg asset
+also needs bsdtar, which the source check runs to unpack it.
 EOF
   printf '%s' "${text}"
 }

@@ -22,6 +22,12 @@ do
     exit 1
   }
 done
+# The .pkg test makes a xar archive with bsdtar. Alpine's libarchive cannot write one,
+# so bump.yml's bash 3.2 job sets BUMP_TEST_SKIP_PKG=1.
+[[ -n "${BUMP_TEST_SKIP_PKG:-}" ]] || command -v bsdtar >/dev/null || {
+  echo "test-bump.sh: bsdtar is required (BUMP_TEST_SKIP_PKG=1 skips the .pkg test)" >&2
+  exit 1
+}
 sut_bash="$(command -v "${BUMP_TEST_BASH:-bash}")" || {
   echo "test-bump.sh: no bash at ${BUMP_TEST_BASH:-bash}" >&2
   exit 1
@@ -1034,6 +1040,46 @@ add_release 21StarkCom/pubdemo v1.1.1 611 pubdemo_1.1.1_darwin_arm64.zip --bytes
 bump pubdemo v1.1.1
 check "an asset the check cannot read: exit 1" is_code 1
 check "says the check did not run" stderr_has "the source check of pubdemo_1.1.1_darwin_arm64.zip did not run"
+
+# Packs path=text pairs into a flat .pkg, as pkgbuild makes one: a xar archive of a
+# gzip odc Payload. <pkg> <path=text>...
+pkg_of() {
+  local out="$1" dir="${work}/pkg" pair path
+  shift
+  rm -rf "${dir}"
+  mkdir -p "${dir}/root" "${dir}/flat"
+  for pair in "$@"
+  do
+    path="${pair%%=*}"
+    mkdir -p "${dir}/root/$(dirname "${path}")"
+    printf '%s' "${pair#*=}" >"${dir}/root/${path}"
+  done
+  bsdtar --format odc -czf "${dir}/flat/Payload" -C "${dir}/root" .
+  printf '<pkg-info/>\n' >"${dir}/flat/PackageInfo"
+  bsdtar --format xar -cf "${out}" -C "${dir}/flat" .
+}
+
+if [[ -n "${BUMP_TEST_SKIP_PKG:-}" ]]
+then
+  printf '\n# a public entry: a .pkg asset\nskip BUMP_TEST_SKIP_PKG is set\n'
+else
+  begin "a public entry: a .pkg asset"
+  pub_rig
+  pkg_of "${work}/clean.pkg" "usr/local/bin/pubdemo=binary bytes"
+  add_release 21StarkCom/pubdemo v1.2.0 621 pubdemo-1.2.0.pkg --bytes "${work}/clean.pkg"
+  bump pubdemo v1.2.0 --no-pr --asset-suffix .pkg
+  check "a clean .pkg: exit 0" is_code 0
+  check "a clean .pkg: publishes it" released pubdemo-v1.2.0
+  check "a clean .pkg: pins its url" pinned_line Formula/pubdemo.rb "  url \"${PUB_DL}/pubdemo-v1.2.0/pubdemo-1.2.0.pkg\""
+  git -C "${R}/tap" checkout -q -- Formula/pubdemo.rb
+  pkg_of "${work}/source.pkg" "usr/local/bin/pubdemo=binary bytes" "usr/local/lib/pubdemo/main.ts=export {}"
+  add_release 21StarkCom/pubdemo v1.2.1 631 pubdemo-1.2.1.pkg --bytes "${work}/source.pkg"
+  : >"${R}/gh/log"
+  bump pubdemo v1.2.1 --no-pr --asset-suffix .pkg
+  check "a .pkg with source: exit 1" is_code 1
+  check "a .pkg with source: names the file" stderr_has "usr/local/lib/pubdemo/main.ts:"
+  check "a .pkg with source: makes no release" eval '[ "$(gh_calls "api -X POST")" = 0 ] && ! released pubdemo-v1.2.1'
+fi
 
 begin "a public entry needs one source line"
 pub_rig

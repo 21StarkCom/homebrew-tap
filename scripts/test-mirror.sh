@@ -962,7 +962,7 @@ check "--archive, the .tar.gz: refuses nothing" bash -c '[[ -z $1 ]]' _ "${out}"
 printf 'no archive\n' >"${R}/plain.bin"
 archive_check "${R}/plain.bin"
 check "--archive, no archive: exit non-zero" bash -c '[[ $1 != 0 ]]' _ "${code}"
-check "--archive, no archive: says so" err_has "is neither a .zip nor a .tar.gz"
+check "--archive, no archive: says so" err_has "is neither a .zip, a .tar.gz nor a .pkg"
 
 # Runs the check of bundled on an archive of a minified bin/bundled.ts and one
 # more file, <path> with each <line>; asserts that it refuses that file.
@@ -1024,6 +1024,9 @@ pack "${R}/clean.pkg" clean.pkg
 run_check bundled "${R}/clean.pkg"
 check "a clean .pkg: exit 0" is_code 0
 check "a clean .pkg: says it passes" out_has "bundled: clean.pkg passes the source check"
+archive_check "${R}/clean.pkg"
+check "--archive, a clean .pkg: exit 0" is_code 0
+check "--archive, a clean .pkg: refuses nothing" bash -c '[[ -z $1 ]]' _ "${out}"
 stage_file "${app}/src/main.ts" "const a: number = 1"
 stage_file "${app}/app.asar.unpacked/node_modules/@21starkcom/kit/index.js.map" '{"version":3}'
 pack "${R}/case.pkg" case.pkg
@@ -1033,6 +1036,10 @@ check "names the .ts by its path in the Payload" err_has "bundled: Payload/${app
 check "names the first-party .map" \
   err_has "bundled: Payload/${app}/app.asar.unpacked/node_modules/@21starkcom/kit/index.js.map: a source map in a first-party package"
 check "says it is not copied" err_has "bundled: case.pkg holds source in 2 file(s), so it is not copied"
+archive_check "${R}/case.pkg"
+check "--archive, source in the Payload: names the .ts" out_has "Payload/${app}/src/main.ts: TypeScript source"
+check "--archive, source in the Payload: names the .map" \
+  out_has "Payload/${app}/app.asar.unpacked/node_modules/@21starkcom/kit/index.js.map: a source map in a first-party package"
 rm -rf "${R}/pkgroot"
 mkdir -p "${R}/pkgroot"
 printf '<pkg-info/>\n' >"${R}/pkgroot/PackageInfo"
@@ -1042,6 +1049,9 @@ bsdtar --format xar -cf "${R}/nopayload.pkg" -C "${R}/pkgroot" .
 run_check bundled "${R}/nopayload.pkg"
 check "a .pkg with no Payload: exit 1" is_code 1
 check "a .pkg with no Payload: says so" err_has "cannot unpack nopayload.pkg: it holds no Payload to check"
+archive_check "${R}/nopayload.pkg"
+check "--archive, no Payload: exit non-zero" bash -c '[[ $1 != 0 ]]' _ "${code}"
+check "--archive, no Payload: says so" err_has "it holds no Payload to check"
 # A Payload bsdtar cannot read (as Apple's pbzx), beside a Scripts archive it can.
 rm -f "${R}/pkgroot/Empty"
 mkdir -p "${R}/pkgscripts"
@@ -1052,6 +1062,9 @@ bsdtar --format xar -cf "${R}/pbzx.pkg" -C "${R}/pkgroot" .
 run_check bundled "${R}/pbzx.pkg"
 check "an unreadable Payload: exit 1" is_code 1
 check "an unreadable Payload: names it" err_has "cannot unpack pbzx.pkg: its Payload is no archive that bsdtar reads"
+archive_check "${R}/pbzx.pkg"
+check "--archive, an unreadable Payload: exit non-zero" bash -c '[[ $1 != 0 ]]' _ "${code}"
+check "--archive, an unreadable Payload: names it" err_has "its Payload is no archive that bsdtar reads"
 printf 'not a xar archive\n' >"${R}/broken.pkg"
 run_check bundled "${R}/broken.pkg"
 check "a broken .pkg: exit 1" is_code 1
@@ -1288,7 +1301,7 @@ check "the copy has the marker on line 3" pub_line3_is_marker
 check "the copy renames 21starkcom/tap" copy_has Formula/pubdemo.rb 'depends_on "getevinced/tap/demo"'
 check "the copy keeps its homepage" copy_has Formula/pubdemo.rb '  homepage "https://github.com/21StarkCom/homebrew-tap"'
 check "no copy names 21starkcom/tap" no_21stark_tap
-check "README lists it" readme_has '| `pubdemo` | formula | 3.0.0 | [21StarkCom/homebrew-tap](https://github.com/21StarkCom/homebrew-tap) |'
+check "README lists it with its source repo, not the tap" readme_has '| `pubdemo` | formula | 3.0.0 | [21StarkCom/pubdemo](https://github.com/21StarkCom/pubdemo) |'
 check "README names the public releases" readme_has 'or from a public release of `21StarkCom/homebrew-tap`'
 check "GITHUB_OUTPUT lists it" output_lists formulae pubdemo
 check "says why" out_has "pubdemo 3.0.0: a public entry; its copy keeps its url"

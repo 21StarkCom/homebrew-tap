@@ -7,24 +7,11 @@
 # Anthropic-signed `claude`. Released from `librarian-v*` tags by `scripts/release-librarian.sh`.
 class Librarian < Formula
   desc "Atlas vault librarian: answers questions from the vaults (CLI, MCP, daemon)"
-  homepage "https://github.com/21StarkCom/atlas"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/atlas/releases/assets/770889206",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/atlas
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/librarian-v0.29.0/librarian_0.29.0_darwin_arm64.zip"
   version "0.29.0"
   sha256 "3c7dcef63f11075a87941220b8ce7301b9c871072395a993b776658e1ff4b5cf"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   # The librarian's tools run `brain`. Tap-qualified: a bare name resolves to homebrew/core first,
   # and is ambiguous when another tap ships a `brain`.
