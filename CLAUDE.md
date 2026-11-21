@@ -14,7 +14,8 @@ Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as 
 - An entry downloads, with no token code, from its release `<entry>-v<version>` here. Its line `# Source release repo: <owner>/<repo>` names the repo the bumper reads (`docs/specs/public-tap.md`).
 - The bumper checks the asset with `scripts/source-check.pl`, then publishes that release before it pins it. A public asset cannot be called back.
 - A new entry starts public. Before its first publish, unpack its asset, dump the strings of each Mach-O or ELF file, run `gitleaks dir` over it, and read each finding.
-- An asset that holds a secret stays private. Before you add a private entry, read its shape and traps in the README's Public entries section. PRs and Actions logs here are public.
+- An asset that holds a secret stays private. Before you add a private entry, read its shape and traps in the README's Public entries section.
+- Trap: PRs and Actions logs here are public. Keep each secret value out of them.
 - Never override `_fetch` or run curl in the tap: Homebrew owns preflight, redirects, cache freshness and partial resume.
 
 ## Release fields and the bumper
@@ -24,12 +25,13 @@ Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as 
 - Keep the standalone `url "…",`, `version "…"` and `sha256 "…"` stanzas, each exactly once: the bumper refuses an entry with more or fewer. It finds each one by an anchored regex, so their order is free.
 - Never move the `url` into a helper or interpolate the version into it: the bumper rewrites the literal.
 - To re-point an entry by hand, run the bumper from a clean checkout of this repo at `origin/main` (`--dry-run` previews, `--no-pr` edits the checkout without a commit).
-- Callers run `main` unpinned, so the bumper's interface only grows. A bumper change lands with its tests (`scripts/test-bump.sh`) in the same PR.
+- Callers run `main` unpinned, so the bumper's interface only grows.
+- A bumper change lands with its tests (`scripts/test-bump.sh`) in the same PR.
 - Keep `scripts/bump.sh` working under bash 3.2: a signing Mac runs it as `/bin/bash`.
 
 ## Platform
 
-- An entry declares `depends_on :macos` and `depends_on arch: :arm64`.
+- A macOS entry declares `depends_on :macos` and `depends_on arch: :arm64`.
 - A `<tool>-linux` formula is the tool's unsigned Linux build for the devbox, with `depends_on :linux` and `depends_on arch: :x86_64`. It is a separate entry because `brew style` refuses a `url` inside `on_macos`/`on_linux`.
 - Name a new `-linux` formula after the binary it ships: CI requires its zip to hold `<tool>` as a Linux x86-64 executable.
 - Trap: a `-linux` bump without the entry's `--asset-suffix` (the README's caller table) pins the macOS zip.
@@ -65,14 +67,18 @@ scripts/mirror.sh --dry-run
 ## Checks
 
 - The registered tap is a separate git clone at `/opt/homebrew/Library/Taps/21starkcom/homebrew-tap`, not a symlink to this checkout. Never discard another process's changes in that shared clone.
-- `brew style <path>` checks this working tree. It can also load the clone's copy of the same class and report `Lint/DuplicateMethods` on `install` or `caveats`: when `main`'s unchanged file shows the same offense, rerun with `--except-cops Lint/DuplicateMethods`.
+- `brew style <path>` checks this working tree.
+- Trap: it can also load the clone's copy of the entry and flag `Lint/DuplicateMethods` on `install` or `caveats`. When `main`'s unchanged file shows it too, add `--except-cops Lint/DuplicateMethods`.
 - `brew audit` rejects a path. `brew audit --strict 21StarkCom/tap/<name>` and `brew fetch --cask 21StarkCom/tap/<name>` read the registered clone.
 - `brew fetch --cask <path>` works only under `HOMEBREW_DEVELOPER=1`: use it to check an edited cask's download against its `sha256`.
-- Check syntax and style before you merge. After the merge, confirm the clone is clean, fast-forward it to the merged entry, confirm it has the reviewed version, url and checksum, and run the audit.
-- Homebrew trusts this tap per entry (`brew trust --json=v1`). It refuses to load a new entry copied into the clone for `brew audit` and `brew fetch` until `brew trust --formula 21starkcom/tap/<name>`. `brew install` of the full name trusts it.
+- Check syntax and style before you merge.
+- After the merge, confirm the clone is clean, fast-forward it to the merged entry, confirm it has the reviewed version, url and checksum, and run the audit.
+- Homebrew trusts this tap per entry: `brew trust --json=v1` lists the trusted entries.
+- Trap: `brew audit` and `brew fetch` refuse a new entry copied into the clone until `brew trust --formula 21starkcom/tap/<name>` (`--cask` for a cask). `brew install` of the full name trusts it.
 - CI installs and tests no entry. Run `brew reinstall` and `brew test` on a Mac, and on the x86_64 devbox for a `-linux` formula.
 - Keep `test do` version-agnostic: assert `version.to_s` against the tool's own `version` output, never a fixed string.
-- CI fetches only the entries a PR changes; a change of `scripts/` or `formulae.yml`, or `gh workflow run formulae.yml`, fetches all. The fetch catches a gone asset or a mismatched `sha256`, but not a url and checksum of another release: check the version yourself.
+- CI fetches only the entries a PR changes. A change of `scripts/` or `formulae.yml`, or `gh workflow run formulae.yml`, fetches all.
+- Trap: the fetch catches a gone asset or a mismatched `sha256`, but not a url and checksum of another release. Check the version yourself.
 
 ## PRs
 
@@ -93,7 +99,8 @@ scripts/mirror.sh --dry-run
 
 - The release zip is a node ESM tree (`dist/` and a vendored `node_modules` with the signed native modules) plus any run-time data the CLI reads from disk.
 - `install` runs `libexec.install Dir["*"]`, which keeps the layout and the relative pnpm symlinks. It writes a `bin` wrapper that runs the entry under `depends_on "node"`: `exec "#{formula_opt_bin("node")}/node" "#{libexec}/dist/bin.js" "$@"`.
-- Trap: Homebrew renames each dylib in the keg to its `opt` path, and fails the install when the name does not fit the header. For such a dylib, `install` renames it to `@rpath/<name>` and re-signs it ad hoc, under `preserve_rpath` (`Formula/floorplan.rb`).
+- Trap: Homebrew renames each keg dylib to its `opt` path, and fails when that name does not fit the header. `install` renames such a dylib to `@rpath/<name>` and re-signs it ad hoc.
+- Such a formula declares `preserve_rpath`, which keeps that name, as `Formula/floorplan.rb` does.
 
 **Bun bundle-tree CLI → formula** (`Formula/sleipnir.rb` is the model):
 
@@ -101,7 +108,7 @@ scripts/mirror.sh --dry-run
 - `install` runs `libexec.install Dir["*"]`, which skips top-level dotfiles: keep the zip free of them. It writes a `bin` wrapper over `depends_on "bun"`: `exec "#{formula_opt_bin("bun")}/bun" "#{libexec}/bin/<entry>.mjs" "$@"`.
 - The bumper never rewrites the wrappers: a launcher move is a hand edit in that release's tap PR.
 - Add `--no-env-file --config=/dev/null` when the CLI must not inherit the caller's cwd `.env` or `bunfig.toml` preloads, and keep a matching `test do` assertion.
-- Trap: a Bun floor that the CLI enforces at run time is invisible to `brew install`, which sets no minimum version on a dependency: a stale homebrew/core pours an old bottle, and only `brew test` catches it.
+- Trap: `brew install` sets no minimum version on a dependency, so a stale homebrew/core bottle can miss a Bun floor that the CLI enforces at run time. Only `brew test` catches it.
 
 **GUI `.app` → cask** (`Casks/mimir.rb` is the model):
 
@@ -110,14 +117,16 @@ scripts/mirror.sh --dry-run
 - `depends_on macos:` pins the build's deployment target.
 - `uninstall quit:` closes the app, and any menu bar helper it opens (a login item with its own bundle id), on upgrade. Never name a `KeepAlive` launchd agent there: launchd relaunches it at once.
 - Put every launchd job the app registers, its login item included, in `zap launchctl:`, never in `uninstall launchctl:`: `brew upgrade` runs every `uninstall` directive but `signal` too.
-- A helper's own `SMAppService.mainApp` registration owns no launchd job while the helper is quit, and outlives its bundle. Zap it with `login_item:` by display name; System Events then asks the terminal for Automation access.
+- Trap: a helper's own `SMAppService.mainApp` registration owns no launchd job while the helper is quit, and outlives its bundle. Zap it with `login_item:` by display name.
+- A `login_item:` zap makes System Events ask the terminal for Automation access.
 - The release zip holds the notarized and **stapled** `.app` at its root: Homebrew installs a cask's app quarantined on each install or upgrade, and the stapled ticket lets Gatekeeper check it offline.
 
 ## The GetEvinced mirror
 
 - After each push to `main`, `mirror.yml` copies each entry to `GetEvinced/homebrew-tap`. A public entry's copy keeps its url; only a private entry's asset is copied there. Every member of the GetEvinced org can read what lands there.
 - `docs/specs/getevinced-mirror.md` is the mirror's design. `scripts/mirror.sh --help` lists what the copy changes and what its source check refuses.
-- Run `scripts/mirror.sh --check <entry> <archive>` on a new entry's release zip, `.tar.gz` or `.pkg` before its PR (a `.pkg` needs `bsdtar`). Add a fleet repo's new npm scope to `FIRST_PARTY_SCOPES` in `scripts/source-check.pl`.
+- Run `scripts/mirror.sh --check <entry> <archive>` on a new entry's release zip, `.tar.gz` or `.pkg` before its PR (a `.pkg` needs `bsdtar`).
+- Add a fleet repo's new npm scope to `FIRST_PARTY_SCOPES` in `scripts/source-check.pl`.
 - The check cannot judge readable JS: an unminified bundle, the JS inside a `bun build --compile` binary, or an Electron `app.asar`. The PR that adds a private entry whose asset holds readable JS also adds it to `EXCLUDED` in `scripts/mirror.sh`, unless the operator says it may go.
 - Every entry that `EXCLUDED` does not hold is copied, a new one included.
 - Keep `# frozen_string_literal: true` and a blank line as an entry's first two lines: the copy puts its marker line after them.
@@ -128,7 +137,7 @@ scripts/mirror.sh --dry-run
 ## CI
 
 - `bump.yml`'s test fails when the bumper's `GATE_WORKFLOWS` differs from the workflows here that trigger on `pull_request`, or when one of them filters that trigger. Keep each such trigger unfiltered, and add a new one to `GATE_WORKFLOWS` in the same PR.
-- `mirror.yml` has no `pull_request` trigger and stays out of `GATE_WORKFLOWS`: `scripts/test-mirror.sh` checks both.
+- `mirror.yml` has no `pull_request` trigger and stays out of `GATE_WORKFLOWS`: `bump.yml` runs `scripts/test-mirror.sh` on each PR instead.
 - `brew style … scripts` lints `scripts/*.sh` with every optional shellcheck check and Homebrew's `shfmt` layout (`brew style --fix scripts/bump.sh` applies it).
 - Trap: that layout pass misreads a line inside a string or heredoc that starts with `if`. Keep embedded jq, Ruby and stub code free of those.
 - `formulae.yml`'s fetch steps pass the Actions secret `HOMEBREW_RELEASE_READ_TOKEN` as the token, and fetch with none when it is empty (a fork's PR). A private entry's source repo must grant it contents-read access.
