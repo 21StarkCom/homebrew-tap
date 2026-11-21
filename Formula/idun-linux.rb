@@ -8,9 +8,9 @@ class IdunLinux < Formula
   desc "Personal-ops maintenance CLI, Linux x86_64 build"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/idun
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/idun-linux-v0.180.1/idun_v0.180.1_linux_x64.zip"
-  version "0.180.1"
-  sha256 "d733353b10af9f84823a178cb9feca381e8b82d0ac23af2775ef880658a6dbb5"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/idun-linux-v0.181.0/idun_v0.181.0_linux_x64.zip"
+  version "0.181.0"
+  sha256 "a4c3eba9ff4015b6117f84e6e278f7ffd892acd814e29f3083ea9eef713e03af"
 
   depends_on arch: :x86_64 # bun build --compile --target=bun-linux-x64
   depends_on :linux
