@@ -6,24 +6,11 @@
 # path, so the two are installed side by side.
 class Bragi < Formula
   desc "Streaming speech-to-text and text-to-speech for agents"
-  homepage "https://github.com/21StarkCom/bragi"
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/bragi/releases/assets/698438427",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/bragi
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/bragi-v0.6.0/bragi_v0.6.0_darwin_arm64.zip"
   version "0.6.0"
   sha256 "ac947fe3ac7ebeea04e3fbca12c2d93780e3af4b72e87ab9d33504c141e75500"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :arm64
   depends_on macos: :sequoia # bragi-audio is built for macOS 15; bare symbol == ">="

@@ -8,25 +8,11 @@
 # Mac by idavoll's statusline/release.sh (STARK-10552).
 class StarkStatusline < Formula
   desc "Claude Code statusline: compiled renderer and terminal layout editor"
-  homepage "https://github.com/21StarkCom/idavoll"
-  # version / asset id / sha256 are release-specific and rewritten when idavoll's
-  # statusline release calls the bumper (the README's caller table) — do not hand-edit them.
-  # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-  # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
-  # config. They never download (the brew process fetched first), so they skip the lookup.
-  worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
-  token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/771520146",
-      headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
+  homepage "https://github.com/21StarkCom/homebrew-tap"
+  # Source release repo: 21StarkCom/idavoll
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/stark-statusline-v0.7.0/stark-statusline_0.7.0_darwin_arm64.zip"
   version "0.7.0"
   sha256 "101ea208c592d7b06188e7d34271d0bd90b7a489a398e2dae9d8658b822dcd4d"
-  if token.empty? && !worker
-    raise CurlDownloadStrategyError.new(
-      stable.url,
-      "This private tap needs a GitHub token with contents:read access: " \
-      "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-    )
-  end
 
   depends_on arch: :arm64
   depends_on macos: :ventura # Go's linker builds it for macOS 13.0; bare symbol == ">="

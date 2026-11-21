@@ -238,8 +238,9 @@ jobs:
           # Prove the token comes from gh, not a stray env var or keychain entry.
           brew ruby -e 'source = GitHub::API.credentials_type
             abort "token source is #{source}, not the gh login" unless source == :github_cli_token'
-          brew fetch --force 21StarkCom/tap/stark-statusline
-          brew fetch --force --cask 21StarkCom/tap/mimir
+          # Private entries: a public entry downloads with no token at all.
+          brew fetch --force 21StarkCom/tap/muninn
+          brew fetch --force --cask 21StarkCom/tap/idavoll
       - name: Verify authenticated preflight and partial resume
         if: env.FULL == 'true'
         env:
