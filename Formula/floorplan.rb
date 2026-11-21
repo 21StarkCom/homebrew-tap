@@ -8,9 +8,9 @@ class Floorplan < Formula
   desc "C4 design tool of the 21Stark fleet, built on LikeC4"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/floorplan
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/floorplan-v0.15.1/floorplan_0.15.1_darwin_arm64.zip"
-  version "0.15.1"
-  sha256 "d0e34696cbb03eb67903054a904f2689a5e5607d944ab5e5dc97aab28c851f2d"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/floorplan-v0.16.0/floorplan_0.16.0_darwin_arm64.zip"
+  version "0.16.0"
+  sha256 "91c0bb2cca64f6c1898b126454eb37cef53138912aefdfa774958624442ddadc"
 
   depends_on arch: :arm64 # the zip vendors darwin-arm64 native prebuilds (esbuild, rollup, …)
   depends_on :macos
