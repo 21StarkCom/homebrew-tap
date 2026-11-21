@@ -67,6 +67,9 @@ jobs:
           persist-credentials: false
       - name: Shellcheck
         run: shellcheck scripts/bump.sh scripts/test-bump.sh
+      - name: Install bsdtar
+        # The source check unpacks a .pkg with bsdtar, and the tests make one with it.
+        run: command -v bsdtar || { sudo apt-get update -qq && sudo apt-get install -y -qq libarchive-tools; }
       - name: Test bump.sh
         run: scripts/test-bump.sh
 
@@ -105,4 +108,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Test bump.sh
+        # Alpine's libarchive cannot write the xar archive of a .pkg; the test job runs it.
+        env:
+          BUMP_TEST_SKIP_PKG: "1"
         run: scripts/test-bump.sh

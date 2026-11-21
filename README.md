@@ -5,9 +5,8 @@ Public [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew
 `brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build (muninn: an unsigned bash tree) pulled from a GitHub Release, plus eight `-linux` formulae,
 the Linux x86_64 builds for the devbox of muxctl, frigg, urd, sonar, ghx, utgard and idun's two apps
-(`idun-linux` and `valkyrie-linux`). The [public entries](#public-entries) download from releases of
-this tap with no GitHub login; every other entry downloads a private release asset of its source
-repo, with a GitHub token. The source repos stay private. The tap builds nothing. It only pins
+(`idun-linux` and `valkyrie-linux`). Every entry is [public](#public-entries): it downloads from a
+release of this tap with no GitHub login. The source repos stay private. The tap builds nothing. It only pins
 each entry to a published release, and each source repo's release re-pins its own entry by pull request.
 
 **Status:** active. Every entry installs today; 32 of the 34 are re-pinned on each release
@@ -26,24 +25,13 @@ Pens and pictures reach the operator's hands through [homebrew-tap](https://gith
 ```sh
 # Once. The tap repo is public: brew clones it over HTTPS with no key or token.
 brew tap 21StarkCom/tap
-# A public entry installs with no GitHub login.
-brew install 21StarkCom/tap/tyr
-# Every other entry needs a GitHub token with contents:read on the private 21StarkCom
-# release repos: a Homebrew-installed gh signed in to an account that can read them is enough.
-brew install gh && gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
+# Every entry installs with no GitHub login.
 brew install 21StarkCom/tap/<formula>
 brew install --cask 21StarkCom/tap/<cask>
 brew upgrade 21StarkCom/tap/<name>
 ```
 
-The token authenticates the private release downloads only. Each private entry takes it
-from Homebrew's own lookup: `HOMEBREW_GITHUB_API_TOKEN` if set, else `gh auth token`
-(Homebrew's own gh only: a gh installed another way is not on the path it searches), else a
-GitHub token in the macOS keychain. Every `brew` command that reads a private formula needs
-one, `brew info` included: the formula refuses to evaluate without it. A private cask needs
-it only to download. A public entry holds no token code.
-Homebrew's sandboxed build and test workers cannot read gh's config, and never download,
-so they skip that check. A formula's files are installed without the
+No entry holds token code. A formula's files are installed without the
 quarantine xattr, so an ad-hoc-signed or un-notarized build runs under Homebrew but hits
 Gatekeeper if you unzip the release by hand. Casks install their apps quarantined. Every entry but
 the eight `-linux` formulae is **macOS arm64 only**; for another platform,
@@ -785,7 +773,7 @@ loads only when named in full.
 | Path | What it holds |
 |---|---|
 | `Formula/` | One Ruby formula per CLI, plus eight `<tool>-linux` formulae (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`), their tools' Linux builds. |
-| `Casks/` | One cask per GUI app; each private one has an initialization-only download adapter. The idavoll cask is in `Casks/i/`, which idavoll's installer does not read. |
+| `Casks/` | One cask per GUI app. The idavoll cask is in `Casks/i/`, which idavoll's installer does not read. |
 | `formula_renames.json` | Homebrew's map of renamed formulae: `njord` → `ghx`, `njord-linux` → `ghx-linux`, `hermod` → `muxctl`, `hermod-linux` → `muxctl-linux`. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
@@ -794,34 +782,34 @@ loads only when named in full.
 | `scripts/test-mirror.sh` | The mirror's tests, against a bare remote and a stubbed `gh`. |
 | `docs/specs/getevinced-mirror.md` | The design of the GetEvinced mirror (epic STARK-13601). |
 | `docs/specs/public-tap.md` | The design of the public entries (STARK-19553). |
-| `scripts/verify-auth.rb` | Checks the missing and whitespace-only token errors of each private entry, and that each public entry downloads with no token, with synthetic credentials only and gh's login hidden. |
-| `scripts/verify-download.rb` | Checks muxctl's authenticated preflight and a partial-download resume against the pinned checksum. |
-| `.github/workflows/formulae.yml` | On ubuntu arm64 (Homebrew on Linux): styles every entry, runs both verify scripts, audits and fetches every formula and cask, and fetches with only a gh login. |
-| `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu, and under bash 3.2 in the `bash:3.2` image, and `scripts/test-mirror.sh` on ubuntu. |
+| `scripts/verify-auth.rb` | Checks that each public entry downloads with no token, with gh's login hidden, and the missing and whitespace-only token errors of a private entry (none today), with synthetic credentials only. |
+| `scripts/verify-download.rb` | Checks muxctl's preflight and a partial-download resume against the pinned checksum. |
+| `.github/workflows/formulae.yml` | On ubuntu arm64 (Homebrew on Linux): styles every entry, runs both verify scripts, and audits and fetches every formula and cask. |
+| `.github/workflows/bump.yml` | Runs `scripts/test-bump.sh` on ubuntu, and under bash 3.2 in the `bash:3.2` image (with no `.pkg` test), and `scripts/test-mirror.sh` on ubuntu. |
 | `.github/workflows/mirror.yml` | On each push to `main`, daily and by hand: runs `scripts/mirror.sh` as the `21stark-tap-mirror` App, then fetches the changed copies (every copy, daily and by hand) from GetEvinced. |
 | `.github/workflows/secret-scan.yml` | The fleet's shared secret scan. |
 
 ## How it fits the fleet
 
 The tap is a passive publish target. Each source repo's release re-pins its own entry by
-running this repo's `scripts/bump.sh` (21stark ADR-0008), which reads the asset id and
-checksum back from the published release and opens a PR here; for a public entry, it first
-publishes the asset as a release of this tap. Two entries have no release
+running this repo's `scripts/bump.sh` (21stark ADR-0008), which reads the asset and its
+checksum back from the published release, publishes the asset as a release of this tap,
+and opens a PR here. Two entries have no release
 that bumps them: the atlas cask, re-pointed by hand at a `desktop-v*` release, and tyr, a
 frozen v0.109.0 CLI from before tyr became library-only.
 
 Every push to `main` also reaches [`GetEvinced/homebrew-tap`](https://github.com/GetEvinced/homebrew-tap)
-(`GetEvinced/tap`), for Evinced engineers who cannot read 21StarkCom. `mirror.yml` copies each
-entry's release asset into a release there and writes the entry there with its URL on that
-copy and `21StarkCom/tap` renamed to `GetEvinced/tap`
+(`GetEvinced/tap`), for Evinced engineers. `mirror.yml` writes each entry there with
+`21StarkCom/tap` renamed to `GetEvinced/tap`
 ([the spec](docs/specs/getevinced-mirror.md)). It writes only files that hold its marker
 line, its own block of the README there, and its own pairs in `formula_renames.json` and
 `cask_renames.json` (spec D13), so the Evinced team's own `aac` and `evinced` stay theirs,
 and it deletes no release. A rename here, such as `njord` to `ghx`, so reaches GetEvinced,
 and `brew update` moves an install of the old name there too.
-A public entry's copy keeps its url, and no asset is copied for it.
-Before each upload it unpacks the asset and refuses one that holds source (spec D12; the
-rules are in `scripts/source-check.pl`):
+A public entry's copy keeps its url, and no asset is copied for it; so today no asset is copied.
+For a private entry, it copies the release asset into a release there and points the copy's
+URL at it. Before each upload it unpacks the asset and refuses one that holds source (spec D12; the
+rules are in `scripts/source-check.pl`, which the bumper also runs before it publishes an asset here):
 outside `node_modules`, a `.ts`, `.tsx`, `.mts` or `.cts` file (but a `.d.ts`, and a
 minified bundle at a path the entry names under `libexec`), a `.map` file, or a `.json`
 that holds `sourcesContent`; in a package of a first-party scope (`@21starkcom`, `@atlas`,
@@ -839,18 +827,29 @@ its bash source tree. A new entry goes there unless its PR adds it to `EXCLUDED`
 
 ### Public entries
 
-Some entries are public: anyone installs them with no GitHub login, because each downloads
-from a public release of this tap ([the spec](docs/specs/public-tap.md)). Their source repos
-stay private. They are `bragi`, `frigg`, `frigg-linux`, `heimdall`, `lumiere`, `plume`,
-`sonar`, `sonar-linux`, `stark-statusline`, `tyr`, `urd`, `urd-linux`, and the casks
-`goldfinger` and `mimir`. A public entry's `url` is
+Every entry is public: anyone installs it with no GitHub login, because each downloads
+from a public release of this tap ([the spec](docs/specs/public-tap.md)). The source repos
+stay private. A public entry's `url` is
 `https://github.com/21StarkCom/homebrew-tap/releases/download/<entry>-v<version>/<asset>`, and
 its line `# Source release repo: <owner>/<repo>` names the repo whose release the bumper reads.
 The bumper checks the asset with `scripts/source-check.pl`, publishes it as that release of
-this tap, then pins it. A public asset cannot be called back. Only an entry whose asset holds
-no readable JS goes public (the Go builds, and `mimir`, which embeds a minified web UI), and
-`goldfinger`, whose readable Safari extension script the operator let go. A new entry stays
-private until a PR converts it.
+this tap, then pins it. A public asset cannot be called back. The operator let readable JS
+and shell source go public (the node trees, the Bun bundles, the Electron app and `muninn`),
+but never a secret: scan a new entry's asset with `gitleaks` before its first publish. A new
+entry starts public.
+
+An entry whose asset holds a secret stays private, in the shape that the bumper and
+`scripts/verify-auth.rb` still support. Its `url` is the GitHub API URL of its source repo's
+asset, with an `Accept: application/octet-stream` header and a token from Homebrew's own
+lookup (`GitHub::API.credentials`): `HOMEBREW_GITHUB_API_TOKEN`, else Homebrew's gh login,
+else a keychain token. A formula passes them as `headers:` on its `url`, skips the lookup in
+Homebrew's sandboxed build, test and postinstall workers (and `sandbox_operation.rb`, for a
+formula that renames a dylib), matched by full path under `HOMEBREW_LIBRARY_PATH`, never by
+`ENV`, which Homebrew restores after it evaluates a formula. It raises
+`CurlDownloadStrategyError` with setup guidance when the lookup finds nothing. A cask sets
+them in an initialization-only download adapter, so `brew info --json` shows no credential.
+Homebrew redacts only `ENV` secrets: with a gh-only login, `--verbose --debug` output shows
+the gh token. Git history before STARK-19636 holds each shape (`Formula/idun.rb`, `Casks/atlas.rb`).
 
 On a bare Mac, [idavoll](https://github.com/21StarkCom/idavoll)'s installer reads `Formula/`
 and `Casks/` from its clone of this repo and installs every entry, so a new entry reaches the
@@ -863,8 +862,8 @@ list, so a new entry needs its line there too (STARK-11780 places `frigg-linux`)
 
 ## Releases: who bumps each entry
 
-Each entry pins three release-specific lines: `version`, the release asset's id in its
-`url` (a public entry: the URL of its release of this tap), and `sha256`. Do **not** hand-edit them. The source repo's release step calls the
+Each entry pins three release-specific lines: `version`, its `url` (the URL of its
+release of this tap), and `sha256`. Do **not** hand-edit them. The source repo's release step calls the
 bumper, which reads them back from the published GitHub Release and opens a PR here.
 `scripts/bump.sh --help` is the bumper's reference, and CLAUDE.md says how to run it by hand.
 
@@ -914,6 +913,6 @@ Actions: read on this tap. Every other bump PR stays open for a hand merge with
 
 ## Download authentication and CI
 
-A public entry downloads from a public release of this tap and holds no token code. All private entries use native download auth headers, including preflight metadata requests. Formulae declare URL `headers:` directly. Casks use initialization-only adapters so tokens are never serialized in cask JSON; all network operations remain Homebrew's. Homebrew handles redirects, cache freshness, and partial resume. Each entry takes its token from Homebrew's own lookup (`HOMEBREW_GITHUB_API_TOKEN`, else Homebrew's gh login, else a keychain token), stripped before use; a whitespace-only env var counts as unset, and when the lookup finds nothing the entry reports the asset URL and setup guidance. Homebrew redacts only environment secrets from its output, so with a gh-only login, `--verbose --debug` or `HOMEBREW_CURL_VERBOSE` output shows the gh token: don't paste it anywhere. Formula validation happens during evaluation, so formula metadata commands require the token too. Casks validate when their downloader is initialized.
+Every entry downloads from a public release of this tap and holds no token code; all network operations remain Homebrew's, which handles redirects, cache freshness, and partial resume. [Public entries](#public-entries) describes the private shape that an entry with a secret in its asset would take.
 
-Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, missing-token checks of each private entry, a no-token download of each public entry, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched with the token, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate muxctl download check verifies authenticated metadata and partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI uses the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories.
+Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, a no-token download of each changed entry, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate muxctl download check verifies the preflight and a partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI's fetch steps still require the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, with read access to the private release repositories, for a private entry.

@@ -2,7 +2,7 @@
 
 Add only rules, traps and pointers here. Put reasons, history and catalogs in `docs/` or the ticket.
 
-Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as `21StarkCom/tap`). It is a passive publish target: it builds nothing, and each entry pins one GitHub Release asset. A public entry pins its release of this tap; any other entry pins a private asset of its source repo.
+Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as `21StarkCom/tap`). It is a passive publish target: it builds nothing, and each entry pins one GitHub Release asset. Every entry is public: it pins its release of this tap.
 
 - `README.md` holds the catalogs: the Entries table (kind, build, signing and macOS floor of each entry), the caller table (the release step that bumps each entry), and one section per entry. Read it before you change an entry.
 - A CLI is a formula in `Formula/`. A GUI `.app` is a cask in `Casks/`, never a formula.
@@ -11,21 +11,18 @@ Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as 
 
 ## Downloads
 
-- Each private entry puts `Accept: application/octet-stream` and a stripped token from Homebrew's own lookup on its GitHub API asset URL. The lookup is `GitHub::API.credentials`: `HOMEBREW_GITHUB_API_TOKEN`, else `gh auth token` from Homebrew's own gh (the only gh it looks for), else a keychain token.
-  - A formula passes them as `headers:` on its `url`.
-  - A cask keeps a small initialization-only adapter that sets the same download metadata, because `brew info --json` prints cask URL headers verbatim.
+- An entry downloads, with no token code, from its release `<entry>-v<version>` here. Its line `# Source release repo: <owner>/<repo>` names the repo the bumper reads (`docs/specs/public-tap.md`).
+- The bumper checks the asset with `scripts/source-check.pl`, then publishes that release before it pins it. A public asset cannot be called back.
+- A new entry starts public. Before its first publish, unpack its asset, dump the strings of each Mach-O or ELF file, run `gitleaks dir` over it, and read each finding.
+- An asset that holds a secret stays private. Before you add a private entry, read its shape and traps in the README's Public entries section. PRs and Actions logs here are public.
 - Never override `_fetch` or run curl in the tap: Homebrew owns preflight, redirects, cache freshness and partial resume.
-- When the lookup finds nothing, the entry raises `CurlDownloadStrategyError.new(url, guidance)`: a formula when it is evaluated, so formula metadata commands need a token too, and a cask when its downloader starts.
-- Homebrew's sandboxed `build.rb`, `test.rb` and `postinstall.rb` workers reload the formula with gh's config (`~/.config/gh`) and the login keychain unreadable, and never download. Formulae skip the lookup and the raise in them, and match a worker by its full path under `HOMEBREW_LIBRARY_PATH`.
-- Do not hand those workers the token through `ENV`: Homebrew restores `ENV` after it evaluates a formula.
-- Trap: Homebrew redacts only `ENV` secrets. With a gh-only login, `--verbose --debug` and `HOMEBREW_CURL_VERBOSE` print the gh token in the curl command line: do not paste that output. PRs and Actions logs here are public.
 
 ## Release fields and the bumper
 
-- `version`, the numeric asset id in the `url` (a public entry: its tap release URL), and `sha256` change each release. Do not hand-edit them: each source repo's release runs `scripts/bump.sh`, which reads them back from the published release and opens a PR here.
+- `version`, the `url` and `sha256` change each release. Do not hand-edit them: each source repo's release runs `scripts/bump.sh`, which reads them back from the published release and opens a PR here.
 - `scripts/bump.sh --help` is the bumper's reference: its flags, PR titles and the `no-ticket` label.
 - Keep the standalone `url "…",`, `version "…"` and `sha256 "…"` stanzas, each exactly once: the bumper refuses an entry with more or fewer. It finds each one by an anchored regex, so their order is free.
-- Keep a private entry's auth headers as continuation arguments of the `url`. Never move the asset pin into a helper or interpolate the version into it.
+- Never move the `url` into a helper or interpolate the version into it: the bumper rewrites the literal.
 - To re-point an entry by hand, run the bumper from a clean checkout of this repo at `origin/main` (`--dry-run` previews, `--no-pr` edits the checkout without a commit).
 - Callers run `main` unpinned, so the bumper's interface only grows. A bumper change lands with its tests (`scripts/test-bump.sh`) in the same PR.
 - Keep `scripts/bump.sh` working under bash 3.2: a signing Mac runs it as `/bin/bash`.
@@ -40,19 +37,16 @@ Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as 
 ## Commands
 
 ```sh
-# Install: a private entry needs read access to its source repo; a public one needs no token
-brew install gh && gh auth login    # or: export HOMEBREW_GITHUB_API_TOKEN=<github PAT>
+# Install: no entry needs a token
 brew install 21StarkCom/tap/idun
 
-# Lint and audit an edit, from the repo root (--online reports each private asset URL
-# "not reachable": check it with brew fetch)
+# Lint and audit an edit, from the repo root
 brew style Formula/idun.rb
 brew audit --strict 21StarkCom/tap/idun
 # A -linux formula: audit it as Linux x86_64 (CI does); reinstall and test it on the devbox
 brew audit --strict --os=linux --arch=intel 21StarkCom/tap/<tool>-linux
 
-# A private cask's asset-id URL fails the unversioned-URL audit by design; atlas also
-# needs `,token_conflicts`
+# A cask's audit skips the unversioned-URL check, as CI does; atlas also needs `,token_conflicts`
 brew fetch --cask 21StarkCom/tap/atlas        # checks the registered clone's pinned sha256
 brew audit --cask --strict --except=sha256_no_check_if_unversioned 21StarkCom/tap/atlas
 
@@ -73,25 +67,24 @@ scripts/mirror.sh --dry-run
 - `brew style <path>` checks this working tree. It can also load the clone's copy of the same class and report `Lint/DuplicateMethods` on `install` or `caveats`: when `main`'s unchanged file shows the same offense, rerun with `--except-cops Lint/DuplicateMethods`.
 - `brew audit` rejects a path. `brew audit --strict 21StarkCom/tap/<name>` and `brew fetch --cask 21StarkCom/tap/<name>` read the registered clone.
 - `brew fetch --cask <path>` works only under `HOMEBREW_DEVELOPER=1`: use it to check an edited cask's download against its `sha256`.
-- Check syntax and style before you merge. After the merge, confirm the clone is clean, fast-forward it to the merged entry, confirm it has the reviewed version, asset id and checksum, and run the audit.
+- Check syntax and style before you merge. After the merge, confirm the clone is clean, fast-forward it to the merged entry, confirm it has the reviewed version, url and checksum, and run the audit.
 - Homebrew trusts this tap per entry (`brew trust --json=v1`). It refuses to load a new entry copied into the clone for `brew audit` and `brew fetch` until `brew trust --formula 21starkcom/tap/<name>`. `brew install` of the full name trusts it.
 - CI installs and tests no entry. Run `brew reinstall` and `brew test` on a Mac, and on the x86_64 devbox for a `-linux` formula.
-- A change to the sandboxed workers' skip needs a Mac's `brew reinstall` and `brew test` under a gh-only login: CI's Linux Homebrew never loads those workers for an entry.
 - Keep `test do` version-agnostic: assert `version.to_s` against the tool's own `version` output, never a fixed string.
-- CI fetches only the entries a PR changes; a change of `scripts/` or `formulae.yml`, or `gh workflow run formulae.yml`, fetches all. The fetch catches a gone asset or a mismatched asset id or `sha256`, but not an id and checksum of another release: check the version yourself.
+- CI fetches only the entries a PR changes; a change of `scripts/` or `formulae.yml`, or `gh workflow run formulae.yml`, fetches all. The fetch catches a gone asset or a mismatched `sha256`, but not a url and checksum of another release: check the version yourself.
 
 ## PRs
 
 - Pass `--ticket STARK-<n>` to the bumper when a ticket covers the bump: it puts the ticket in the PR title.
 - A bump PR that a ticket covers but that opened unscoped needs a retitle and its `no-ticket` label dropped, in one command (`gh pr edit <n> --title … --remove-label no-ticket`): `ghx pr-merge` reads the live title, and skips its ticket stamp while the label stays.
-- A bump PR is a release bot's PR under the root review rules. Bumpers open it with plain `gh pr create`, so `ghx pr-open`'s checks never ran on it: before you merge, check that its diff changes only the entry's three release lines, and that the asset id and checksum match the release.
+- A bump PR is a release bot's PR under the root review rules. Bumpers open it with plain `gh pr create`, so `ghx pr-open`'s checks never ran on it: before you merge, check that its diff changes only the entry's three release lines, and that the url and checksum match the release.
 - The secret scan may flag a formula's public 64-hex checksum as high-entropy. Check it against the downloaded release bytes before you pass `--allow-secret-commit` to `ghx pr-open`.
 
 ## Adding a formula (or cask)
 
-- Copy an existing entry of the same shape. Keep its native auth headers and token check, and point `homepage` and `url` at the new private repo.
+- Copy an existing entry of the same shape. Point its source line at the new repo; `homepage` stays this tap.
 - `bin.install` names each shipped binary: `bin.install "alfred", "alfredd"`, or a glob such as `Dir["lumiere", "lumiere-*"]`. A bare dispatcher name needs its own literal, since `lumiere-*` does not match it.
-- The bumper never creates an entry: the first PR pins `version`, the asset id and `sha256` to the first release. Once the file exists, `scripts/bump.sh <entry> <tag> --no-pr` fills them in.
+- The bumper never creates an entry: the first PR pins `version`, the `url` and `sha256` to the first release. Once the file exists, `scripts/bump.sh <entry> <tag> --no-pr` publishes the asset and fills them in.
 - Update `README.md` in the same PR, the caller table included.
 - Check the name against homebrew/core and homebrew/cask (`brew info homebrew/cask/<name>`). A name that collides (a bare `valkyrie` or `sleipnir` is a homebrew/cask app) is named in full, `21StarkCom/tap/<name>`, in every `brew` command.
 
@@ -99,7 +92,7 @@ scripts/mirror.sh --dry-run
 
 - The release zip is a node ESM tree (`dist/` and a vendored `node_modules` with the signed native modules) plus any run-time data the CLI reads from disk.
 - `install` runs `libexec.install Dir["*"]`, which keeps the layout and the relative pnpm symlinks. It writes a `bin` wrapper that runs the entry under `depends_on "node"`: `exec "#{formula_opt_bin("node")}/node" "#{libexec}/dist/bin.js" "$@"`.
-- Trap: Homebrew renames each dylib in the keg to its `opt` path, and fails the install when the name does not fit the header. For such a dylib, `install` renames it to `@rpath/<name>` and re-signs it ad hoc, under `preserve_rpath` (`Formula/floorplan.rb`). Then the sandboxed `fix_linkage` worker, `sandbox_operation.rb`, reloads the formula: add it to the formula's worker list.
+- Trap: Homebrew renames each dylib in the keg to its `opt` path, and fails the install when the name does not fit the header. For such a dylib, `install` renames it to `@rpath/<name>` and re-signs it ad hoc, under `preserve_rpath` (`Formula/floorplan.rb`).
 
 **Bun bundle-tree CLI → formula** (`Formula/sleipnir.rb` is the model):
 
@@ -111,7 +104,6 @@ scripts/mirror.sh --dry-run
 
 **GUI `.app` → cask** (`Casks/mimir.rb` is the model):
 
-- A private cask keeps a uniquely named initialization-only adapter, like `AtlasPrivateReleaseStrategy`, that sets `@meta[:headers]`, so the cask JSON shows no credential.
 - `app "X.app"` places the bundle in `/Applications`.
 - `binary "#{appdir}/X.app/Contents/Resources/bin/<cli>"` symlinks a nested CLI onto PATH. Never copy it: the CLI resolves its own path to find the bundle executable it pins.
 - `depends_on macos:` pins the build's deployment target.
@@ -122,21 +114,15 @@ scripts/mirror.sh --dry-run
 
 ## The GetEvinced mirror
 
-- After each push to `main`, `mirror.yml` copies each entry, with its release asset, to `GetEvinced/homebrew-tap`. Every member of the GetEvinced org can read what lands there.
+- After each push to `main`, `mirror.yml` copies each entry to `GetEvinced/homebrew-tap`. A public entry's copy keeps its url; only a private entry's asset is copied there. Every member of the GetEvinced org can read what lands there.
 - `docs/specs/getevinced-mirror.md` is the mirror's design. `scripts/mirror.sh --help` lists what the copy changes and what its source check refuses.
 - Run `scripts/mirror.sh --check <entry> <archive>` on a new entry's release zip, `.tar.gz` or `.pkg` before its PR (a `.pkg` needs `bsdtar`). Add a fleet repo's new npm scope to `FIRST_PARTY_SCOPES` in `scripts/source-check.pl`.
-- The check cannot judge readable JS: an unminified bundle, the JS inside a `bun build --compile` binary, or an Electron `app.asar`. The PR that adds an entry whose asset holds readable JS also adds it to `EXCLUDED` in `scripts/mirror.sh`, unless the operator says it may go.
+- The check cannot judge readable JS: an unminified bundle, the JS inside a `bun build --compile` binary, or an Electron `app.asar`. The PR that adds a private entry whose asset holds readable JS also adds it to `EXCLUDED` in `scripts/mirror.sh`, unless the operator says it may go.
 - Every entry that `EXCLUDED` does not hold is copied, a new one included.
 - Keep `# frozen_string_literal: true` and a blank line as an entry's first two lines: the copy puts its marker line after them.
 - Name another fleet entry only as `21StarkCom/tap/<entry>`, which the copy renames to `GetEvinced/tap/<entry>`.
 - An entry that names an excluded one (`21StarkCom/tap/alfred`) must be excluded too: `mirror.sh` fails it until it is.
 - Mimir's item `GitHub App - 21stark-tap-mirror` holds the key of record of the mirror's GitHub App.
-
-## Public entries
-
-- A public entry downloads, with no token code, from its release `<entry>-v<version>` here; its line `# Source release repo: <owner>/<repo>` names the repo the bumper reads (`docs/specs/public-tap.md`).
-- The bumper checks the asset with `scripts/source-check.pl`, then publishes that release before it pins it. A public asset cannot be called back.
-- Make an entry public only when its asset holds no readable JS; look by hand. Convert it in a PR, then run `scripts/bump.sh <entry> <tag> --no-pr` to publish and pin it.
 
 ## CI
 
@@ -144,4 +130,4 @@ scripts/mirror.sh --dry-run
 - `mirror.yml` has no `pull_request` trigger and stays out of `GATE_WORKFLOWS`: `scripts/test-mirror.sh` checks both.
 - `brew style … scripts` lints `scripts/*.sh` with every optional shellcheck check and Homebrew's `shfmt` layout (`brew style --fix scripts/bump.sh` applies it).
 - Trap: that layout pass misreads a line inside a string or heredoc that starts with `if`. Keep embedded jq, Ruby and stub code free of those.
-- `formulae.yml` reads each release with the Actions secret `HOMEBREW_RELEASE_READ_TOKEN`, and fails when it cannot: a new entry's source repo must grant that token contents-read access.
+- `formulae.yml`'s fetch steps fail when the Actions secret `HOMEBREW_RELEASE_READ_TOKEN` is empty. A private entry's source repo must grant it contents-read access.

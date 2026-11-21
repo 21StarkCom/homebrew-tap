@@ -1,25 +1,5 @@
 # frozen_string_literal: true
 
-require "download_strategy"
-
-# Cask URL specs are serialized by brew info and installed metadata. Keep the
-# credential in the downloader only; inherit all native preflight/cache/resume.
-class IdavollPrivateReleaseStrategy < CurlDownloadStrategy
-  def initialize(url, name, version, **meta)
-    super
-    # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
-    token = GitHub::API.credentials.to_s.strip
-    if token.empty?
-      raise CurlDownloadStrategyError.new(
-        url,
-        "This private tap needs a GitHub token with contents:read access: " \
-        "run `gh auth login` with Homebrew's gh (`brew install gh`), or set HOMEBREW_GITHUB_API_TOKEN.",
-      )
-    end
-    @meta[:headers] = ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  end
-end
-
 # idavoll, the 21Stark workspace installer: Idavoll.app and its `idavoll` CLI. The cask
 # installs the release's own Developer ID signed, notarized and stapled .pkg, the package
 # a bare Mac installs from the GitHub release: /Applications/Idavoll.app and
@@ -34,18 +14,18 @@ end
 # this cask to the same path in GetEvinced/tap, .pkg included: the operator accepted the
 # app's readable JavaScript there on 2026-10-31.
 cask "idavoll" do
-  # version / asset id / sha256 are release-specific and rewritten when idavoll's release
-  # calls the bumper (the README's caller table) — do not hand-edit them.
+  # version / url / sha256 are release-specific and rewritten when idavoll's release calls
+  # the bumper (the README's caller table), which publishes the .pkg as a release of this
+  # tap — do not hand-edit them.
   version "0.22.0"
   sha256 "eaebf754ce33958d9898e5f017e5c1da9628299de7b72f2e49c6916fdf47a34c"
 
-  # API asset URL (private repo). asset id is release-specific; bump on each release.
   # The download keeps the asset's own name (idavoll-<version>.pkg), which `pkg` names.
-  url "https://api.github.com/repos/21StarkCom/idavoll/releases/assets/744164839",
-      using: IdavollPrivateReleaseStrategy
+  # Source release repo: 21StarkCom/idavoll
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/idavoll-v0.22.0/idavoll-0.22.0.pkg"
   name "Idavoll"
   desc "Workspace installer for the 21Stark fleet, with its CLI"
-  homepage "https://github.com/21StarkCom/idavoll"
+  homepage "https://github.com/21StarkCom/homebrew-tap"
 
   depends_on arch: :arm64        # the app and the CLI are arm64 Mach-Os
   depends_on macos: :ventura     # the app's LSMinimumSystemVersion is 13.0

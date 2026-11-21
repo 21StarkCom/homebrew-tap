@@ -1,9 +1,9 @@
 # typed: strict
 # frozen_string_literal: true
 
-# Run with brew ruby in an isolated HOMEBREW_CACHE and a read-only release token,
-# with the tap trusted (formulae.yml trusts it where it registers it): brew ruby
-# names no formula, so tap trust refuses the load below otherwise.
+# Run with brew ruby in an isolated HOMEBREW_CACHE, with the tap trusted (formulae.yml
+# trusts it where it registers it): brew ruby names no formula, so tap trust refuses
+# the load below otherwise.
 # Never enable curl verbose/debug output: only report non-secret evidence.
 require "formulary"
 require "digest"
@@ -13,8 +13,8 @@ downloader = formula.downloader
 abort "Expected Homebrew's native CurlDownloadStrategy" unless downloader.instance_of?(CurlDownloadStrategy)
 
 modified, size = downloader.resolved_time_file_size
-abort "Authenticated preflight did not return release metadata" if modified.nil? || !size.positive?
-puts "Authenticated preflight: Content-Length=#{size}, Last-Modified=#{modified.utc.iso8601}"
+abort "The preflight did not return release metadata" if modified.nil? || !size.positive?
+puts "Preflight: Content-Length=#{size}, Last-Modified=#{modified.utc.iso8601}"
 
 downloader.fetch
 cached = downloader.cached_location

@@ -223,27 +223,8 @@ jobs:
             brew audit --cask --strict --os=tahoe --arch=arm --except="$except" "$cask"
             echo "${cask}: fetched and audited"
           done
-      - name: Fetch with a gh login alone
-        if: env.FULL == 'true'
-        # No HOMEBREW_GITHUB_API_TOKEN here: entries fall back to `gh auth token`
-        # (STARK-10632). Homebrew's lookup runs its own gh first, so install it as a
-        # user would; the runner's gh shares its config and would answer too.
-        env:
-          RELEASE_READ_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
-        run: |
-          unset HOMEBREW_GITHUB_API_TOKEN
-          brew install gh
-          "$(brew --prefix)/bin/gh" auth login --with-token --insecure-storage <<<"$RELEASE_READ_TOKEN"
-          unset RELEASE_READ_TOKEN
-          # Prove the token comes from gh, not a stray env var or keychain entry.
-          brew ruby -e 'source = GitHub::API.credentials_type
-            abort "token source is #{source}, not the gh login" unless source == :github_cli_token'
-          # Private entries: a public entry downloads with no token at all.
-          brew fetch --force 21StarkCom/tap/muninn
-          brew fetch --force --cask 21StarkCom/tap/idavoll
-      - name: Verify authenticated preflight and partial resume
+      - name: Verify the preflight and a partial resume
         if: env.FULL == 'true'
         env:
-          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
           HOMEBREW_CACHE: ${{ runner.temp }}/muxctl-download-check
         run: brew ruby scripts/verify-download.rb
