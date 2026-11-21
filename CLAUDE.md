@@ -138,6 +138,12 @@ scripts/mirror.sh --dry-run
 - An entry that names an excluded one (`21StarkCom/tap/alfred`) must be excluded too: `mirror.sh` fails it until it is.
 - Mimir's item `GitHub App - 21stark-tap-mirror` holds the key of record of the mirror's GitHub App.
 
+## The public tap
+
+- `mirror.sh --target public` copies the allow list `PUBLIC_ENTRIES` to the public `21StarkCom/homebrew-public`. Read `docs/specs/public-tap.md` first.
+- Add an entry only when its asset holds no readable JS; look by hand. A public asset cannot be called back.
+- Keep each entry's token code in the shapes the spec lists: a public copy of another shape fails.
+
 ## CI
 
 - `bump.yml`'s test fails when the bumper's `GATE_WORKFLOWS` differs from the workflows here that trigger on `pull_request`, or when one of them filters that trigger. Keep each such trigger unfiltered, and add a new one to `GATE_WORKFLOWS` in the same PR.

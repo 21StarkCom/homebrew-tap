@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 # scripts/mirror.sh: copies the entries of this tap, with their release assets,
-# into GetEvinced/homebrew-tap, so an Evinced engineer installs them with no
-# access to 21StarkCom. The design is docs/specs/getevinced-mirror.md (epic
-# STARK-13601); `scripts/mirror.sh --help` is the reference. Tests:
-# scripts/test-mirror.sh. .github/workflows/mirror.yml runs it on each push to main.
+# into another tap. The default target is GetEvinced/homebrew-tap, so an Evinced
+# engineer installs them with no access to 21StarkCom (docs/specs/getevinced-mirror.md,
+# epic STARK-13601). --target public copies the entries of PUBLIC_ENTRIES into
+# 21StarkCom/homebrew-public, which anyone installs from with no GitHub login
+# (docs/specs/public-tap.md, STARK-19531). `scripts/mirror.sh --help` is the
+# reference. Tests: scripts/test-mirror.sh. .github/workflows/mirror.yml runs it
+# on each push to main.
 #
 # brew style (formulae.yml) lints this with every optional shellcheck check. Off:
 # single-quoted $names are jq's and perl's, not the shell's (SC2016); functions
@@ -19,13 +22,21 @@ then
   exit 2
 fi
 
-TARGET_REPO="GetEvinced/homebrew-tap"
-TARGET_URL="https://github.com/${TARGET_REPO}.git"
-# Entries that never reach GetEvinced (spec D11). A marked copy of one is deleted.
+# Set by set_target from --target: getevinced (the default) or public.
+TARGET_REPO="" TARGET_URL="" TARGET_TAP="" TARGET_SPEC=""
+PUBLIC_REPO="21StarkCom/homebrew-public"
+# Entries that reach no target (spec D11). A marked copy of one is deleted.
 # alfred stays here by the operator's request of 2026-10-29. muninn ships its
 # bash source tree (STARK-17276). The operator let floorplan go on 2026-11-07,
 # its readable JS tree included (STARK-17312).
 EXCLUDED="alfred muninn"
+# The only entries --target public copies (docs/specs/public-tap.md): an allow
+# list, so a new entry stays out of the public tap until a PR names it here.
+# Anyone can download their assets, so each holds no readable JS: the Go builds,
+# and mimir, whose binary embeds a minified web UI. goldfinger is the one by-name
+# exception: the operator let its readable Safari extension script go on
+# 2026-11-21 (STARK-19531). EXCLUDED wins over it.
+PUBLIC_ENTRIES="bragi frigg frigg-linux goldfinger heimdall lumiere mimir plume sonar sonar-linux stark-statusline tyr urd urd-linux"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.
@@ -51,23 +62,35 @@ HOMEPAGE_RE='^[[:space:]]*homepage[[:space:]]+"([^"]+)"'
 ENTRY_RE='^[A-Za-z0-9][A-Za-z0-9@+._-]*$'
 NL=$'\n'
 
-dry_run=false branch=main check_entry="" check_file=""
+dry_run=false branch=main check_entry="" check_file="" target=getevinced
 declare -a only=() names=() changed_formulae=() changed_casks=()
-declare -A kind=() rel=() src_repo=() src_id=() ver=() sha=() new_id=() failed=() wanted=() excluded=()
+declare -A kind=() rel=() src_repo=() src_id=() ver=() sha=() new_id=() new_name=() failed=() wanted=() excluded=()
 tmp="" clone="" src_root="" src_rev="" created_branch=false auth_header=""
 changed="" pushed=false rejected=false attempt=0
 
 usage() {
   cat <<'EOF'
-Usage: scripts/mirror.sh [--dry-run] [--branch <name>] [--only <entry>]...
+Usage: scripts/mirror.sh [--target getevinced|public] [--dry-run] [--branch <name>] [--only <entry>]...
        scripts/mirror.sh --check <entry> <archive>
 
-Make a branch of GetEvinced/homebrew-tap match the entries of this checkout:
-each entry's release asset is copied into a GetEvinced release, and each entry
-is written there with its asset URL pointed at that copy
-(docs/specs/getevinced-mirror.md). alfred and muninn are never copied.
+Make a branch of the target tap match the entries of this checkout: each
+entry's release asset is copied into a release of the target, and each entry
+is written there with its asset URL pointed at that copy. alfred and muninn
+are never copied.
 
-  --branch <name>   the GetEvinced branch to push (default main); made from
+  --target getevinced
+                    the default: GetEvinced/homebrew-tap (GetEvinced/tap),
+                    for the members of GetEvinced (docs/specs/getevinced-mirror.md)
+  --target public   21StarkCom/homebrew-public (21StarkCom/public), for anyone
+                    with no GitHub login (docs/specs/public-tap.md). It copies
+                    only the entries of PUBLIC_ENTRIES, and deletes a marked
+                    copy of any other entry. Each copy downloads from the
+                    public release with no token: the copy drops the asset
+                    URL's headers: or using: argument, the token lookup and
+                    its check, the cask download adapter and the caveat that
+                    asks for GitHub access, points homepage at the public
+                    tap, and fails when a trace of the token code is left.
+  --branch <name>   the target branch to push (default main); made from
                     main when it does not exist
   --only <entry>    copy only this entry (repeatable); delete no file and
                     change no rename file
@@ -97,16 +120,17 @@ unpack (Apple's pbzx, say), or when it holds no Payload.
 It reads Formula/*.rb, Casks/*.rb and Casks/*/*.rb (Casks/i/idavoll.rb), and a
 copy keeps its path. It also reads formula_renames.json and cask_renames.json at
 the root, when they exist, and merges each pair whose new name is a copied entry
-of that kind into the same file of GetEvinced/homebrew-tap: a pair sets its old
-name there, a pair it does not copy removes its old name there, and a GetEvinced
-pair of another old name stays. It writes no rename file that would be empty.
+of that kind into the same file of the target: a pair sets its old name there, a
+pair it does not copy removes its old name there, and a target pair of another
+old name stays. It writes no rename file that would be empty.
 Run it from a checkout whose Formula/, Casks/ and rename files have no
 uncommitted change.
 To push main, HEAD must be origin/main (git fetch first).
 
 Environment:
   MIRROR_SOURCE_TOKEN  reads the 21StarkCom release assets (not needed for --dry-run)
-  MIRROR_TARGET_TOKEN  reads and writes GetEvinced/homebrew-tap: releases and the branch
+  MIRROR_TARGET_TOKEN  reads and writes the target repo: releases and the branch
+                       (for --dry-run, a token that can read it is enough)
   MIRROR_GIT_NAME, MIRROR_GIT_EMAIL
                        the commit's author and committer (default: git's own)
   GITHUB_OUTPUT        when set, gets formulae=, casks= (the changed entries) and pushed=
@@ -114,9 +138,10 @@ Environment:
 For each entry, in this order: find the release <entry>-v<version> and its asset
 whose digest is the pinned sha256; else download the source asset, check its
 sha256 and its files, make the release as a draft, upload, and publish it. Then
-write the entry with the marker line, the copy's asset URL, 21starkcom/tap
-renamed to getevinced/tap, and "21StarkCom private repos" renamed. A reused copy
-is not checked again. Then delete marked files whose entry left this tap, moved,
+write the entry with the marker line, the copy's asset URL, and 21starkcom/tap
+renamed to the target's tap (getevinced/tap, or 21starkcom/public); for
+getevinced, "21StarkCom private repos" is renamed too. A reused copy is not
+checked again. Then delete marked files whose entry left this tap, moved,
 or is excluded; merge the rename files; rewrite the README block; commit once and
 push.
 A push that loses a race clones again and writes again, up to three times. Files
@@ -159,7 +184,7 @@ hash_of() {
 # gh as each side: the token goes in the environment, never in an argument.
 src_gh() { GH_TOKEN="${MIRROR_SOURCE_TOKEN}" gh "$@"; }
 dst_gh() { GH_TOKEN="${MIRROR_TARGET_TOKEN}" gh "$@"; }
-# git toward GetEvinced: the token rides an http.extraheader in the environment,
+# git toward the target: the token rides an http.extraheader in the environment,
 # so it never lands in .git/config, a URL or an argument.
 tgit() {
   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="http.https://github.com/.extraheader" \
@@ -202,6 +227,12 @@ parse_args() {
         others=1
         shift
         ;;
+      --target)
+        [[ $# -ge 2 && ($2 == getevinced || $2 == public) ]] || usage_error "--target needs getevinced or public"
+        target="$2"
+        others=1
+        shift
+        ;;
       --check)
         [[ $# -ge 3 && $2 =~ ${ENTRY_RE} && -n $3 ]] || usage_error "--check needs an entry name and an archive"
         check_entry="$2" check_file="$3"
@@ -213,6 +244,18 @@ parse_args() {
   done
   [[ ${branch} =~ ^[A-Za-z0-9][A-Za-z0-9._/-]*$ ]] || usage_error "bad branch name: ${branch}"
   [[ -z ${check_entry} || ${others} == 0 ]] || usage_error "--check takes no other option"
+}
+
+set_target() {
+  case "${target}" in
+    public)
+      TARGET_REPO="${PUBLIC_REPO}" TARGET_TAP="21StarkCom/public" TARGET_SPEC="docs/specs/public-tap.md"
+      ;;
+    *)
+      TARGET_REPO="GetEvinced/homebrew-tap" TARGET_TAP="GetEvinced/tap" TARGET_SPEC="docs/specs/getevinced-mirror.md"
+      ;;
+  esac
+  TARGET_URL="https://github.com/${TARGET_REPO}.git"
 }
 
 # The copy is of what this checkout holds, so it must hold what main holds.
@@ -235,8 +278,28 @@ check_source() {
 # reads Casks/**/*.rb; idavoll's cask is in Casks/i/, which idavoll's own installer
 # does not read, so the copy keeps that path too.
 read_entries() {
-  local f name line first n_url n_ver n_sha e
+  local f name line first n_url n_ver n_sha e q
+  local -A listed=() seen=()
   for e in ${EXCLUDED}; do excluded[${e}]=1; done
+  if [[ ${target} == public ]]
+  then
+    # An allow list: every other entry of this tap is excluded from the public tap.
+    # A listed name that is both a formula and a cask stays listed, so the loop
+    # below fails it as it does for GetEvinced.
+    for e in ${PUBLIC_ENTRIES}; do listed[${e}]=1; done
+    for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb "${src_root}"/Casks/*/*.rb
+    do
+      [[ -f ${f} ]] || continue
+      name="${f##*/}"
+      name="${name%.rb}"
+      seen[${name}]=1
+      [[ -n ${listed[${name}]:-} ]] || excluded[${name}]=1
+    done
+    for e in "${!listed[@]}"
+    do
+      [[ -n ${seen[${e}]:-} ]] || warn "PUBLIC_ENTRIES names ${e}, which is no entry of this tap"
+    done
+  fi
   for f in "${src_root}"/Formula/*.rb "${src_root}"/Casks/*.rb "${src_root}"/Casks/*/*.rb
   do
     [[ -f ${f} ]] || continue
@@ -283,11 +346,14 @@ read_entries() {
     then
       fail_entry "${name}" "needs one url, version and sha256 stanza each; has ${n_url}, ${n_ver} and ${n_sha}"
     fi
-    # The copy renames 21StarkCom/tap/<x> to GetEvinced/tap/<x>, which does not
-    # exist for an excluded x: such an entry stays out until it is excluded too.
-    for e in ${EXCLUDED}
+    # The copy renames 21StarkCom/tap/<x> to the target's tap, where no excluded x
+    # exists: such an entry stays out until it is excluded too. A . or + of a name
+    # (ENTRY_RE) matches only itself.
+    for e in "${!excluded[@]}"
     do
-      if grep -qiE "21starkcom/tap/${e}([^A-Za-z0-9_-]|\$)" "${f}"
+      q="${e//./[.]}"
+      q="${q//+/[+]}"
+      if grep -qiE "21starkcom/tap/${q}([^A-Za-z0-9_-]|\$)" "${f}"
       then
         fail_entry "${name}" "it names 21StarkCom/tap/${e}, which the mirror excludes; exclude ${name} too, or drop the reference"
         break
@@ -515,7 +581,7 @@ check_archive() {
   say "${check_entry}: ${check_file##*/} passes the source check"
 }
 
-# Clones the GetEvinced branch into $clone, from main when the branch is new.
+# Clones the target branch into $clone, from main when the branch is new.
 clone_target() {
   local rc=0
   rm -rf "${clone}"
@@ -547,7 +613,7 @@ renames_ok() {
     "$1" >/dev/null 2>&1
 }
 
-# Fails each entry whose GetEvinced file exists without the marker line.
+# Fails each entry whose file in the target exists without the marker line.
 check_clashes() {
   local name
   for name in "${names[@]}"
@@ -590,10 +656,11 @@ publish_release() { # <entry> <release id> <tag>
   }
 }
 
-# Sets new_id[$1] to a GetEvinced asset with the entry's bytes: an uploaded copy
-# found by its digest, or one this run uploads. Fails the entry on any error.
+# Sets new_id[$1] and new_name[$1] to an asset of the target with the entry's
+# bytes: an uploaded copy found by its digest, or one this run uploads. Fails the
+# entry on any error.
 ensure_asset() {
-  local name="$1" tag release="" rjson rid draft found sname file got uname taken asset state digest busy
+  local name="$1" tag release="" rjson rid draft found sname file got uname taken asset state digest busy body
   tag="${name}-v${ver[${name}]}"
   find_release "${tag}" || {
     fail_entry "${name}" "${TARGET_REPO} has more than one release tagged ${tag}; delete the extra one"
@@ -603,8 +670,9 @@ ensure_asset() {
   then
     rid="$(jq -r .id <<<"${release}")"
     draft="$(jq -r .draft <<<"${release}")"
+    # Its id and name, one tab apart: an asset name holds no tab.
     found="$(jq -r --arg d "sha256:${sha[${name}]}" \
-      '[.assets[] | select(.state == "uploaded" and .digest == $d)][0].id // empty' <<<"${release}")"
+      '[.assets[] | select(.state == "uploaded" and .digest == $d)][0] // empty | "\(.id)\t\(.name)"' <<<"${release}")"
     if [[ -n ${found} ]]
     then
       # A draft here holds the asset of a run that stopped before publishing.
@@ -612,15 +680,17 @@ ensure_asset() {
       then
         publish_release "${name}" "${rid}" "${tag}" || return 0
       fi
-      new_id[${name}]="${found}"
-      say "${name} ${ver[${name}]}: reuse asset ${found} of release ${tag}"
+      new_id[${name}]="${found%%$'\t'*}"
+      new_name[${name}]="${found#*$'\t'}"
+      say "${name} ${ver[${name}]}: reuse asset ${new_id[${name}]} of release ${tag}"
       return 0
     fi
   fi
   if ${dry_run}
   then
-    # A stand-in id, so the plan shows the file this copy would change.
+    # A stand-in id and name, so the plan shows the file this copy would change.
     new_id[${name}]=0
+    new_name[${name}]="dry-run-asset"
     say "${name} ${ver[${name}]}: would copy ${src_repo[${name}]} asset ${src_id[${name}]} to release ${tag}"
     return 0
   fi
@@ -667,9 +737,14 @@ ensure_asset() {
 
   if [[ -z ${release} ]]
   then
+    if [[ ${target} == public ]]
+    then
+      body="The release asset \`${sname}\` of \`${name}\` ${ver[${name}]} for the Homebrew tap ${TARGET_TAP}, SHA-256 \`${sha[${name}]}\`, copied by scripts/mirror.sh of 21StarkCom/homebrew-tap."
+    else
+      body="A copy of ${src_repo[${name}]} release asset ${src_id[${name}]} (\`${sname}\`), SHA-256 \`${sha[${name}]}\`, made by scripts/mirror.sh of 21StarkCom/homebrew-tap for its GetEvinced/tap entry \`${name}\`."
+    fi
     rid="$(dst_gh api -X POST "repos/${TARGET_REPO}/releases" -f tag_name="${tag}" -f target_commitish=main \
-      -f name="${name} ${ver[${name}]}" -F draft=true -f make_latest=false \
-      -f body="A copy of ${src_repo[${name}]} release asset ${src_id[${name}]} (\`${sname}\`), SHA-256 \`${sha[${name}]}\`, made by scripts/mirror.sh of 21StarkCom/homebrew-tap for its GetEvinced/tap entry \`${name}\`." \
+      -f name="${name} ${ver[${name}]}" -F draft=true -f make_latest=false -f body="${body}" \
       --jq .id)" || {
       fail_entry "${name}" "cannot create the release ${tag}"
       return 0
@@ -720,13 +795,21 @@ ensure_asset() {
     publish_release "${name}" "${rid}" "${tag}" || return 0
   fi
   new_id[${name}]="$(jq -r .id <<<"${asset}")"
+  new_name[${name}]="${uname}"
   say "${name} ${ver[${name}]}: uploaded asset ${new_id[${name}]}"
 }
 
-# Writes the copy of entry $1 into the clone (the spec's "The copy of an entry").
+# Writes the copy of entry $1 into the clone (the spec's "The copy of an entry";
+# for --target public, docs/specs/public-tap.md adds its rules). With --check, it
+# only makes the copy, with a stand-in asset, and fails the entry when it cannot.
+# No line of the perl starts with `if`: brew style's layout pass misreads one in a
+# string, and re-indents the shell code after it.
 write_copy() {
-  local name="$1" out
-  out="$(TARGET_REPO="${TARGET_REPO}" NEWID="${new_id[${name}]}" MARKER="${MARKER}" FROZEN="${FROZEN}" perl -0777 -ne '
+  local name="$1" check="${2:-}" out home dl
+  home="https://github.com/${TARGET_REPO}"
+  dl="${home}/releases/download/${name}-v${ver[${name}]}/${new_name[${name}]:-}"
+  out="$(TARGET="${target}" TARGET_REPO="${TARGET_REPO}" NEWID="${new_id[${name}]:-0}" MARKER="${MARKER}" FROZEN="${FROZEN}" \
+    PUBLIC_URL="${dl}" PUBLIC_HOME="${home}" perl -0777 -ne '
     my $first = "$ENV{FROZEN}\n";
     substr($_, 0, length $first) eq $first or die "its first line is not $ENV{FROZEN}\n";
     my $rest = substr($_, length $first);
@@ -735,20 +818,54 @@ write_copy() {
     my $n = 0;
     $n++ while $rest =~ /$url/g;
     $n == 1 or die "it has $n asset url stanzas\n";
-    $rest =~ s/$url/$1$ENV{TARGET_REPO}$2$ENV{NEWID}"/;
-    $rest =~ s{(21starkcom)(/tap)\b}{($1 eq lc($1) ? "getevinced" : "GetEvinced") . $2}gie;
-    $rest =~ s{read access to 21StarkCom private repos}{read access to GetEvinced private repos}g;
+    my $public = $ENV{TARGET} eq "public";
+    $public or do {
+      $rest =~ s/$url/$1$ENV{TARGET_REPO}$2$ENV{NEWID}"/;
+      $rest =~ s{(21starkcom)(/tap)\b}{($1 eq lc($1) ? "getevinced" : "GetEvinced") . $2}gie;
+      $rest =~ s{read access to 21StarkCom private repos}{read access to GetEvinced private repos}g;
+    };
+    # The public copy downloads a public release with no token, so the token code goes.
+    $public and do {
+      # The asset URL, with the one argument line that may follow it: a headers:
+      # array on that line, or a using: class. Any other argument fails the entry.
+      $rest =~ s{^([ \t]*url[ \t]+)"https://api\.github\.com/repos/[^"\n]+"(?:,[ \t]*\n[ \t]*(?:headers:[ \t]*\[[^\]\n]*\]|using:[ \t]*[A-Za-z0-9_:]+))?[ \t]*$}{$1"$ENV{PUBLIC_URL}"}m;
+      $rest =~ m{^[ \t]*url[ \t]+"[^"\n]*",}m and die "its url stanza has an argument the public copy cannot drop\n";
+      # A formula: the token lookup, its check, and the comment block right above
+      # the lookup, which explains the pin, the bumper and the token.
+      $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^([ \t]*)worker = %w\[[^\]\n]*\]\.any\? do \|w\|[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
+      $rest =~ s{(?:^[ \t]*#[^\n]*\n)*^[ \t]*worker = %w\[[^\]\n]*\]\.any\? \{[^\n]*\}[ \t]*\n}{}m;
+      $rest =~ s{^[ \t]*token = worker \? "" : GitHub::API\.credentials\.to_s\.strip[ \t]*\n}{}m;
+      $rest =~ s{^([ \t]*)if token\.empty\? && !worker[ \t]*\n.*?^\1end[ \t]*\n}{}ms;
+      $rest =~ s{^[ \t]*# (?:API asset URL \(private repo\)|Homebrew.s own lookup:|Its sandboxed build, test and postinstall workers|config\. They never download|So does its fix_linkage worker)[^\n]*\n}{}mg;
+      # A cask: its download adapter, and the comment above it.
+      $rest =~ s{^require "download_strategy"[ \t]*\n(?:[ \t]*\n)?}{}m;
+      $rest =~ s{^# Cask URL specs are serialized[^\n]*\n# credential in the downloader only[^\n]*\n}{}m;
+      $rest =~ s{^class [A-Za-z0-9_]+ < CurlDownloadStrategy[ \t]*\n.*?^end[ \t]*\n(?:[ \t]*\n)?}{}ms;
+      # The caveat that asks for GitHub access, in a heredoc or on one line.
+      $rest =~ s{^[ \t]*Installing needs GitHub read access to 21StarkCom private repos:[^\n]*\n[ \t]*in \(`brew install gh && gh auth login`\), or export HOMEBREW_GITHUB_API_TOKEN=<token>[ \t]*\n(?:[ \t]*\n)?}{}m;
+      $rest =~ s{^[ \t]*caveats "Installing needs GitHub read access to 21StarkCom private repos[^"\n]*"[ \t]*\n}{}m;
+      $rest =~ s{^[ \t]*caveats <<~EOS[ \t]*\n[ \t]*EOS[ \t]*\n}{}m;
+      $rest =~ s{\n[ \t]*\n(end[ \t]*\n?)\z}{\n$1};
+      # The source repo is private: its page is no homepage for the public.
+      $rest =~ s{^([ \t]*homepage[ \t]+)"https://github\.com/21StarkCom/[A-Za-z0-9_.-]+"}{$1"$ENV{PUBLIC_HOME}"}m;
+      $rest =~ s{(21starkcom)/tap\b}{$1/public}gi;
+      foreach my $left ("GitHub::API", "Authorization:", "CurlDownloadStrategy", "api.github.com/repos/",
+        "HOMEBREW_GITHUB_API_TOKEN", "private repos") {
+        index($rest, $left) < 0 or die "the public copy still holds $left: its token code has a shape the copy does not know\n";
+      }
+    };
     $rest =~ m{21starkcom/tap\b}i and die "the copy still names 21starkcom/tap\n";
     print $first, "\n", $ENV{MARKER}, "\n\n", $rest;
   ' "${src_root}/${rel[${name}]}" 2>"${tmp}/perl.err")" || {
     fail_entry "${name}" "cannot copy ${rel[${name}]}: $(<"${tmp}/perl.err")"
     return 0
   }
+  [[ -z ${check} ]] || return 0
   mkdir -p "${clone}/${rel[${name}]%/*}"
   printf '%s\n' "${out}" >"${clone}/${rel[${name}]}"
 }
 
-# Deletes each marked GetEvinced file whose entry left this tap, moved (between
+# Deletes each marked file of the target whose entry left this tap, moved (between
 # Formula/ and Casks/, or into or out of a Casks/ subfolder), or is excluded.
 remove_departed() {
   local f name path why
@@ -831,7 +948,30 @@ write_renames() {
 # Rewrites the README block from the marked files in the clone.
 write_readme() {
   local block f name k v home line sep=""
-  block="${BEGIN_MARK}
+  if [[ ${target} == public ]]
+  then
+    block="${BEGIN_MARK}
+## Install
+
+The mirror job of \`21StarkCom/homebrew-tap\` (its \`scripts/mirror.sh\`) writes this
+section and every file that holds its marker line. A change made here is lost at
+its next run. Each of these entries downloads its asset from a public release of
+this repo, so installing needs no GitHub login and no token.
+
+\`\`\`sh
+brew tap ${TARGET_TAP}
+brew trust --tap ${TARGET_TAP}
+brew install ${TARGET_TAP}/<entry>
+brew install --cask ${TARGET_TAP}/<cask>
+\`\`\`
+
+A Mac that also taps \`21StarkCom/tap\` must use full names in every \`brew\`
+command, \`brew services\` included, for example \`${TARGET_TAP}/tyr\`.
+
+| Entry | Kind | Version |
+|---|---|---|"
+  else
+    block="${BEGIN_MARK}
 ## Mirrored from 21StarkCom/homebrew-tap
 
 The mirror job of \`21StarkCom/homebrew-tap\` (its \`scripts/mirror.sh\`) writes this
@@ -853,6 +993,7 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
 
 | Entry | Kind | Version | Source |
 |---|---|---|---|"
+  fi
   for f in "${clone}"/Formula/*.rb "${clone}"/Casks/*.rb "${clone}"/Casks/*/*.rb
   do
     marked "${f}" || continue
@@ -865,7 +1006,12 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
       if [[ -z ${v} && ${line} =~ ${VERSION_RE} ]]; then v="${BASH_REMATCH[1]}"; fi
       if [[ -z ${home} && ${line} =~ ${HOMEPAGE_RE} ]]; then home="${BASH_REMATCH[1]}"; fi
     done <"${f}"
-    block+="${NL}| \`${name}\` | ${k} | ${v} | [${home#https://github.com/}](${home}) |"
+    if [[ ${target} == public ]]
+    then
+      block+="${NL}| \`${name}\` | ${k} | ${v} |"
+    else
+      block+="${NL}| \`${name}\` | ${k} | ${v} | [${home#https://github.com/}](${home}) |"
+    fi
   done
   block+="${NL}${END_MARK}"
   if [[ -f "${clone}/README.md" ]] && grep -qxF -- "${BEGIN_MARK}" "${clone}/README.md" &&
@@ -876,6 +1022,12 @@ that also taps \`21StarkCom/tap\` must use full names in every \`brew\` command,
       s/^\Q$ENV{BEGIN_MARK}\E\n.*?^\Q$ENV{END_MARK}\E(?:\n|\z)/$ENV{BLOCK}\n/ms
     ' "${clone}/README.md" || die "cannot rewrite the README block"
   else
+    # A new public README starts with the tap's name. GetEvinced's README is the
+    # Evinced team's: the job writes only its block there (spec D6).
+    if [[ ${target} == public && ! -s "${clone}/README.md" ]]
+    then
+      printf '# %s\n' "${TARGET_TAP}" >"${clone}/README.md"
+    fi
     [[ ! -s "${clone}/README.md" ]] || sep="${NL}"
     printf '%s%s\n' "${sep}" "${block}" >>"${clone}/README.md"
   fi
@@ -947,7 +1099,7 @@ write_and_push() {
     return 0
   else
     cgit commit -q -m "mirror: 21StarkCom/homebrew-tap@${src_rev}" \
-      -m "Copied by scripts/mirror.sh (docs/specs/getevinced-mirror.md).${changed:+${NL}${changed}}"
+      -m "Copied by scripts/mirror.sh (${TARGET_SPEC}).${changed:+${NL}${changed}}"
   fi
   ${dry_run} && return 0
   head="$(cgit rev-parse --short HEAD)"
@@ -966,6 +1118,7 @@ write_and_push() {
 
 main() {
   parse_args "$@"
+  set_target
   src_root="$(CDPATH='' cd -- "${BASH_SOURCE[0]%/*}/.." && pwd -P)"
   if [[ -n ${check_entry} ]]
   then
@@ -996,6 +1149,9 @@ main() {
   local name
   for name in "${names[@]}"
   do
+    active "${name}" || continue
+    # A public upload cannot be called back: an entry whose copy fails uploads nothing.
+    [[ ${target} != public ]] || write_copy "${name}" --check
     active "${name}" || continue
     ensure_asset "${name}"
   done
