@@ -1,6 +1,6 @@
 # homebrew-tap
 
-Private [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
+Public [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew as
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
 `brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build (muninn: an unsigned bash tree) pulled from a private GitHub Release, plus eight `-linux` formulae,
@@ -15,7 +15,7 @@ entry, running the bumper and verifying a change are in [CLAUDE.md](CLAUDE.md).
 
 ## In the saga
 
-Pens and pictures reach the operator's hands through [homebrew-tap](https://github.com/21StarkCom/homebrew-tap), the house's private Homebrew tap and home of the one bumper script that source repos' releases run to re-pin their entries by pull request. It appears in [plume](https://github.com/21StarkCom/plume)'s chapter of [The Saga of House Stark](https://github.com/21StarkCom/.github/blob/main/fleet/saga.md).
+Pens and pictures reach the operator's hands through [homebrew-tap](https://github.com/21StarkCom/homebrew-tap), the house's public Homebrew tap and home of the one bumper script that source repos' releases run to re-pin their entries by pull request. It appears in [plume](https://github.com/21StarkCom/plume)'s chapter of [The Saga of House Stark](https://github.com/21StarkCom/.github/blob/main/fleet/saga.md).
 
 ---
 
@@ -25,11 +25,8 @@ Pens and pictures reach the operator's hands through [homebrew-tap](https://gith
 # A GitHub token with contents:read on the private 21StarkCom release repos: a
 # Homebrew-installed gh signed in to an account that can read them is enough.
 brew install gh && gh auth login        # or: export HOMEBREW_GITHUB_API_TOKEN=<token>
-# Once, in the foreground, so ssh can ask to trust github.com's host key: answer
-# yes only on GitHub's published key fingerprint (below). Exits 1 on success.
-ssh -T git@github.com
-# Once. The tap repo is private too, so clone it over SSH with your own GitHub key.
-brew tap 21StarkCom/tap git@github.com:21StarkCom/homebrew-tap.git
+# Once. The tap repo is public: brew clones it over HTTPS with no key or token.
+brew tap 21StarkCom/tap
 brew install 21StarkCom/tap/<formula>
 brew install --cask 21StarkCom/tap/<cask>
 brew upgrade 21StarkCom/tap/<name>
@@ -48,14 +45,8 @@ the eight `-linux` formulae is **macOS arm64 only**; for another platform,
 build from the tool's own repo where it supports one (the agent-seats, frigg, lumiere, plume,
 sonar, stark-statusline and urd sections say how).
 
-`ssh -T git@github.com` makes the Mac's first SSH connection to github.com in a terminal
-you watch. Where `~/.ssh/known_hosts` does not hold github.com yet, it asks whether to
-trust GitHub's host key: answer `yes` only when the fingerprint it prints matches one of
-[GitHub's published SSH key fingerprints](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/githubs-ssh-key-fingerprints).
-It then greets you by GitHub username and exits 1, which is expected. Skip it and
-`brew tap` hangs with nothing printed: Homebrew runs its clone in a process group of its
-own, which stops when ssh asks that question. `gh auth login` can upload your key, but it
-does not record GitHub's host key.
+A tap first added over SSH (`git@github.com:21StarkCom/homebrew-tap.git`) keeps that
+remote and works as before.
 
 ## Entries
 

@@ -2,7 +2,7 @@
 
 Add only rules, traps and pointers here. Put reasons, history and catalogs in `docs/` or the ticket.
 
-Private Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as `21StarkCom/tap`). It is a passive publish target: it builds nothing, and each entry pins one private GitHub Release asset.
+Public Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as `21StarkCom/tap`). It is a passive publish target: it builds nothing, and each entry pins one private GitHub Release asset.
 
 - `README.md` holds the catalogs: the Entries table (kind, build, signing and macOS floor of each entry), the caller table (the release step that bumps each entry), and one section per entry. Read it before you change an entry.
 - A CLI is a formula in `Formula/`. A GUI `.app` is a cask in `Casks/`, never a formula.
@@ -18,7 +18,7 @@ Private Homebrew tap for the 21Stark fleet (`21StarkCom/homebrew-tap`, tapped as
 - When the lookup finds nothing, the entry raises `CurlDownloadStrategyError.new(url, guidance)`: a formula when it is evaluated, so formula metadata commands need a token too, and a cask when its downloader starts.
 - Homebrew's sandboxed `build.rb`, `test.rb` and `postinstall.rb` workers reload the formula with gh's config (`~/.config/gh`) and the login keychain unreadable, and never download. Formulae skip the lookup and the raise in them, and match a worker by its full path under `HOMEBREW_LIBRARY_PATH` (the path `Sandbox.ruby_command` launches it by).
 - Do not hand those workers the token through `ENV`: Homebrew restores `ENV` after it evaluates a formula.
-- Trap: Homebrew redacts only `ENV` secrets. With a gh-only login, `--verbose --debug` and `HOMEBREW_CURL_VERBOSE` print the gh token in the curl command line: do not paste that output.
+- Trap: Homebrew redacts only `ENV` secrets. With a gh-only login, `--verbose --debug` and `HOMEBREW_CURL_VERBOSE` print the gh token in the curl command line: do not paste that output. PRs here are public.
 
 ## Release fields and the bumper
 
