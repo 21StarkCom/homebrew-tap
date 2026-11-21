@@ -1,20 +1,20 @@
 # frozen_string_literal: true
 
-# Ad-hoc-signed macOS build of the hermod control-API CLI (renamed from
-# cmux-client, STARK-1758).
-class Hermod < Formula
+# Ad-hoc-signed macOS build of muxctl, the control-API CLI of the mux-control repo. This
+# formula was named hermod up to 0.52.0 (STARK-19541): it keeps a `hermod` link to muxctl.
+class Muxctl < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
-  homepage "https://github.com/21StarkCom/hermod"
+  homepage "https://github.com/21StarkCom/mux-control"
   # API asset URL (private repo). asset id is release-specific; bump on each release.
   # Homebrew's own lookup: HOMEBREW_GITHUB_API_TOKEN, else `gh auth token`, else a keychain token.
   # Its sandboxed build, test and postinstall workers reload this file where gh cannot read its
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/hermod/releases/assets/774958270",
+  url "https://api.github.com/repos/21StarkCom/mux-control/releases/assets/775368395",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.52.0"
-  sha256 "e80f6f883eaaa561999344663cf0de7092498395fb5811cca28c30a2516ec7f7"
+  version "0.53.0"
+  sha256 "7c379667bd58445831570e68edfbd83c8528e3eac7fa6e249fd2b0e5370611b5"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
@@ -23,17 +23,19 @@ class Hermod < Formula
     )
   end
 
-  # hermod finds a repo's checkout with `urd repos get`. Tap-qualified: a bare name resolves
+  # muxctl finds a repo's checkout with `urd repos get`. Tap-qualified: a bare name resolves
   # to homebrew/core first, and is ambiguous when another tap ships a `urd`.
   depends_on "21starkcom/tap/urd"
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
 
   def install
-    bin.install "hermod"
+    bin.install "muxctl"
+    bin.install_symlink "muxctl" => "hermod"
   end
 
   test do
-    assert_equal "hermod v#{version}", shell_output("#{bin}/hermod version").strip
+    assert_equal "muxctl v#{version}", shell_output("#{bin}/muxctl version").strip
+    assert_equal "muxctl v#{version}", shell_output("#{bin}/hermod version").strip
   end
 end
