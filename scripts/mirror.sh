@@ -33,8 +33,10 @@ EXCLUDED="alfred muninn"
 # The only entries --target public copies (docs/specs/public-tap.md): an allow
 # list, so a new entry stays out of the public tap until a PR names it here.
 # Anyone can download their assets, so each holds no readable JS: the Go builds,
-# and mimir, whose binary embeds a minified web UI. EXCLUDED wins over it.
-PUBLIC_ENTRIES="bragi frigg frigg-linux heimdall lumiere mimir plume sonar sonar-linux stark-statusline tyr urd urd-linux"
+# and mimir, whose binary embeds a minified web UI. goldfinger is the one by-name
+# exception: the operator let its readable Safari extension script go on
+# 2026-11-21 (STARK-19531). EXCLUDED wins over it.
+PUBLIC_ENTRIES="bragi frigg frigg-linux goldfinger heimdall lumiere mimir plume sonar sonar-linux stark-statusline tyr urd urd-linux"
 # The package scopes of the operator's own code. A package under node_modules/
 # in one of them is held to the source check (spec D12). Add a fleet repo's new
 # scope here.

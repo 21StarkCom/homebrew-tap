@@ -839,8 +839,9 @@ brew install 21StarkCom/public/<entry>
 `mirror.yml` copies each entry of `PUBLIC_ENTRIES` in `scripts/mirror.sh`, with its release
 asset, into a public release there ([the spec](docs/specs/public-tap.md)). The copy downloads
 from that release and drops the token code: the token lookup and its check, the cask
-download adapter, and the caveat that asks for GitHub access. The list holds only entries
-whose asset has no readable JS: the twelve Go formulae and `mimir`. It is an allow list, so
+download adapter, and the caveat that asks for GitHub access. The list holds the entries
+whose asset has no readable JS (the twelve Go formulae and `mimir`), and `goldfinger`, whose
+readable Safari extension script the operator let go. It is an allow list, so
 a new entry stays out of the public tap until a PR adds it. A public asset cannot be called
 back: the mirror checks each copy before it uploads.
 
