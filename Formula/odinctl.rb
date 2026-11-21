@@ -20,10 +20,10 @@ class Odinctl < Formula
   # config. They never download (the brew process fetched first), so they skip the lookup.
   worker = %w[build.rb test.rb postinstall.rb].any? { |w| $PROGRAM_NAME == (HOMEBREW_LIBRARY_PATH/w).to_s }
   token = worker ? "" : GitHub::API.credentials.to_s.strip
-  url "https://api.github.com/repos/21StarkCom/odin/releases/assets/775055533",
+  url "https://api.github.com/repos/21StarkCom/odin/releases/assets/775283730",
       headers: ["Accept: application/octet-stream", "Authorization: token #{token}"]
-  version "0.60.0"
-  sha256 "d317e1d5808384c6f97218fa21b23a40c07c626f4e56f51cbf05252ebe63c670"
+  version "0.61.0"
+  sha256 "d602a47e07393a05e76b828e08e8e9e93ff3630117b5b9e5690b2592b872a986"
   if token.empty? && !worker
     raise CurlDownloadStrategyError.new(
       stable.url,
