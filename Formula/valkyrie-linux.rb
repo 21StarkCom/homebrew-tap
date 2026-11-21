@@ -8,9 +8,9 @@ class ValkyrieLinux < Formula
   desc "Agent launchers for Claude Code and Codex, Linux x86_64 build"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/idun
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/valkyrie-linux-v0.18.0/valkyrie_0.18.0_linux_x64.zip"
-  version "0.18.0"
-  sha256 "1af8b22b5da5e3c50a1bd2e8864b7aabfbbccd9cd4c708265ea60cb87a4af0bd"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/valkyrie-linux-v0.19.0/valkyrie_0.19.0_linux_x64.zip"
+  version "0.19.0"
+  sha256 "6d2bdb5590fcedd0d7073587d457fac06e843ca840bf6dc1f72a351c02633bbc"
 
   depends_on arch: :x86_64 # bun build --compile --target=bun-linux-x64
   depends_on :linux
