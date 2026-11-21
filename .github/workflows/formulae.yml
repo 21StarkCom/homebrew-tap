@@ -244,5 +244,5 @@ jobs:
         if: env.FULL == 'true'
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
-          HOMEBREW_CACHE: ${{ runner.temp }}/hermod-download-check
+          HOMEBREW_CACHE: ${{ runner.temp }}/muxctl-download-check
         run: brew ruby scripts/verify-download.rb

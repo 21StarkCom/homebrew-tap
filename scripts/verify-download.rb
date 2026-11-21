@@ -8,7 +8,7 @@
 require "formulary"
 require "digest"
 
-formula = Formulary.factory("21StarkCom/tap/hermod")
+formula = Formulary.factory("21StarkCom/tap/muxctl")
 downloader = formula.downloader
 abort "Expected Homebrew's native CurlDownloadStrategy" unless downloader.instance_of?(CurlDownloadStrategy)
 
