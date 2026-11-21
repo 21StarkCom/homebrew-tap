@@ -1044,14 +1044,15 @@ check "says the check did not run" stderr_has "the source check of pubdemo_1.1.1
 # Packs path=text pairs into a flat .pkg, as pkgbuild makes one: a xar archive of a
 # gzip odc Payload. <pkg> <path=text>...
 pkg_of() {
-  local out="$1" dir="${work}/pkg" pair
+  local out="$1" dir="${work}/pkg" pair path
   shift
   rm -rf "${dir}"
   mkdir -p "${dir}/root" "${dir}/flat"
   for pair in "$@"
   do
-    mkdir -p "${dir}/root/${pair%/*}"
-    printf '%s' "${pair#*=}" >"${dir}/root/${pair%%=*}"
+    path="${pair%%=*}"
+    mkdir -p "${dir}/root/$(dirname "${path}")"
+    printf '%s' "${pair#*=}" >"${dir}/root/${path}"
   done
   bsdtar --format odc -czf "${dir}/flat/Payload" -C "${dir}/root" .
   printf '<pkg-info/>\n' >"${dir}/flat/PackageInfo"

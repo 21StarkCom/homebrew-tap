@@ -198,17 +198,29 @@ sub tar_gz {
   die "$file: cannot read: $error\n" if defined $error && $error ne "";
 }
 
-# Runs a command with its output thrown away; true when it exits 0.
+# Runs a command with its output thrown away and its stderr in the file $err;
+# true when it exits 0.
 sub quiet {
-  my @cmd = @_;
+  my ($err, @cmd) = @_;
   my $pid = fork // die "cannot fork: $!\n";
   unless ($pid) {
     open STDOUT, ">", "/dev/null";
-    open STDERR, ">", "/dev/null";
+    open STDERR, ">", $err;
     exec @cmd or exit 127;
   }
   waitpid $pid, 0;
   return $? == 0;
+}
+
+# The text of the file $err on one line, after ": ", or "" when it holds none.
+sub said {
+  my ($err) = @_;
+  open my $h, "<", $err or return "";
+  local $/;
+  my $text = <$h> // "";
+  $text =~ s/\s+\z//;
+  $text =~ s/\s*\n\s*/ /g;
+  return $text eq "" ? "" : ": $text";
 }
 
 # A flat .pkg, a xar archive, as scripts/mirror.sh's unpack_pkg reads one: bsdtar
@@ -220,12 +232,14 @@ sub pkg {
   require File::Temp;
   require File::Find;
   require File::Path;
-  my ($bsdtar) = grep { -x } map { "$_/bsdtar" } split /:/, ($ENV{PATH} // "");
+  my ($bsdtar) = grep { -f && -x } map { "$_/bsdtar" } split /:/, ($ENV{PATH} // "");
   die "$file: reading a .pkg needs bsdtar (libarchive) on PATH\n" unless defined $bsdtar;
   my $dir = File::Temp::tempdir("source-check.XXXXXX", TMPDIR => 1, CLEANUP => 1);
+  # bsdtar's own error, kept out of the tree that is checked.
+  my (undef, $err) = File::Temp::tempfile("source-check-err.XXXXXX", TMPDIR => 1, UNLINK => 1);
   # Only the bytes count: Linux bsdtar cannot write macOS extended attributes.
   my @plain = ("--no-xattrs", "--no-acls", "--no-fflags");
-  quiet($bsdtar, "-xf", $file, "-C", $dir, @plain) or die "$file: bsdtar cannot unpack it\n";
+  quiet($err, $bsdtar, "-xf", $file, "-C", $dir, @plain) or die "$file: bsdtar cannot unpack it" . said($err) . "\n";
   my @members;
   File::Find::find({ no_chdir => 1, wanted => sub { push @members, $_ if -f $_ && !-l $_ } }, $dir);
   my $payloads = 0;
@@ -234,7 +248,7 @@ sub pkg {
     next unless -s $m;
     rename $m, "$m.member" or die "$file: cannot move $m: $!\n";
     mkdir $m or die "$file: cannot make $m: $!\n";
-    if (quiet($bsdtar, "-xf", "$m.member", "-C", $m, @plain)) {
+    if (quiet($err, $bsdtar, "-xf", "$m.member", "-C", $m, @plain)) {
       unlink "$m.member";
       $payloads++ if $m =~ /Payload\z/;
       next;
@@ -242,7 +256,8 @@ sub pkg {
     File::Path::remove_tree($m);
     rename "$m.member", $m or die "$file: cannot move $m back: $!\n";
     (my $rel = $m) =~ s{\A\Q$dir\E/}{};
-    die "$file: its $rel is no archive that bsdtar reads, so it cannot be checked\n" if $m =~ /Payload\z/;
+    die "$file: its $rel is no archive that bsdtar reads, so it cannot be checked" . said($err) . "\n"
+      if $m =~ /Payload\z/;
   }
   die "$file: it holds no Payload to check\n" unless $payloads;
   my @paths;

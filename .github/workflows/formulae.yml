@@ -109,9 +109,10 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: style-only-placeholder
         run: brew style Formula Casks scripts
-      - name: Missing and whitespace-only token diagnostics (the changed entries on a partial run)
-        # A new or hand-edited entry must still reject a missing token and keep it
-        # out of its JSON metadata. The job runs only when an entry changed or FULL.
+      - name: No-token download of each public entry (the changed entries on a partial run)
+        # A public entry must download and evaluate with no token. A private entry must
+        # reject a missing token and keep it out of its JSON metadata. The job runs only
+        # when an entry changed or FULL.
         run: |
           if [[ "$FULL" != true ]]; then
             export VERIFY_AUTH_ENTRIES="$FORMULAE_FILES $CASKS_FILES"
@@ -122,9 +123,11 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
+          # A PR from a fork gets no secrets. Every public entry fetches with no token;
+          # a private entry fails its own fetch, with setup guidance, when it is empty.
           if [[ -z "$HOMEBREW_GITHUB_API_TOKEN" ]]; then
-            echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
-            exit 1
+            echo '::notice::HOMEBREW_RELEASE_READ_TOKEN is empty: fetching with no token.'
+            unset HOMEBREW_GITHUB_API_TOKEN
           fi
           formulae=()
           macos=()
@@ -191,9 +194,11 @@ jobs:
         env:
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.HOMEBREW_RELEASE_READ_TOKEN }}
         run: |
+          # A PR from a fork gets no secrets. Every public entry fetches with no token;
+          # a private entry fails its own fetch, with setup guidance, when it is empty.
           if [[ -z "$HOMEBREW_GITHUB_API_TOKEN" ]]; then
-            echo 'Configure HOMEBREW_RELEASE_READ_TOKEN with contents:read access to the private release repositories.' >&2
-            exit 1
+            echo '::notice::HOMEBREW_RELEASE_READ_TOKEN is empty: fetching with no token.'
+            unset HOMEBREW_GITHUB_API_TOKEN
           fi
           # A cask in Casks/<first character>/ too (Casks/i/idavoll.rb): Homebrew
           # reads Casks/**/*.rb. A glob with no match stays as its pattern.

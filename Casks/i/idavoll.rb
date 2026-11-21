@@ -11,8 +11,8 @@
 # installs each Casks/*.rb of this tap, so it would install idavoll's own .pkg in the
 # middle of its own run, and the package's preinstall quits a running Idavoll.app.
 # Homebrew reads Casks/**/*.rb; idavoll reads Casks/*.rb only. The GetEvinced mirror copies
-# this cask to the same path in GetEvinced/tap, .pkg included: the operator accepted the
-# app's readable JavaScript there on 2026-10-31.
+# this cask to the same path in GetEvinced/tap. The copy keeps this public url, so no .pkg
+# is copied there.
 cask "idavoll" do
   # version / url / sha256 are release-specific and rewritten when idavoll's release calls
   # the bumper (the README's caller table), which publishes the .pkg as a release of this

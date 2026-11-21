@@ -131,4 +131,4 @@ scripts/mirror.sh --dry-run
 - `mirror.yml` has no `pull_request` trigger and stays out of `GATE_WORKFLOWS`: `scripts/test-mirror.sh` checks both.
 - `brew style … scripts` lints `scripts/*.sh` with every optional shellcheck check and Homebrew's `shfmt` layout (`brew style --fix scripts/bump.sh` applies it).
 - Trap: that layout pass misreads a line inside a string or heredoc that starts with `if`. Keep embedded jq, Ruby and stub code free of those.
-- `formulae.yml`'s fetch steps fail when the Actions secret `HOMEBREW_RELEASE_READ_TOKEN` is empty. A private entry's source repo must grant it contents-read access.
+- `formulae.yml`'s fetch steps pass the Actions secret `HOMEBREW_RELEASE_READ_TOKEN` as the token, and fetch with none when it is empty (a fork's PR). A private entry's source repo must grant it contents-read access.
