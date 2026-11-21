@@ -265,11 +265,12 @@ a `vX.Y.Z` tag of the `github-extended` repo. It is compiled with the release Ma
 `bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
 
 `ghx` was `njord`, an app of the `idun` repo, up to 0.32.1. `formula_renames.json` maps
-`njord` to `ghx` and `njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an installed `njord`
-to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`). Homebrew does
-not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is trusted,
-they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
-`ghx-linux`) trusts the new entry and moves the installed `njord` to it.
+`njord` to `ghx` and `njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an
+installed `njord` to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`).
+Homebrew does not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is
+trusted, they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
+`ghx-linux`) trusts the new entry and moves the installed `njord` to it. The formulas install no
+`njord` command: after the move, a script that runs `njord` must run `ghx`.
 
 On Linux x86_64 (the devbox):
 
