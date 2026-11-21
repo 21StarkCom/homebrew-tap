@@ -52,8 +52,8 @@ and works as before.
 | `floorplan` | formula | [floorplan](https://github.com/21StarkCom/floorplan) | `floorplan` | node ESM tree | none of its own; its native npm prebuilds are ad-hoc (the linker's signature; the three it renames, re-signed ad hoc in the keg) | any |
 | `frigg` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | ad-hoc | any |
 | `frigg-linux` | formula | [frigg](https://github.com/21StarkCom/frigg) | `frigg`, `frigg-*`, `frg-*`, `gws-*` | Go | none | none: Linux x86_64 |
-| `ghx` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx`, `njord` (a link to `ghx`) | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
-| `ghx-linux` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx`, `njord` (a link to `ghx`) | `bun build --compile` | none | none: Linux x86_64 |
+| `ghx` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `ghx-linux` | formula | [github-extended](https://github.com/21StarkCom/github-extended) | `ghx` | `bun build --compile` | none | none: Linux x86_64 |
 | `heimdall` | formula | [heimdall](https://github.com/21StarkCom/heimdall) | `heimdall` | Go | Developer ID + notarized | any |
 | `idun` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `idun-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `idun` | `bun build --compile` | none | none: Linux x86_64 |
@@ -264,13 +264,13 @@ The release zip is a `bun build --compile` binary, Developer-ID signed + notariz
 a `vX.Y.Z` tag of the `github-extended` repo. It is compiled with the release Mac's Homebrew
 `bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
 
-`ghx` was `njord`, an app of the `idun` repo, up to 0.32.1. Each `ghx` formula also installs
-`njord` as a link to `ghx`, and `formula_renames.json` maps `njord` to `ghx` and
-`njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an installed `njord`
-to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`). Homebrew does
-not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is trusted,
-they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
-`ghx-linux`) trusts the new entry and moves the installed `njord` to it.
+`ghx` was `njord`, an app of the `idun` repo, up to 0.32.1. `formula_renames.json` maps
+`njord` to `ghx` and `njord-linux` to `ghx-linux`, so `brew update` and `brew upgrade` move an
+installed `njord` to `ghx` on a machine that trusts the whole tap (`brew trust --tap 21StarkCom/tap`).
+Homebrew does not carry an entry's trust over to its new name: where only `21starkcom/tap/njord` is
+trusted, they skip it and leave `njord` at 0.32.1. There, `brew install 21StarkCom/tap/ghx` (or
+`ghx-linux`) trusts the new entry and moves the installed `njord` to it. The formulas install no
+`njord` command: after the move, a script that runs `njord` must run `ghx`.
 
 On Linux x86_64 (the devbox):
 

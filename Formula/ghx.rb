@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
-# Signed (Developer ID) + notarized macOS build of ghx, the GitHub-work CLI from the github-extended
-# repo. ghx was njord, an app of the idun repo, up to 0.32.1: this formula keeps a `njord` link to it.
+# Signed (Developer ID) + notarized macOS build of ghx, the GitHub-work CLI from the github-extended repo.
 class Ghx < Formula
   desc "GitHub work CLI: pull requests, CI, Actions runs, cleanup and fleet repos"
   homepage "https://github.com/21StarkCom/homebrew-tap"
@@ -15,11 +14,9 @@ class Ghx < Formula
 
   def install
     bin.install "ghx"
-    bin.install_symlink "ghx" => "njord"
   end
 
   test do
     assert_match version.to_s, shell_output("#{bin}/ghx --version")
-    assert_match version.to_s, shell_output("#{bin}/njord --version")
   end
 end
