@@ -15,9 +15,9 @@ class Odinctl < Formula
   desc "Doors that run a playbook on the odin agent kernel (terminal and schedule)"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/odin
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/odinctl-v0.65.0/odinctl_0.65.0_darwin_arm64.zip"
-  version "0.65.0"
-  sha256 "227e744ddbcf74fda47011003126b545e3609b4c107cb45b385fb3ddcaafddfc"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/odinctl-v0.66.0/odinctl_0.66.0_darwin_arm64.zip"
+  version "0.66.0"
+  sha256 "53198377014a75f16c2622e5b472216d9c6271c3fd29ab075b8c31dcaf6d8eb1"
 
   depends_on arch: :arm64 # the Agent SDK's vendored `claude` is darwin-arm64
   depends_on :macos
