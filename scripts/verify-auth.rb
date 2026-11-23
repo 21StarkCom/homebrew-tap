@@ -25,7 +25,11 @@ publics = 0
 # still exercises the no-token path.
 Dir.mktmpdir("verify-auth-home") do |home|
   paths.each do |path|
-    kind = path.relative_path_from(root).to_s.start_with?("Casks/") ? "--cask" : "--formula"
+    kind = if path.relative_path_from(root).to_s.start_with?("Casks/")
+      "--cask"
+    else
+      "--formula"
+    end
     name = "21StarkCom/tap/#{path.basename(".rb")}"
     text = path.read
     asset_url = text[/^  url "([^"]+)"/, 1]
@@ -38,7 +42,11 @@ Dir.mktmpdir("verify-auth-home") do |home|
       abort "#{name}: a public entry did not download with no token:\n#{output}" unless status.success?
       # A fetch Homebrew skips exits 0 with nothing downloaded. Ask --cache as macOS
       # arm64 for a cask: it prints nothing for a macOS-only cask on Linux.
-      cache_args = (kind == "--cask") ? ["--cask", "--os=tahoe", "--arch=arm"] : ["--formula"]
+      cache_args = if kind == "--cask"
+        ["--cask", "--os=tahoe", "--arch=arm"]
+      else
+        ["--formula"]
+      end
       cache, = Open3.capture2(
         { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => nil, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
         HOMEBREW_BREW_FILE.to_s, "--cache", *cache_args, name
@@ -69,5 +77,6 @@ Dir.mktmpdir("verify-auth-home") do |home|
     abort "#{name}: metadata exposes the token" if output.include?("metadata-leak-sentinel")
   end
 end
-puts "#{paths.length - publics} private entries: missing/blank tokens reject with URL and guidance; " \
+privates = paths.length - publics
+puts "#{privates} private entries: missing/blank tokens reject with URL and guidance; " \
      "JSON metadata omits credentials. #{publics} public entries: download and metadata with no token"
