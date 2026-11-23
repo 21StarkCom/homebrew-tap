@@ -4,6 +4,7 @@
 # Real brew entry points, with synthetic credentials only. A private entry must
 # reject a missing token before any request reaches GitHub. A public entry
 # (docs/specs/public-tap.md) must download with no token at all.
+require "fileutils"
 require "open3"
 require "tmpdir"
 
@@ -24,21 +25,41 @@ publics = 0
 # var is unset or blank. An empty HOME hides gh's login, so a signed-in box
 # still exercises the no-token path.
 Dir.mktmpdir("verify-auth-home") do |home|
+  # Homebrew reads tap trust from HOMEBREW_USER_CONFIG_HOME/trust.json: under
+  # XDG_CONFIG_HOME when it is set (`brew ruby` passes it on as HOMEBREW_XDG_CONFIG_HOME,
+  # as on CI), else ~/.homebrew. The empty HOME hides ~/.homebrew, and brew then
+  # refuses every entry of the trusted tap: copy the trust store in.
+  trust = File.join(ENV.fetch("HOMEBREW_USER_CONFIG_HOME", File.join(Dir.home, ".homebrew")), "trust.json")
+  if !ENV.key?("HOMEBREW_XDG_CONFIG_HOME") && File.exist?(trust)
+    FileUtils.mkdir_p(File.join(home, ".homebrew"))
+    FileUtils.cp(trust, File.join(home, ".homebrew"))
+  end
   paths.each do |path|
-    kind = path.relative_path_from(root).to_s.start_with?("Casks/") ? "--cask" : "--formula"
+    kind = if path.relative_path_from(root).to_s.start_with?("Casks/")
+      "--cask"
+    else
+      "--formula"
+    end
     name = "21StarkCom/tap/#{path.basename(".rb")}"
     text = path.read
     asset_url = text[/^  url "([^"]+)"/, 1]
-    if asset_url&.match?(public_url)
+    abort "#{name}: no `  url \"…\"` line to check" unless asset_url
+    # Each fetch below has --force: the children share this run's HOMEBREW_CACHE,
+    # and a cached asset would pass a fetch with no request at all.
+    if asset_url.match?(public_url)
       abort "#{name}: a public entry holds token code" if text.match?(/GitHub::API|Authorization:|CurlDownloadStrategy/)
       output, status = Open3.capture2e(
         { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => nil, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
-        HOMEBREW_BREW_FILE.to_s, "fetch", kind, name
+        HOMEBREW_BREW_FILE.to_s, "fetch", "--force", kind, name
       )
       abort "#{name}: a public entry did not download with no token:\n#{output}" unless status.success?
       # A fetch Homebrew skips exits 0 with nothing downloaded. Ask --cache as macOS
       # arm64 for a cask: it prints nothing for a macOS-only cask on Linux.
-      cache_args = (kind == "--cask") ? ["--cask", "--os=tahoe", "--arch=arm"] : ["--formula"]
+      cache_args = if kind == "--cask"
+        ["--cask", "--os=tahoe", "--arch=arm"]
+      else
+        ["--formula"]
+      end
       cache, = Open3.capture2(
         { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => nil, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
         HOMEBREW_BREW_FILE.to_s, "--cache", *cache_args, name
@@ -55,7 +76,7 @@ Dir.mktmpdir("verify-auth-home") do |home|
     invalid_tokens.each do |token|
       output, status = Open3.capture2e(
         { "HOME" => home, "HOMEBREW_GITHUB_API_TOKEN" => token, "HOMEBREW_NO_AUTO_UPDATE" => "1" },
-        HOMEBREW_BREW_FILE.to_s, "fetch", kind, name
+        HOMEBREW_BREW_FILE.to_s, "fetch", "--force", kind, name
       )
       abort "#{name}: fetch succeeded with no env or gh token (a keychain token?)" if status.success?
       abort "#{name}: download URL missing from error" unless output.include?("Download failed: #{asset_url}")
@@ -69,5 +90,6 @@ Dir.mktmpdir("verify-auth-home") do |home|
     abort "#{name}: metadata exposes the token" if output.include?("metadata-leak-sentinel")
   end
 end
-puts "#{paths.length - publics} private entries: missing/blank tokens reject with URL and guidance; " \
+privates = paths.length - publics
+puts "#{privates} private entries: missing/blank tokens reject with URL and guidance; " \
      "JSON metadata omits credentials. #{publics} public entries: download and metadata with no token"
