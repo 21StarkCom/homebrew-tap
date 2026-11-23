@@ -26,7 +26,11 @@ class Lumiere < Formula
       next if command.exist? || command.symlink?
 
       # lumiere-onnx exits 0 only for a tool it holds. For any other tool it fails.
-      holder = (onnx.exist? && quiet_system(onnx, tool, "-version")) ? onnx : bin/"lumiere"
+      holder = if onnx.exist? && quiet_system(onnx, tool, "-version")
+        onnx
+      else
+        bin/"lumiere"
+      end
       bin.install_symlink holder.basename => command.basename
     end
   end
@@ -48,7 +52,8 @@ class Lumiere < Formula
     # this one (v0.4.0 shipped minos 27.0, STARK-8882). Without the library-validation
     # entitlement it can't load the ONNX Runtime it downloads (v0.1.1-v0.4.1, STARK-9716).
     # The check reads the binary that holds lumiere-upscale: the file, or the link's target.
+    upscale = (bin/"lumiere-upscale").realpath
     assert_match "com.apple.security.cs.disable-library-validation",
-                 shell_output("codesign -d --entitlements - --xml #{(bin/"lumiere-upscale").realpath} 2>&1")
+                 shell_output("codesign -d --entitlements - --xml #{upscale} 2>&1")
   end
 end
