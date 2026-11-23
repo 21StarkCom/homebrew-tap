@@ -9,9 +9,9 @@ class Frigg < Formula
   desc "Google Workspace IT-ops toolkit: frigg CLI, frigg-*, frg-* and gws-* tools"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/frigg
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/frigg-v0.89.0/frigg_v0.89.0_darwin_arm64.zip"
-  version "0.89.0"
-  sha256 "aa9db670a33437fd172e4be1ce3c5b06ed0dfe01b68c6b94b1bb9628bbca0052"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/frigg-v0.90.0/frigg_v0.90.0_darwin_arm64.zip"
+  version "0.90.0"
+  sha256 "c6b7a8d24523082423659aa638df5d1a5c39e1dc64d1d22bb51b28afd852d98a"
 
   depends_on arch: :arm64
   depends_on :macos
