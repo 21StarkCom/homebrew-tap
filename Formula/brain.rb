@@ -13,9 +13,9 @@ class Brain < Formula
   desc "Atlas CLI — the second-brain engine (ingest, index, retrieve, review)"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/atlas
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/brain-v0.33.0/brain_0.33.0_darwin_arm64.zip"
-  version "0.33.0"
-  sha256 "babd4409084476535524da18f195303fd9c794cb997fac25f62300a0c4724587"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/brain-v0.34.0/brain_0.34.0_darwin_arm64.zip"
+  version "0.34.0"
+  sha256 "9da0fdb0fb8157aa5305c9493dc0dcdadf85b2370c660247f3ad3dff45b2dbba"
 
   depends_on arch: :arm64 # ships signed arm64 native modules (lancedb, better-sqlite3)
   depends_on :macos
