@@ -13,11 +13,11 @@ cask "atlas" do
   # version / url / sha256 are release-specific. No release step bumps this cask (the README's
   # caller table): re-point it with the bumper, which publishes the zip as a release of this
   # tap — do not hand-edit them. The real sha256 keeps every download checked.
-  version "0.29.5"
-  sha256 "99152e9dd0b73f120501079ecef5d57dd1f1967a2a6ce071a39968da73d0583f"
+  version "0.29.6"
+  sha256 "094f12047219285332895e887747b279dcbbef38bf7b6f5aa5134e40170c532e"
 
   # Source release repo: 21StarkCom/atlas
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/atlas-v0.29.5/Atlas-0.29.5.zip"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/atlas-v0.29.6/Atlas-0.29.6.zip"
   name "Atlas"
   desc "Second-brain desktop app (companion GUI to the brain CLI)"
   homepage "https://github.com/21StarkCom/homebrew-tap"
