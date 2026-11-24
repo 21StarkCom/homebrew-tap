@@ -8,9 +8,9 @@ class Urd < Formula
   desc "Local identity and infra cache: one SQLite file, synced from vendors"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/urd
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/urd-v0.15.1/urd_v0.15.1_darwin_arm64.zip"
-  version "0.15.1"
-  sha256 "25ad0a0a73fac64f5ad18b4017991f2940a43ea76acab067662b95e1cead767c"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/urd-v0.16.0/urd_v0.16.0_darwin_arm64.zip"
+  version "0.16.0"
+  sha256 "1405053732e23cc12550b2d7afbf8b784aa72059a502a82874fd1d057189713f"
 
   depends_on arch: :arm64
   depends_on :macos
