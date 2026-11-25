@@ -11,9 +11,9 @@ class SonarLinux < Formula
   # version / url / sha256 are rewritten when sonar's release calls the bumper with
   # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
   # Source release repo: 21StarkCom/sonar
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-linux-v0.18.0/sonar_v0.18.0_linux_amd64.zip"
-  version "0.18.0"
-  sha256 "c9f54cf61bbc2472aa2bee77a7f0ec24f02b939b5f6294cb7add39d5ce862c19"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-linux-v0.19.0/sonar_v0.19.0_linux_amd64.zip"
+  version "0.19.0"
+  sha256 "204d01e69de9b025d4388264631f61ccd4a71b7235ad71c506de44ade310f00d"
 
   depends_on arch: :x86_64 # sonar's release builds linux/amd64
   depends_on :linux
