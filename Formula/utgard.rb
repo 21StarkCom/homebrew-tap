@@ -5,9 +5,9 @@ class Utgard < Formula
   desc "Remote VMs: the devbox and the winbox, run from the Mac"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/utgard
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/utgard-v0.18.4/utgard_0.18.4_darwin_arm64.zip"
-  version "0.18.4"
-  sha256 "b36667323f9f0e48656b85304c35880b2a8b8330993e4382e956ed8fd001a458"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/utgard-v0.18.5/utgard_0.18.5_darwin_arm64.zip"
+  version "0.18.5"
+  sha256 "4a0cb828f39544b287c10aca782902a73a06c2b8f10931521a8d6d6da587a998"
 
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
