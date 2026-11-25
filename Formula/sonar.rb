@@ -9,9 +9,9 @@ class Sonar < Formula
   desc "Read-only CLI that resolves vendor links and probes URLs"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/sonar
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-v0.17.0/sonar_v0.17.0_darwin_arm64.zip"
-  version "0.17.0"
-  sha256 "483281c73722b0cfc3e72437c0dbf8cf7807a1bf54b50cbca634d644c431044e"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sonar-v0.18.0/sonar_v0.18.0_darwin_arm64.zip"
+  version "0.18.0"
+  sha256 "b6fd951878091e4093dea5974b96aff904301c0199a558b4cf8273ebab8a02c8"
 
   depends_on arch: :arm64
   depends_on :macos
