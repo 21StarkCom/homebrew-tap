@@ -8,9 +8,9 @@ class Alfred < Formula
   desc "Manual-ticket CLI + always-on local daemon for the 21Stark work fleet"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/odin
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/alfred-v0.91.0/alfred_v0.91.0_darwin_arm64.zip"
-  version "0.91.0"
-  sha256 "6f6d01c4ec270f5250e5d3e472efbc1dea94e29d5876a9d09fa5ae0ce716ba68"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/alfred-v0.92.0/alfred_v0.92.0_darwin_arm64.zip"
+  version "0.92.0"
+  sha256 "295151a457f3de90985bdfea046de47341f1c42d9fbee5ceddc1734b5e3ed767"
 
   # alfred reads people, identity and org data through `urd`. Tap-qualified: a bare name
   # resolves to homebrew/core first, and is ambiguous when another tap ships a `urd`.
