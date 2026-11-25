@@ -8,9 +8,9 @@ class GhxLinux < Formula
   desc "GitHub work CLI: pull requests, CI, Actions runs, Linux x86_64 build"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/github-extended
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/ghx-linux-v0.36.0/ghx_0.36.0_linux_x64.zip"
-  version "0.36.0"
-  sha256 "521ed0eb4ee9cbf8763ffaa9b38d7123c24f7a5488dfc7be12e385800aa146b5"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/ghx-linux-v0.37.0/ghx_0.37.0_linux_x64.zip"
+  version "0.37.0"
+  sha256 "c75d27345cc62421c9c7151bdd81c471e3e2e22d0d4046e334913e6027c03496"
 
   depends_on arch: :x86_64 # bun build --compile --target=bun-linux-x64
   depends_on :linux
