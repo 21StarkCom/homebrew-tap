@@ -5,9 +5,9 @@ class Ghx < Formula
   desc "GitHub work CLI: pull requests, CI, Actions runs, cleanup and fleet repos"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/github-extended
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/ghx-v0.37.1/ghx_0.37.1_darwin_arm64.zip"
-  version "0.37.1"
-  sha256 "22ee12dfd587ed6cbe44b287b316b601b8fe725eac8569ceee0cccb23b66c4d8"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/ghx-v0.38.0/ghx_0.38.0_darwin_arm64.zip"
+  version "0.38.0"
+  sha256 "475bbc04a56261ec18ac4dab645fe2499f6dce7ae6f1e847abe86037b925cacb"
 
   depends_on arch: :arm64
   depends_on macos: :golden_gate # the release Mac's Homebrew bun builds it for macOS 27.0; bare symbol == ">="
