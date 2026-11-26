@@ -10,9 +10,9 @@ class FriggLinux < Formula
   # version / url / sha256 are rewritten when frigg's release calls the bumper with
   # --asset-suffix linux_amd64.zip (the README's caller table) — do not hand-edit them.
   # Source release repo: 21StarkCom/frigg
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/frigg-linux-v0.99.0/frigg_v0.99.0_linux_amd64.zip"
-  version "0.99.0"
-  sha256 "f2bb880846adb9a8cf0af86afb89c873bda16c12c601ba8050de8c8332d54bbd"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/frigg-linux-v0.100.0/frigg_v0.100.0_linux_amd64.zip"
+  version "0.100.0"
+  sha256 "d8cdaf7c4a3dbb01cba3490b561593ea3f8c250616f691a650d9000bc69b986e"
 
   depends_on arch: :x86_64 # frigg's release builds linux/amd64
   depends_on :linux
