@@ -4,7 +4,7 @@ Public [Homebrew](https://brew.sh) tap for the 21Stark fleet, referenced by brew
 `21StarkCom/tap`. It puts the fleet's tools on an Apple Silicon Mac with one
 `brew install`: 22 formulae for the CLIs and 4 casks for the GUI apps, each a signed
 macOS arm64 build (muninn: an unsigned bash tree) pulled from a GitHub Release, plus eight `-linux` formulae,
-the Linux x86_64 builds for the devbox of muxctl, frigg, urd, sonar, ghx, utgard and idun's two apps
+the Linux x86_64 builds for the devbox of muxctl, frigg, urd, sonar, ghx, box and idun's two apps
 (`idun-linux` and `valkyrie-linux`). Every entry is [public](#public-entries): it downloads from a
 release of this tap with no GitHub login. The source repos stay private. The tap builds nothing. It only pins
 each entry to a published release, and each source repo's release re-pins its own entry by pull request.
@@ -71,8 +71,8 @@ and works as before.
 | `tyr` | formula | [tyr](https://github.com/21StarkCom/tyr) | `tyr` (frozen at v0.109.0) | Go | Developer ID + notarized | any |
 | `urd` | formula | [urd](https://github.com/21StarkCom/urd) | `urd` | Go | ad-hoc | any |
 | `urd-linux` | formula | [urd](https://github.com/21StarkCom/urd) | `urd` | Go | none | none: Linux x86_64 |
-| `utgard` | formula | [utgard](https://github.com/21StarkCom/utgard) | `utgard` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
-| `utgard-linux` | formula | [utgard](https://github.com/21StarkCom/utgard) | `utgard` | `bun build --compile` | none | none: Linux x86_64 |
+| `box` | formula | [remote-boxes](https://github.com/21StarkCom/remote-boxes) | `box`, `utgard` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
+| `box-linux` | formula | [remote-boxes](https://github.com/21StarkCom/remote-boxes) | `box`, `utgard` | `bun build --compile` | none | none: Linux x86_64 |
 | `valkyrie` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | Developer ID + notarized | 27 (Golden Gate) |
 | `valkyrie-linux` | formula | [idun](https://github.com/21StarkCom/idun) | `valkyrie` | `bun build --compile` | none | none: Linux x86_64 |
 | `atlas` (cask) | cask | [atlas](https://github.com/21StarkCom/atlas) | `Atlas.app` | Electron app | Developer ID + notarized + stapled | 13 (Ventura); its bundled Node needs 13.5 |
@@ -130,6 +130,41 @@ alfredd install      # once: write the daemon's LaunchAgent plist and load it
 The plist pins Homebrew's stable `opt` path, so an upgrade never orphans the daemon. Both
 binaries are Developer-ID signed + notarized Go builds. The formula depends on this tap's
 [`urd`](#urd) formula, by its full name, because alfred reads the cache through `urd`.
+
+## box
+
+The [`box`](https://github.com/21StarkCom/remote-boxes) CLI runs the remote boxes from the
+Mac: the devbox and the winbox VMs, and the Macs in `~/.ssh/config`. `box devbox`,
+`box winbox` and `box open` run the VMs and open tabs on each box, and each box is a
+command too (`box m5 ssh`). It lives in the `remote-boxes` repo (its
+`docs/specs/vm-app.md`).
+
+```sh
+brew install 21StarkCom/tap/box
+```
+
+The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
+a `vX.Y.Z` tag of the `remote-boxes` repo. It is compiled with the release Mac's Homebrew
+`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
+Releases up to 0.11.2 came from the `utgard-vX.Y.Z` tags of the `idun` repo.
+
+`box` was `utgard`, from the `utgard` repo (now `remote-boxes`), up to 0.18.5. Each `box`
+formula also installs `utgard` as a link to `box`, and `formula_renames.json` maps `utgard`
+to `box` and `utgard-linux` to `box-linux`, so `brew update` and `brew upgrade` move an
+installed `utgard` to `box` on a machine that trusts the whole tap. Where only
+`21starkcom/tap/utgard` is trusted, `brew install 21StarkCom/tap/box` (or `box-linux`)
+trusts the new entry and moves the installed `utgard` to it.
+
+On Linux x86_64 (the devbox):
+
+```sh
+brew install 21StarkCom/tap/box-linux
+```
+
+`box-linux` installs the same release's Linux x86_64 binary, which
+`scripts/release-darwin.sh box` cross-compiles beside the macOS one from the
+`vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `muxctl-linux`
+is (see [muxctl](#muxctl)).
 
 ## bragi
 
@@ -576,34 +611,6 @@ ships beside the darwin one. It is a formula of its own for the reason `muxctl-l
 (see [muxctl](#muxctl)), and its binary is unsigned. On another platform, `go install`
 from the `urd` repo.
 
-## utgard
-
-The [`utgard`](https://github.com/21StarkCom/utgard) remote VMs — the subcommands
-`utgard devbox`, `utgard winbox` and `utgard open`, which run the devbox and the winbox VMs
-and open tabs on each box from the Mac. The formula puts only `utgard` on `PATH`. utgard
-took over `devbox` and `winbox` from `idun`, and lives in its own repo (utgard's
-`docs/specs/vm-app.md`).
-
-```sh
-brew install 21StarkCom/tap/utgard
-```
-
-The release zip is a `bun build --compile` binary, Developer-ID signed + notarized, from
-a `vX.Y.Z` tag of the `utgard` repo. It is compiled with the release Mac's Homebrew
-`bun`, whose build targets macOS 27.0, so the formula requires macOS 27 (Golden Gate).
-Releases up to 0.11.2 came from the `utgard-vX.Y.Z` tags of the `idun` repo.
-
-On Linux x86_64 (the devbox):
-
-```sh
-brew install 21StarkCom/tap/utgard-linux
-```
-
-`utgard-linux` installs the same release's Linux x86_64 binary, which
-`scripts/release-darwin.sh utgard` cross-compiles beside the macOS one from the
-`vX.Y.Z` tag. It is unsigned, and a formula of its own for the reason `muxctl-linux`
-is (see [muxctl](#muxctl)).
-
 ## valkyrie
 
 The [`valkyrie`](https://github.com/21StarkCom/idun) agent launchers — the subcommands
@@ -772,9 +779,9 @@ loads only when named in full.
 
 | Path | What it holds |
 |---|---|
-| `Formula/` | One Ruby formula per CLI, plus eight `<tool>-linux` formulae (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`), their tools' Linux builds. |
+| `Formula/` | One Ruby formula per CLI, plus eight `<tool>-linux` formulae (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `box-linux`, `sonar-linux`), their tools' Linux builds. |
 | `Casks/` | One cask per GUI app. The idavoll cask is in `Casks/i/`, which idavoll's installer does not read. |
-| `formula_renames.json` | Homebrew's map of renamed formulae: `njord` → `ghx`, `njord-linux` → `ghx-linux`, `hermod` → `muxctl`, `hermod-linux` → `muxctl-linux`. |
+| `formula_renames.json` | Homebrew's map of renamed formulae: `njord` → `ghx`, `njord-linux` → `ghx-linux`, `hermod` → `muxctl`, `hermod-linux` → `muxctl-linux`, `utgard` → `box`, `utgard-linux` → `box-linux`. |
 | `scripts/bump.sh` | The bumper: re-pins one entry to a published release and opens the PR. `--help` is its reference. |
 | `scripts/test-bump.sh` | The bumper's tests, against a bare remote and a stubbed `gh`. |
 | `scripts/mirror.sh` | The mirror: copies every entry, with its release asset, into `GetEvinced/homebrew-tap`; a public entry's copy keeps its url. `--help` is its reference. |
@@ -895,8 +902,8 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `tyr` | tyr | none: tyr is library-only and ships no binary, so the formula stays on its last CLI release | — |
 | `urd` | urd | `scripts/release.sh`, after its tag's `.github/workflows/release.yml` publishes | the devbox |
 | `urd-linux` | urd | `scripts/release.sh` (`--asset-suffix linux_amd64.zip`) | the devbox |
-| `utgard` | utgard | `scripts/release-darwin.sh utgard`, for a `v*` tag | the signing Mac |
-| `utgard-linux` | utgard | `scripts/release-darwin.sh utgard` (`--asset-suffix linux_x64.zip`) | the signing Mac |
+| `box` | remote-boxes | `scripts/release-darwin.sh box`, for a `v*` tag | the signing Mac |
+| `box-linux` | remote-boxes | `scripts/release-darwin.sh box` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `valkyrie` | idun | `scripts/release-darwin.sh valkyrie`, for a `valkyrie-v*` tag | the signing Mac |
 | `valkyrie-linux` | idun | `scripts/release-darwin.sh valkyrie` (`--asset-suffix linux_x64.zip`) | the signing Mac |
 | `atlas` (cask) | atlas | none: no release step bumps it, so re-point it by hand at a `desktop-v*` release (`--asset-suffix .zip`) | — |
@@ -904,7 +911,7 @@ bumper, which reads them back from the published GitHub Release and opens a PR h
 | `idavoll` (cask) | idavoll | the Mac release steps in `mac/README.md`, after the publish of a `mac-v*` tag (`--asset-suffix .pkg`) | the operator's Mac |
 | `mimir` (cask) | mimir | `scripts/release-darwin.sh` | the signing Mac |
 
-agent-seats', idun's (`idun` and `valkyrie`, and each one's `-linux` formula), github-extended's (`ghx` and `ghx-linux`), utgard's (`utgard` and `utgard-linux`), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
+agent-seats', idun's (`idun` and `valkyrie`, and each one's `-linux` formula), github-extended's (`ghx` and `ghx-linux`), remote-boxes' (`box` and `box-linux`), alfred's and urd's (`urd` and `urd-linux`) releases and plume's, frigg's, muninn's and sonar's `release.yml` merge their
 own bump PRs unattended (frigg's two: `frigg` and `frigg-linux`; sonar's two: `sonar` and `sonar-linux`): `bump.sh --merge` waits for every
 check here first. frigg's run leaves its PRs open, under a warning, while its token lacks
 Actions: read on this tap. Every other bump PR stays open for a hand merge with
@@ -915,4 +922,4 @@ Actions: read on this tap. Every other bump PR stays open for a hand merge with
 
 Every entry downloads from a public release of this tap and holds no token code; all network operations remain Homebrew's, which handles redirects, cache freshness, and partial resume. [Public entries](#public-entries) describes the private shape that an entry with a secret in its asset would take.
 
-Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, a no-token download of each changed entry, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `utgard-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate muxctl download check verifies the preflight and a partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI's fetch steps pass the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN` as the token, which a private entry needs, with read access to its source repo; with the secret empty, as on a PR from a fork, they fetch with no token.
+Pull requests run on ubuntu arm64, under Homebrew on Linux: `brew style`, a no-token download of each changed entry, and `brew audit --strict` and `brew fetch` for every formula, which checks its download against the pinned `sha256`; each `<tool>-linux` formula (`muxctl-linux`, `frigg-linux`, `urd-linux`, `idun-linux`, `ghx-linux`, `valkyrie-linux`, `box-linux`, `sonar-linux`) is audited as Linux x86_64, and CI requires its fetch to have downloaded a Linux x86-64 `<tool>`. Every cask is fetched, which checks its download against the pinned `sha256`, and strict-audited with `brew audit --cask --strict`, skipping only `sha256_no_check_if_unversioned` (plus `token_conflicts` for atlas). A separate muxctl download check verifies the preflight and a partial resume against the release checksum. Every entry but the eight `-linux` formulae is macOS-only, and those are x86_64-only on the arm runner, so CI installs and tests none of them; `brew reinstall` and `brew test` do, on a Mac, and on the x86_64 devbox for the `-linux` formulae. The `bump` workflow runs the bumper's tests (`scripts/test-bump.sh`) on ubuntu, and under bash 3.2 in the `bash:3.2` image. CI's fetch steps pass the repository Actions secret `HOMEBREW_RELEASE_READ_TOKEN` as the token, which a private entry needs, with read access to its source repo; with the secret empty, as on a PR from a fork, they fetch with no token.
