@@ -12,9 +12,9 @@ class Sleipnir < Formula
   desc "Drive dedicated, persistent Chrome profiles for ad-hoc agent tasks"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/sleipnir
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sleipnir-v0.115.1/sleipnir_0.115.1_darwin_arm64.zip"
-  version "0.115.1"
-  sha256 "18f9897f80943e9776dc86d40f1b257f05deecc9aa5a5cd2aba1ed5e523db666"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/sleipnir-v0.116.0/sleipnir_0.116.0_darwin_arm64.zip"
+  version "0.116.0"
+  sha256 "721227800ff6a0388aae01e64107bb4838a31879b0abd2370638b7d8e249f3a1"
 
   depends_on arch: :arm64 # the zip ships only the darwin-arm64 bare-fs, bare-path and bare-url prebuilds
   depends_on "bun" # Bun runs the zip's minified bundles, which Bun's bundler built for Bun
