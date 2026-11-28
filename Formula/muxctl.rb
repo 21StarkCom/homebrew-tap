@@ -6,9 +6,9 @@ class Muxctl < Formula
   desc "TypeScript CLI + engine for the cmux control API: spawn/split, todos, orphans"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/mux-control
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/muxctl-v0.54.0/muxctl_v0.54.0_darwin_arm64.zip"
-  version "0.54.0"
-  sha256 "dbee7e834e5be27346a4b972f59d7c8acfc8eb79fb975d43bc5e8d9123a60823"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/muxctl-v0.55.0/muxctl_v0.55.0_darwin_arm64.zip"
+  version "0.55.0"
+  sha256 "c9d75e6ce0f8e7ec4d8f11487a71b245d9c614190ac13c3412bca9f3be3a1942"
 
   # muxctl finds a repo's checkout with `urd repos get`. Tap-qualified: a bare name resolves
   # to homebrew/core first, and is ambiguous when another tap ships a `urd`.
