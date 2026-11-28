@@ -8,9 +8,9 @@ class MuxctlLinux < Formula
   desc "TypeScript CLI + engine for the cmux control API, on Linux through tmux"
   homepage "https://github.com/21StarkCom/homebrew-tap"
   # Source release repo: 21StarkCom/mux-control
-  url "https://github.com/21StarkCom/homebrew-tap/releases/download/muxctl-linux-v0.54.0/muxctl_v0.54.0_linux_x64.zip"
-  version "0.54.0"
-  sha256 "ea6c924b31453fe7d3ffb3bb12a9b379d99b557d248e2040e26d4f83c457f059"
+  url "https://github.com/21StarkCom/homebrew-tap/releases/download/muxctl-linux-v0.55.0/muxctl_v0.55.0_linux_x64.zip"
+  version "0.55.0"
+  sha256 "e066caf962aebdd94cc41f357ae58dc5aa62fe82fc66cdf54c29aeae8c4ea62c"
 
   # muxctl finds a repo's checkout with `urd repos get`; urd-linux installs that `urd`.
   depends_on "21starkcom/tap/urd-linux"
